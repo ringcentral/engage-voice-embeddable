@@ -1,0 +1,419 @@
+import 'ringcentral-integration/lib/TabFreezePrevention';
+
+import { RcModuleV2 } from '@ringcentral-integration/core/lib/RcModule';
+
+import { dialoutStatuses } from '@ringcentral-integration/engage-voice-widgets/enums/dialoutStatus';
+import { transferStatuses } from '@ringcentral-integration/engage-voice-widgets/enums/transferStatuses';
+import { EvClient } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient';
+// import { evStatus } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums/evStatus';
+import { EvActiveCallControl } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallControl';
+import { EvActiveCallListUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallListUI';
+import { EvAuth } from '@ringcentral-integration/engage-voice-widgets/modules/EvAuth';
+import { EvCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvCall';
+import { EvCallDisposition } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDisposition';
+import { EvCallHistory } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallHistory';
+import { EvCallMonitor } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallMonitor';
+import { EvDialerUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvDialerUI';
+import { EvInboundQueuesUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvInboundQueuesUI';
+import { EvIntegratedSoftphone } from '@ringcentral-integration/engage-voice-widgets/modules/EvIntegratedSoftphone';
+import { EvManualDialSettingsUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvManualDialSettingsUI';
+import { EvPresence } from '@ringcentral-integration/engage-voice-widgets/modules/EvPresence';
+import { EvRequeueCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvRequeueCall';
+import { EvSessionConfig } from '@ringcentral-integration/engage-voice-widgets/modules/EvSessionConfig';
+import { EvSessionConfigUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvSessionConfigUI';
+import { EvSettings } from '@ringcentral-integration/engage-voice-widgets/modules/EvSettings';
+import { EvSettingsUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvSettingsUI';
+import { EvSubscription } from '@ringcentral-integration/engage-voice-widgets/modules/EvSubscription';
+import { EvTransferCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvTransferCall';
+import { EvTransferCallUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvTransferCallUI';
+import { EvWorkingState } from '@ringcentral-integration/engage-voice-widgets/modules/EvWorkingState';
+import { MainViewUI } from '@ringcentral-integration/engage-voice-widgets/modules/MainViewUI';
+
+import SDK from 'ringcentral';
+import RingCentralClient from 'ringcentral-client';
+import { ModuleFactory } from 'ringcentral-integration/lib/di';
+import LocalForageStorage from 'ringcentral-integration/lib/LocalForageStorage';
+import RcModule from 'ringcentral-integration/lib/RcModule';
+import { waitWithCheck } from 'ringcentral-integration/lib/time';
+import AccountInfo from 'ringcentral-integration/modules/AccountInfo';
+import ActivityMatcher from 'ringcentral-integration/modules/ActivityMatcher';
+import Alert from 'ringcentral-integration/modules/Alert';
+import Auth from 'ringcentral-integration/modules/Auth';
+import AvailabilityMonitor from 'ringcentral-integration/modules/AvailabilityMonitor';
+import Brand from 'ringcentral-integration/modules/Brand';
+import ConnectivityMonitor from 'ringcentral-integration/modules/ConnectivityMonitor';
+import ContactMatcher from 'ringcentral-integration/modules/ContactMatcher';
+import DateTimeFormat from 'ringcentral-integration/modules/DateTimeFormat';
+import DialingPlan from 'ringcentral-integration/modules/DialingPlan';
+import ExtensionInfo from 'ringcentral-integration/modules/ExtensionInfo';
+import GlobalStorage from 'ringcentral-integration/modules/GlobalStorage';
+import Locale from 'ringcentral-integration/modules/Locale';
+import RateLimiter from 'ringcentral-integration/modules/RateLimiter';
+import RegionSettings from 'ringcentral-integration/modules/RegionSettings';
+import RolesAndPermissions from 'ringcentral-integration/modules/RolesAndPermissions';
+import Storage from 'ringcentral-integration/modules/Storage';
+import Subscription from 'ringcentral-integration/modules/Subscription';
+import TabManager from 'ringcentral-integration/modules/TabManager';
+import AlertUI from 'ringcentral-widgets/modules/AlertUI';
+import ConnectivityBadgeUI from 'ringcentral-widgets/modules/ConnectivityBadgeUI';
+import ConnectivityManager from 'ringcentral-widgets/modules/ConnectivityManager';
+import { Modal } from 'ringcentral-widgets/modules/Modal';
+import { ModalUI } from 'ringcentral-widgets/modules/ModalUI';
+import OAuth from 'ringcentral-widgets/modules/ProxyFrameOAuth';
+import RegionSettingsUI from 'ringcentral-widgets/modules/RegionSettingsUI';
+import RouterInteraction from 'ringcentral-widgets/modules/RouterInteraction';
+import LoginUI from 'ringcentral-widgets/modules/LoginUI';
+
+import { Adapter } from '../Adapter';
+import { ThirdPartyService } from '../ThirdPartyService';
+import { EvActivityCallUI } from '../EvActivityCallUI';
+import { Environment } from '../Environment';
+import { formatCallFromEVCall } from '../../lib/formatCallFromEVCall';
+import { GenericPhone } from './interface';
+
+@ModuleFactory({
+  providers: [
+    { provide: 'EvSessionConfig', useClass: EvSessionConfig },
+    { provide: 'LoginUI', useClass: LoginUI },
+    { provide: 'EvCallHistory', useClass: EvCallHistory },
+    { provide: 'EvCallDisposition', useClass: EvCallDisposition },
+    { provide: 'EvSettingsUI', useClass: EvSettingsUI },
+    { provide: 'Alert', useClass: Alert },
+    { provide: 'AlertUI', useClass: AlertUI },
+    { provide: 'Modal', useClass: Modal },
+    { provide: 'ModalUI', useClass: ModalUI },
+    { provide: 'RegionSettingsUI', useClass: RegionSettingsUI },
+    { provide: 'Brand', useClass: Brand },
+    { provide: 'Locale', useClass: Locale },
+    { provide: 'GlobalStorage', useClass: GlobalStorage },
+    { provide: 'TabManager', useClass: TabManager },
+    { provide: 'ConnectivityMonitor', useClass: ConnectivityMonitor },
+    { provide: 'ConnectivityManager', useClass: ConnectivityManager },
+    { provide: 'ConnectivityBadgeUI', useClass: ConnectivityBadgeUI },
+    { provide: 'Auth', useClass: Auth },
+    { provide: 'OAuth', useClass: OAuth },
+    { provide: 'Storage', useClass: Storage },
+    { provide: 'RateLimiter', useClass: RateLimiter },
+    { provide: 'Subscription', useClass: Subscription },
+    { provide: 'DateTimeFormat', useClass: DateTimeFormat },
+    { provide: 'RouterInteraction', useClass: RouterInteraction },
+    { provide: 'AccountInfo', useClass: AccountInfo },
+    { provide: 'Environment', useClass: Environment },
+    { provide: 'RegionSettings', useClass: RegionSettings },
+    { provide: 'RolesAndPermissions', useClass: RolesAndPermissions },
+    { provide: 'ExtensionInfo', useClass: ExtensionInfo },
+    { provide: 'DialingPlan', useClass: DialingPlan },
+    { provide: 'AvailabilityMonitor', useClass: AvailabilityMonitor },
+    {
+      provide: 'AvailabilityMonitorOptions',
+      spread: true,
+      useValue: {
+        enabled: true,
+      },
+    },
+    {
+      provide: 'EnvironmentOptions',
+      useFactory({ sdkConfig }) {
+        return {
+          sdkConfig,
+        };
+      },
+      deps: ['SdkConfig'],
+      spread: true,
+    },
+    {
+      provide: 'Client',
+      useFactory: ({ sdkConfig }) => new RingCentralClient(new SDK(sdkConfig)),
+      deps: [{ dep: 'SdkConfig', useParam: true }],
+    },
+    {
+      provide: 'StorageOptions',
+      useValue: {
+        StorageProvider: LocalForageStorage,
+      },
+      spread: true,
+    },
+    { provide: 'ContactMatcher', useClass: ContactMatcher },
+    { provide: 'ActivityMatcher', useClass: ActivityMatcher },
+    { provide: 'Presence', useClass: EvPresence },
+    { provide: 'EvSubscription', useClass: EvSubscription },
+    { provide: 'EvAuth', useClass: EvAuth },
+    { provide: 'EvSettings', useClass: EvSettings },
+    { provide: 'EvCall', useClass: EvCall },
+    { provide: 'EvCallMonitor', useClass: EvCallMonitor },
+    { provide: 'EvWorkingState', useClass: EvWorkingState },
+    { provide: 'Adapter', useClass: Adapter },
+    { provide: 'ThirdPartyService', useClass: ThirdPartyService },
+    { provide: 'EvSessionConfigUI', useClass: EvSessionConfigUI },
+    { provide: 'EvInboundQueuesUI', useClass: EvInboundQueuesUI },
+    { provide: 'EvTransferCall', useClass: EvTransferCall },
+    { provide: 'EvTransferCallUI', useClass: EvTransferCallUI },
+    { provide: 'MainViewUI', useClass: MainViewUI },
+    { provide: 'EvDialerUI', useClass: EvDialerUI },
+    { provide: 'EvManualDialSettingsUI', useClass: EvManualDialSettingsUI },
+    { provide: 'EvActivityCallUI', useClass: EvActivityCallUI },
+    { provide: 'ActiveCallControl', useClass: EvActiveCallControl },
+    { provide: 'EvRequeueCall', useClass: EvRequeueCall },
+    { provide: 'EvActiveCallListUI', useClass: EvActiveCallListUI },
+    { provide: 'EvClient', useClass: EvClient },
+    { provide: 'EvIntegratedSoftphone', useClass: EvIntegratedSoftphone },
+  ],
+})
+export default class BasePhone extends RcModule {
+  public mode: string;
+  public _appConfig: any;
+  public _hasSetLocale?: boolean;
+
+  constructor(private modules: GenericPhone) {
+    super(modules);
+    const { appConfig } = modules;
+
+    for (const [key, value] of Object.entries(modules)) {
+      if (value instanceof RcModuleV2) {
+        value.parentModule = this as any;
+        value.__key__ = key;
+      }
+    }
+    this._appConfig = appConfig;
+
+    this._bindHook(modules);
+  }
+
+  private _bindHook({
+    evCallMonitor,
+    routerInteraction,
+    adapter,
+    evActivityCallUI,
+    evSessionConfig,
+    evDialerUI,
+    evCall,
+    contactMatcher,
+    evTransferCall,
+    evClient,
+    evAuth,
+    auth,
+    evWorkingState,
+    tabManager,
+  }: GenericPhone) {
+    evAuth.onLoginSuccess(async () => {
+      evSessionConfig.afterLogin();
+      if (
+        auth.ready &&
+        auth.loggedIn &&
+        auth.isFreshLogin &&
+        routerInteraction.currentPath === '/'
+      ) {
+        evSessionConfig.setFreshConfig();
+        routerInteraction.push('/sessionConfig');
+      } else {
+        try {
+          if (evSessionConfig.configured) {
+            await evSessionConfig.autoConfigureAgent();
+          } else {
+            evSessionConfig.setFreshConfig();
+            routerInteraction.push('/sessionConfig');
+          }
+        } catch (e) {
+          console.error(e);
+          evSessionConfig.setFreshConfig();
+          routerInteraction.push('/sessionConfig');
+        }
+      }
+    });
+
+    evCallMonitor
+      .addCallRingHook(async () => {
+        if (evSessionConfig.hasMultipleTabs) {
+          await waitWithCheck(() => evSessionConfig.configSuccess, {
+            timeout: 30 * 1000,
+          }).catch(() => {
+            // TODO: alert message about new tab login timeout.
+          });
+          if (!evClient.currentCall || !evClient.currentCall.uii) {
+            const data = await evClient.loadCurrentCall();
+            if (!data || !data.uii) {
+              // TODO: alert message about sync up unexpected data for current call.
+              return routerInteraction.push('/dialer');
+            }
+          }
+        }
+        const [call] = evCallMonitor.calls;
+        if (call && call.callType === 'INBOUND' && tabManager.active) {
+          adapter.popUpWindow();
+        }
+        const id = evClient.encodeUii(call.session);
+        evActivityCallUI.isFirstTimeHandled = true;
+        routerInteraction.push(`/activityCallLog/${id}`);
+        evActivityCallUI.reset();
+        evDialerUI.setToNumber('');
+        contactMatcher.forceMatchNumber({
+          phoneNumber: call.ani,
+        });
+        adapter.onNewCall(
+          formatCallFromEVCall(call, contactMatcher.dataMapping),
+        );
+      })
+      .addCallEndedHook(() => {
+        // if (routerInteraction.currentPath === '/sessionConfig') {
+        //   return;
+        // }
+        this._checkRouterShouldLeave(routerInteraction);
+        evCall.setDialoutStatus(dialoutStatuses.idle);
+        evTransferCall.setTransferStatus(transferStatuses.idle);
+        evTransferCall.closeLoadingNotification();
+        if (!evActivityCallUI.showSubmitStep) {
+          evActivityCallUI.disposeCurrentCall();
+          evActivityCallUI.goDialer();
+          return;
+        }
+        evWorkingState.setIsPendingDisposition(true);
+      });
+
+    evSessionConfig.onConfigSuccess.push(() => {
+      routerInteraction.push('/dialer');
+      // if not allowManualCall, just not handle c2d
+      // if (!evAuth.agentPermissions.allowManualCalls) {
+      //   return;
+      // }
+      // enable c2d
+    });
+  }
+
+  private _checkRouterShouldLeave(routerInteraction: RouterInteraction) {
+    const regex = /^\/activityCallLog\/(\d+\$\d+)\//;
+    const isSubActivityCallLogPath = regex.test(routerInteraction.currentPath);
+
+    if (isSubActivityCallLogPath) {
+      const id = routerInteraction.currentPath.match(regex)[1];
+      routerInteraction.push(`/activityCallLog/${id}`);
+    }
+  }
+
+  initialize() {
+    this.store.subscribe(() => {
+      if (
+        this.modules.auth.ready &&
+        this.modules.routerInteraction.currentPath !== '/' &&
+        !this.modules.auth.loggedIn
+      ) {
+        this.modules.routerInteraction.push('/');
+      }
+      if (
+        this.modules.locale.currentLocale !==
+          this.modules.locale._defaultLocale &&
+        !this._hasSetLocale
+      ) {
+        this._hasSetLocale = true;
+        this.modules.locale.setLocale(this.modules.locale._defaultLocale);
+      }
+    });
+    for (const value of Object.values(this)) {
+      if (value instanceof RcModuleV2) {
+        value.initModule();
+      }
+    }
+  }
+
+  setMode(mode: string) {
+    this.mode = mode;
+  }
+
+  get name() {
+    return this._appConfig.name;
+  }
+
+  get version() {
+    return this._appConfig.version;
+  }
+
+  get buildHash() {
+    return this._appConfig.buildHash;
+  }
+
+  get _actionTypes() {
+    return null;
+  }
+
+  get status() {
+    return this.state.status;
+  }
+}
+
+export function createPhone({
+  runTimeEnvironment = 'development',
+  prefix,
+  brandConfig,
+  version,
+  buildHash,
+  sdkConfig,
+  evSDK,
+  evSdkConfig,
+  targetWindow,
+  hideCallNote,
+  authConfig,
+}) {
+  const appVersion = buildHash ? `${version} (${buildHash})` : version;
+  @ModuleFactory({
+    providers: [
+      { provide: 'AdapterOptions', useValue: { targetWindow }, spread: true },
+      { provide: 'ModuleOptions', useValue: { prefix }, spread: true },
+      {
+        provide: 'SdkConfig',
+        deps: ['Version'],
+        useFactory({ version }) {
+          return {
+            ...sdkConfig,
+            appVersion: version,
+            appName: brandConfig.appName,
+            cachePrefix: `sdk-${prefix}`,
+            clearCacheOnRefreshError: false,
+          };
+        },
+      },
+      {
+        provide: 'EvClientOptions',
+        useValue: {
+          sdk: evSDK,
+          options: evSdkConfig,
+          callbacks: {
+            closeResponse: () => console.log('close connection!!!!!'),
+            openResponse: () => console.log('open connection!!!!!!'),
+          },
+        },
+      },
+      {
+        provide: 'Version',
+        useFactory() {
+          return buildHash ? `${version} (${buildHash})` : version;
+        },
+      },
+      {
+        provide: 'AppConfig',
+        useValue: {
+          name: brandConfig.appName,
+          version,
+          buildHash,
+          hideCallNote,
+        },
+      },
+      { provide: 'BrandOptions', useValue: brandConfig, spread: true },
+      {
+        provide: 'OAuthOptions',
+        useValue: {
+          redirectUri: authConfig.redirectUri,
+          proxyUri: authConfig.proxyUri,
+          extralUIOptions: ['hide_remember_me', 'hide_tos', '-old_ui'],
+        },
+        spread: true,
+      },
+      {
+        provide: 'Version',
+        useFactory() {
+          return appVersion;
+        },
+      },
+    ],
+  })
+  class Phone extends BasePhone {}
+  return (Phone as any).create();
+}
