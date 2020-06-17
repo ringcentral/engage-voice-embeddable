@@ -20,7 +20,7 @@ const evAgentConfig = {
   localTesting: false,
   isSecureSocket: true,
   allowMultiSocket: true,
-  authServer: process.env.ENGAGE_VOICE_AUTH_SERVER,
+  authHost: process.env.ENGAGE_VOICE_AUTH_SERVER,
 };
 
 const authConfig = {
