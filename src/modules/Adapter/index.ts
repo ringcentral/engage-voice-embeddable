@@ -12,6 +12,7 @@ import { Interface, DepsModules, State } from './interface';
 @Module({
   deps: [
     'EvDialerUI',
+    'EvCall',
     { dep: 'GlobalStorage', optional: true },
     { dep: 'AdapterOptions', optional: true, spread: true },
   ],
@@ -27,6 +28,7 @@ class Adapter extends RcModuleV2<DepsModules, State> implements Interface {
   constructor({
     globalStorage,
     evDialerUI,
+    evCall,
     enableGlobalCache = true,
     targetWindow = window.parent,
   }) {
@@ -34,6 +36,7 @@ class Adapter extends RcModuleV2<DepsModules, State> implements Interface {
       modules: {
         globalStorage,
         evDialerUI,
+        evCall,
       },
       enableGlobalCache,
       storageKey: 'Adapter',
@@ -124,7 +127,9 @@ class Adapter extends RcModuleV2<DepsModules, State> implements Interface {
   }
 
   async clickToDial(phoneNumber) {
-    await this._modules.evDialerUI.clickToDial(phoneNumber);
+    this._modules.evDialerUI.setToNumber(phoneNumber);
+    this._modules.evDialerUI.setLatestDialoutNumber();
+    await this._modules.evCall.dialout(this._modules.evDialerUI.toNumber);
   }
 
   onAppStart() {
