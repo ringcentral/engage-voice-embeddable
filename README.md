@@ -1,4 +1,4 @@
-# Engage Voice Embeddable
+# Engage Voice Embeddable (Beta)
 
 ## Introduction
 
@@ -136,3 +136,10 @@ $ yarn start # start a webpack dev server
 ```
 
 Open site: 'http://localhost:8080/' on browser
+
+## TODO
+
+- [ ] WebRTC support
+- [ ] CI build
+- [ ] IVR
+- [ ] Docs

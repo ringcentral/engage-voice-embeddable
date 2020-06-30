@@ -1,3 +1,4 @@
+# yarn build --hosting-url https://ringcentral.github.io/engage-voice-embeddable
 cd build/rc
 pwd
 git init
