@@ -9,6 +9,8 @@ import {
 import messageTypes from '../../enums/messageTypes';
 import { Interface, DepsModules, State } from './interface';
 
+type AdapterState = RcModuleState<Adapter, State>;
+
 @Module({
   deps: [
     'EvDialerUI',
@@ -17,7 +19,7 @@ import { Interface, DepsModules, State } from './interface';
     { dep: 'AdapterOptions', optional: true, spread: true },
   ],
 })
-class Adapter extends RcModuleV2<DepsModules, State> implements Interface {
+class Adapter extends RcModuleV2<DepsModules, AdapterState> implements Interface {
   public messageTypes: typeof messageTypes;
   public transport: MessageTransport;
 
@@ -73,22 +75,22 @@ class Adapter extends RcModuleV2<DepsModules, State> implements Interface {
 
   @action
   setClosed(closed) {
-    this.state.closed = closed;
+    this.closed = closed;
   }
 
   @action
   setMinimized(minimized) {
-    this.state.minimized = minimized;
+    this.minimized = minimized;
   }
 
   @action
   setSize(size) {
-    this.state.size = size;
+    this.size = size;
   }
 
   @action
   setPosition(position) {
-    this.state.position = position;
+    this.position = position;
   }
 
   addListeners() {

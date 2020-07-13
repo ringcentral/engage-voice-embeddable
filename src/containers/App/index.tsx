@@ -2,6 +2,7 @@ import { getAlertRenderer } from '@ringcentral-integration/engage-voice-widgets/
 import { EvLoginHeader } from '@ringcentral-integration/engage-voice-widgets/components/EvLoginHeader';
 import { CallerIdLabel } from '@ringcentral-integration/engage-voice-widgets/components/ManualDialSettingsPanel/CallerIdLabel';
 import { QueueLabel } from '@ringcentral-integration/engage-voice-widgets/components/ManualDialSettingsPanel/QueueLabel';
+import { ActiveCallListPage } from '@ringcentral-integration/engage-voice-widgets/containers/ActiveCallListPage';
 import { ActivityCallLogPage } from '@ringcentral-integration/engage-voice-widgets/containers/ActivityCallLogPage';
 import { AppView } from '@ringcentral-integration/engage-voice-widgets/containers/AppView';
 import { DialerPage } from '@ringcentral-integration/engage-voice-widgets/containers/DialerPage';
@@ -14,22 +15,22 @@ import { RequeueCallGroupPage } from '@ringcentral-integration/engage-voice-widg
 import { SessionConfigPage } from '@ringcentral-integration/engage-voice-widgets/containers/SessionConfigPage';
 import { SettingsPage } from '@ringcentral-integration/engage-voice-widgets/containers/SettingsPage';
 import { TransferCallPage } from '@ringcentral-integration/engage-voice-widgets/containers/TransferCallPage';
-import { ActiveCallListPage } from '@ringcentral-integration/engage-voice-widgets/containers/ActiveCallListPage';
 import { TransferInternalRecipientPage } from '@ringcentral-integration/engage-voice-widgets/containers/TransferInternalRecipientPage';
 import { TransferPhoneBookRecipientPage } from '@ringcentral-integration/engage-voice-widgets/containers/TransferPhoneBookRecipientPage';
 import { TransferManualEntryRecipientPage } from '@ringcentral-integration/engage-voice-widgets/containers/TransferManualEntryRecipientPage';
+import { transferTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
 import { theme as defaultTheme } from '@ringcentral-integration/engage-voice-widgets/theme';
-import React, { FunctionComponent } from 'react';
+// import { RcCircularProgress } from '@ringcentral-integration/rcui';
+import React, { FunctionComponent, useCallback } from 'react';
 import { Provider } from 'react-redux';
 import { Route, Router } from 'react-router';
+import { BlockContainer } from 'ringcentral-widgets/containers/BlockContainer';
 import { NotificationContainer } from 'ringcentral-widgets/containers/NotificationContainer';
 import ConnectivityBadgeContainer from 'ringcentral-widgets/containers/ConnectivityBadgeContainer';
 import { ModalContainer } from 'ringcentral-widgets/containers/ModalContainer';
 import RegionSettingsPage from 'ringcentral-widgets/containers/RegionSettingsPage';
 import { PhoneProviderProps } from 'ringcentral-widgets/lib/phoneContext';
 import PhoneProvider from 'ringcentral-widgets/lib/PhoneProvider';
-
-import { transferTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
 
 type AppProps = PhoneProviderProps;
 
@@ -47,13 +48,17 @@ const App: FunctionComponent<AppProps> = ({ phone, theme }) => {
                 <NotificationContainer
                   getAdditionalRenderer={getAlertRenderer}
                 />
+                <BlockContainer />
               </AppView>
             )}
           >
             <Route
               path="/"
               component={() => (
-                <LoginPage isWide>
+                <LoginPage
+                  onLoading={() => phone.block.block()}
+                  onLoadingComplete={() => phone.block.unblockAll()}
+                >
                   <EvLoginHeader />
                 </LoginPage>
               )}

@@ -15,10 +15,12 @@ import { formatCallFromEVCall } from '../../lib/formatCallFromEVCall';
 import { getCallInfos } from './utils/getCallInfos';
 import { DepsModules, State } from './interface';
 
+type EvActivityCallUIState = RcModuleState<EvActivityCallUI, State>;
+
 @Module({
   deps: ['ThirdPartyService', 'Storage', 'ContactMatcher', 'AppConfig'],
 })
-class EvActivityCallUI extends BaseActivityCallUI<DepsModules, State> {
+class EvActivityCallUI extends BaseActivityCallUI<DepsModules, EvActivityCallUIState> {
   constructor({
     thirdPartyService,
     enableCache = true,
