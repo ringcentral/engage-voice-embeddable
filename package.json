@@ -40,11 +40,11 @@
     "yargs": "^14.0.0"
   },
   "dependencies": {
-    "@ringcentral-integration/core": "^0.11.1",
+    "@ringcentral-integration/core": "^0.11.2",
     "@ringcentral-integration/i18n": "^2.0.0",
     "@ringcentral-integration/phone-number": "^1.0.2",
     "@ringcentral-integration/rcui": "^0.1.0",
-    "@ringcentral-integration/engage-voice-widgets": "^0.0.1",
+    "@ringcentral-integration/engage-voice-widgets": "^0.11.2",
     "classnames": "^2.2.5",
     "dotenv": "^6.2.0",
     "format-message": "^5.1.2",
@@ -61,7 +61,7 @@
     "redux": "^4.0.4",
     "ringcentral": "^3.2.1",
     "ringcentral-client": "^1.0.0-beta.2",
-    "ringcentral-integration": "^0.11.1",
-    "ringcentral-widgets": "^0.11.1"
+    "ringcentral-integration": "^0.11.2",
+    "ringcentral-widgets": "^0.11.2"
   }
 }
