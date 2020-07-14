@@ -1,8 +1,10 @@
 # Engage Voice Embeddable (Beta)
 
+[![Build Status](https://travis-ci.org/ringcentral/engage-voice-embeddable.svg?branch=master)](https://travis-ci.org/ringcentral/engage-voice-embeddable)
+
 ## Introduction
 
-This is an out-of-the-box embeddable web application that help developers to integrate RingCentral Engage Voice services to their web applications with few code.
+This is an out-of-the-box embeddable web application that help developers to integrate [RingCentral Engage Voice](https://www.ringcentral.com/engage/engage-voice.html) services to their web applications with few code.
 
 ## Visit Online
 
@@ -118,11 +120,9 @@ RINGCENTRAL_CLIENT_ID=your_ringcentral_app_client_id
 RINGCENTRAL_CLIENT_SECRET=your_ringcentral_app_client_secret
 RINGCENTRAL_SERVER=https://platform.ringcentral.com
 
-AUTH_REDIRECT_URI=http://localhost:8080/redirect.html
-AUTH_PROXY_URI=http://localhost:8080/proxy.html
-
 ENGAGE_VOICE_AUTH_SERVER=https://engage.ringcentral.com
 ```
+**Notice**: Now the Engage Voice service only is supported on production environment. Please make sure your key is graduated into RingCentral production environment.
 
 ### Start development server
 
@@ -137,9 +137,22 @@ $ yarn start # start a webpack dev server
 
 Open site: 'http://localhost:8080/' on browser
 
+### Deploy on production
+
+If you create pull request to this repository and get merged, CI will deploy it to this repository's github page automatically. But for something that customized, you can deploy it to your own web space, such as your github page.
+
+1. Update `.env` file in production environment
+2. Run command to compile code and build release
+
+```
+$ yarn build --hosting-url your_host_url
+```
+
+Please replace `your_host_uri` with your own web host address, such as `https://ringcentral.github.io/engage-voice-embeddable`.
+
+3. Upload all files in `build/rc` folder to your web space. And visit it in browser.
+
 ## TODO
 
-- [ ] WebRTC support
-- [ ] CI build
-- [ ] IVR
-- [ ] Docs
+- [ ] Support to customize app client id
+- [ ] Details Docs
