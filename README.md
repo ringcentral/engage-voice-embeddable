@@ -139,7 +139,5 @@ Open site: 'http://localhost:8080/' on browser
 
 ## TODO
 
-- [ ] WebRTC support
-- [ ] CI build
-- [ ] IVR
-- [ ] Docs
+- [ ] Support to customize app client id
+- [ ] Details Docs
