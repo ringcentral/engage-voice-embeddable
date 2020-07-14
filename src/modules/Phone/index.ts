@@ -1,7 +1,6 @@
 import 'ringcentral-integration/lib/TabFreezePrevention';
 
-import { RcModuleV2 } from '@ringcentral-integration/core/lib/RcModule';
-
+import { messageTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
 import { dialoutStatuses } from '@ringcentral-integration/engage-voice-widgets/enums/dialoutStatus';
 import { transferStatuses } from '@ringcentral-integration/engage-voice-widgets/enums/transferStatuses';
 import { EvClient } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient';
@@ -55,14 +54,17 @@ import Storage from 'ringcentral-integration/modules/Storage';
 import Subscription from 'ringcentral-integration/modules/Subscription';
 import TabManager from 'ringcentral-integration/modules/TabManager';
 import AlertUI from 'ringcentral-widgets/modules/AlertUI';
+import { Beforeunload } from 'ringcentral-widgets/modules/Beforeunload';
+import { Block } from 'ringcentral-widgets/modules/Block';
+import { BlockUI } from 'ringcentral-widgets/modules/BlockUI';
 import ConnectivityBadgeUI from 'ringcentral-widgets/modules/ConnectivityBadgeUI';
 import ConnectivityManager from 'ringcentral-widgets/modules/ConnectivityManager';
+import LoginUI from 'ringcentral-widgets/modules/LoginUI';
 import { Modal } from 'ringcentral-widgets/modules/Modal';
 import { ModalUI } from 'ringcentral-widgets/modules/ModalUI';
-import OAuth from 'ringcentral-widgets/modules/ProxyFrameOAuth';
+import OAuth from 'ringcentral-widgets/modules/OAuth';
 import RegionSettingsUI from 'ringcentral-widgets/modules/RegionSettingsUI';
 import RouterInteraction from 'ringcentral-widgets/modules/RouterInteraction';
-import LoginUI from 'ringcentral-widgets/modules/LoginUI';
 
 import { Adapter } from '../Adapter';
 import { ThirdPartyService } from '../ThirdPartyService';
@@ -80,6 +82,8 @@ import { GenericPhone } from './interface';
     { provide: 'EvSettingsUI', useClass: EvSettingsUI },
     { provide: 'Alert', useClass: Alert },
     { provide: 'AlertUI', useClass: AlertUI },
+    { provide: 'Block', useClass: Block },
+    { provide: 'BlockUI', useClass: BlockUI },
     { provide: 'Modal', useClass: Modal },
     { provide: 'ModalUI', useClass: ModalUI },
     { provide: 'RegionSettingsUI', useClass: RegionSettingsUI },
@@ -157,6 +161,7 @@ import { GenericPhone } from './interface';
     { provide: 'EvActiveCallListUI', useClass: EvActiveCallListUI },
     { provide: 'EvClient', useClass: EvClient },
     { provide: 'EvIntegratedSoftphone', useClass: EvIntegratedSoftphone },
+    { provide: 'Beforeunload', useClass: Beforeunload },
   ],
 })
 export default class BasePhone extends RcModule {
@@ -167,19 +172,33 @@ export default class BasePhone extends RcModule {
   constructor(private modules: GenericPhone) {
     super(modules);
     const { appConfig } = modules;
-
-    for (const [key, value] of Object.entries(modules)) {
-      if (value instanceof RcModuleV2) {
-        value.parentModule = this as any;
-        value.__key__ = key;
-      }
-    }
     this._appConfig = appConfig;
 
     this._bindHook(modules);
   }
 
+  initialize() {
+    this.store.subscribe(() => {
+      if (
+        this.modules.auth.ready &&
+        this.modules.routerInteraction.currentPath !== '/' &&
+        !this.modules.auth.loggedIn
+      ) {
+        this.modules.routerInteraction.push('/');
+      }
+      if (
+        this.modules.locale.currentLocale !==
+          this.modules.locale._defaultLocale &&
+        !this._hasSetLocale
+      ) {
+        this._hasSetLocale = true;
+        this.modules.locale.setLocale(this.modules.locale._defaultLocale);
+      }
+    });
+  }
+
   private _bindHook({
+    alert,
     evCallMonitor,
     routerInteraction,
     adapter,
@@ -193,36 +212,35 @@ export default class BasePhone extends RcModule {
     evAuth,
     auth,
     evWorkingState,
+    beforeunload,
     tabManager,
+    evIntegratedSoftphone,
   }: GenericPhone) {
+    evIntegratedSoftphone.autoAnswerCheckFn = () =>
+      evAuth.autoAnswerCalls ||
+      // When that is inbound call, check isMonitoring, only inbound will get currentCall first
+      evCall.getCurrentCall()?.isMonitoring;
+    evIntegratedSoftphone.onRinging(() => {
+      adapter.popUpWindow();
+    });
     evAuth.onLoginSuccess(async () => {
       evSessionConfig.afterLogin();
-      if (
-        auth.ready &&
-        auth.loggedIn &&
-        auth.isFreshLogin &&
-        routerInteraction.currentPath === '/'
-      ) {
-        evSessionConfig.setFreshConfig();
-        routerInteraction.push('/sessionConfig');
-      } else {
+
+      if (!auth.isFreshLogin && evSessionConfig.configured) {
         try {
-          if (evSessionConfig.configured) {
-            await evSessionConfig.autoConfigureAgent();
-          } else {
-            evSessionConfig.setFreshConfig();
-            routerInteraction.push('/sessionConfig');
-          }
+          return await evSessionConfig.autoConfigureAgent();
         } catch (e) {
           console.error(e);
-          evSessionConfig.setFreshConfig();
-          routerInteraction.push('/sessionConfig');
         }
       }
+
+      evSessionConfig.setFreshConfig();
+      routerInteraction.push('/sessionConfig');
     });
 
     evCallMonitor
       .addCallRingHook(async () => {
+        let isNewTab = false;
         if (evSessionConfig.hasMultipleTabs) {
           await waitWithCheck(() => evSessionConfig.configSuccess, {
             timeout: 30 * 1000,
@@ -230,6 +248,7 @@ export default class BasePhone extends RcModule {
             // TODO: alert message about new tab login timeout.
           });
           if (!evClient.currentCall || !evClient.currentCall.uii) {
+            isNewTab = true;
             const data = await evClient.loadCurrentCall();
             if (!data || !data.uii) {
               // TODO: alert message about sync up unexpected data for current call.
@@ -238,7 +257,12 @@ export default class BasePhone extends RcModule {
           }
         }
         const [call] = evCallMonitor.calls;
-        if (call && call.callType === 'INBOUND' && tabManager.active) {
+        if (
+          call &&
+          call.callType === 'INBOUND' &&
+          tabManager.active &&
+          !isNewTab
+        ) {
           adapter.popUpWindow();
         }
         const id = evClient.encodeUii(call.session);
@@ -277,6 +301,21 @@ export default class BasePhone extends RcModule {
       // }
       // enable c2d
     });
+
+    evAuth.canUserLogoutFn = async () => {
+      if (beforeunload.checkShouldBlock()) {
+        alert.danger({
+          message: messageTypes.LOGOUT_FAIL_WITH_CALL_CONNECTED,
+          ttl: 0,
+        });
+        return false;
+      }
+      return true;
+    };
+
+    evAuth.beforeAgentLogout(() => {
+      // When logout
+    });
   }
 
   private _checkRouterShouldLeave(routerInteraction: RouterInteraction) {
@@ -286,31 +325,6 @@ export default class BasePhone extends RcModule {
     if (isSubActivityCallLogPath) {
       const id = routerInteraction.currentPath.match(regex)[1];
       routerInteraction.push(`/activityCallLog/${id}`);
-    }
-  }
-
-  initialize() {
-    this.store.subscribe(() => {
-      if (
-        this.modules.auth.ready &&
-        this.modules.routerInteraction.currentPath !== '/' &&
-        !this.modules.auth.loggedIn
-      ) {
-        this.modules.routerInteraction.push('/');
-      }
-      if (
-        this.modules.locale.currentLocale !==
-          this.modules.locale._defaultLocale &&
-        !this._hasSetLocale
-      ) {
-        this._hasSetLocale = true;
-        this.modules.locale.setLocale(this.modules.locale._defaultLocale);
-      }
-    });
-    for (const value of Object.values(this)) {
-      if (value instanceof RcModuleV2) {
-        value.initModule();
-      }
     }
   }
 
@@ -400,8 +414,6 @@ export function createPhone({
       {
         provide: 'OAuthOptions',
         useValue: {
-          redirectUri: authConfig.redirectUri,
-          proxyUri: authConfig.proxyUri,
           extralUIOptions: ['hide_remember_me', 'hide_tos', '-old_ui'],
         },
         spread: true,
