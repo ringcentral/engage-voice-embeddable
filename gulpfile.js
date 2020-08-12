@@ -25,7 +25,6 @@ const evAgentConfig = {
 
 const authConfig = {
   redirectUri: process.env.AUTH_REDIRECT_URI,
-  proxyUri: process.env.AUTH_PROXY_URI,
 };
 
 const localeSettings = {

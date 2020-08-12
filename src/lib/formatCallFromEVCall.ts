@@ -11,7 +11,7 @@ export function formatCallFromEVCall(
   rawCall: EvCall,
   contactMapping: any = {},
 ) {
-  const { callType, dnis, uii, ani, queueDts, agentId } = rawCall;
+  const { callType, dnis, uii, ani, queueDts, agentId, baggage } = rawCall;
 
   // TODO confirm about  dialDest or dnis?
   const fromNumber = callType === 'OUTBOUND' ? dnis : ani;
@@ -38,5 +38,6 @@ export function formatCallFromEVCall(
     fromMatches: contactMapping[fromNumber],
     toMatches: contactMapping[toNumber],
     activityMatches: [],
+    ivrData: baggage,
   };
 }
