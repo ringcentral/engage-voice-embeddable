@@ -91,8 +91,3 @@ $ yarn build --hosting-url your_host_url
 Please replace `your_host_uri` with your own web host address, such as `https://ringcentral.github.io/engage-voice-embeddable`.
 
 3. Upload all files in `build/rc` folder to your web space. And visit it in browser.
-
-## TODO
-
-- [ ] Support to customize app client id
-- [ ] Details Docs
