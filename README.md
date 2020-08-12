@@ -25,11 +25,12 @@ Visit [website](https://ringcentral.github.io/engage-voice-embeddable/) in GitHu
 </script>
 ```
 
-### Documents
+## Documents
 
 * [Get Started](docs/get-started.md)
 * [Customize Client ID and environment](docs/customize-client-id.md)
 * [API](docs/api.md)
+* [Message Transport](docs/message-transport.md)
 
 ## Awesome Embeddable projects
 
