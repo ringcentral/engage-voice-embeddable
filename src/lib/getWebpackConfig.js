@@ -28,7 +28,6 @@ function getWebpackConfig({
     ...base,
     entry: {
       app: './src/app.tsx',
-      proxy: './src/proxy.ts',
       redirect: './src/redirect.ts',
       adapter: './src/adapter.ts',
     },
@@ -52,7 +51,6 @@ function getWebpackConfig({
       }),
       new CopyWebpackPlugin([
         { from: './src/index.html', to: 'index.html' },
-        { from: './src/proxy.html', to: 'proxy.html' },
         { from: './src/redirect.html', to: 'redirect.html' },
         { from: './src/app.html', to: 'app.html' },
       ]),
