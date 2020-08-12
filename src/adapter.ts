@@ -1,3 +1,5 @@
+import { parseUri } from './lib/parseURI';
+
 // eslint-disable-next-line
 import logoUrl from '!url-loader!brand-logo-path/logo.svg';
 // eslint-disable-next-line
@@ -9,6 +11,18 @@ import prefix from './prefix';
 
 const version = process.env.APP_VERSION;
 const appUrl = `${process.env.HOSTING_URL}/app.html`;
+
+let currentScript = document.currentScript;
+if (!currentScript) {
+  currentScript = document.querySelector('script[src*="adapter.js"]');
+}
+
+const {
+  clientId,
+  clientSecret,
+  rcServer,
+  evServer,
+} = parseUri((currentScript && currentScript.src) || '');
 
 function obj2uri(obj) {
   if (!obj) {
@@ -24,6 +38,10 @@ function obj2uri(obj) {
 }
 
 const appUri = `${appUrl}?${obj2uri({
+  clientId,
+  clientSecret,
+  rcServer,
+  evServer,
   fromAdapter: 1,
   _t: Date.now(),
 })}`;

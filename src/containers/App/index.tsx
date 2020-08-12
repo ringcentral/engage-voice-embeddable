@@ -4,7 +4,6 @@ import { CallerIdLabel } from '@ringcentral-integration/engage-voice-widgets/com
 import { QueueLabel } from '@ringcentral-integration/engage-voice-widgets/components/ManualDialSettingsPanel/QueueLabel';
 import { ActiveCallListPage } from '@ringcentral-integration/engage-voice-widgets/containers/ActiveCallListPage';
 import { ActivityCallLogPage } from '@ringcentral-integration/engage-voice-widgets/containers/ActivityCallLogPage';
-import { AppView } from '@ringcentral-integration/engage-voice-widgets/containers/AppView';
 import { DialerPage } from '@ringcentral-integration/engage-voice-widgets/containers/DialerPage';
 import { InboundQueuesPage } from '@ringcentral-integration/engage-voice-widgets/containers/InboundQueuesPage';
 import { LoginPage } from '@ringcentral-integration/engage-voice-widgets/containers/LoginPage';
@@ -31,6 +30,8 @@ import { ModalContainer } from 'ringcentral-widgets/containers/ModalContainer';
 import RegionSettingsPage from 'ringcentral-widgets/containers/RegionSettingsPage';
 import { PhoneProviderProps } from 'ringcentral-widgets/lib/phoneContext';
 import PhoneProvider from 'ringcentral-widgets/lib/PhoneProvider';
+
+import { AppView } from '../AppView';
 
 type AppProps = PhoneProviderProps;
 

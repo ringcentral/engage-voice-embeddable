@@ -3,7 +3,6 @@ import 'ringcentral-integration/lib/TabFreezePrevention';
 import { messageTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
 import { dialoutStatuses } from '@ringcentral-integration/engage-voice-widgets/enums/dialoutStatus';
 import { transferStatuses } from '@ringcentral-integration/engage-voice-widgets/enums/transferStatuses';
-import { EvClient } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient';
 // import { evStatus } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums/evStatus';
 import { EvActiveCallControl } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallControl';
 import { EvActiveCallListUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallListUI';
@@ -65,6 +64,8 @@ import { ModalUI } from 'ringcentral-widgets/modules/ModalUI';
 import OAuth from 'ringcentral-widgets/modules/OAuth';
 import RegionSettingsUI from 'ringcentral-widgets/modules/RegionSettingsUI';
 import RouterInteraction from 'ringcentral-widgets/modules/RouterInteraction';
+
+import { EvClient } from '../EvClient';
 
 import { Adapter } from '../Adapter';
 import { ThirdPartyService } from '../ThirdPartyService';

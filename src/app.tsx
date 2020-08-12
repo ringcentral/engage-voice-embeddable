@@ -18,7 +18,26 @@ const authConfig = process.env.AUTH_CONFIG;
 
 const currentUri = window.location.href;
 const pathParams = parseUri(currentUri);
-const { hideCallNote } = pathParams;
+const {
+  hideCallNote,
+  clientId,
+  clientSecret,
+  rcServer,
+  evServer,
+} = pathParams;
+
+if (clientId) {
+  sdkConfig.appKey = clientId;
+  if (clientSecret) {
+    sdkConfig.appSecret = clientSecret;
+  }
+}
+if (rcServer) {
+  sdkConfig.server = rcServer;
+}
+if (evServer) {
+  evSdkConfig.authHost = evServer;
+}
 // @ts-ignore
 const phone = createPhone({
   sdkConfig,
