@@ -27,9 +27,9 @@ const {
 } = pathParams;
 
 if (clientId) {
-  sdkConfig.appKey = clientId;
+  sdkConfig.clientId = clientId;
   if (clientSecret) {
-    sdkConfig.appSecret = clientSecret;
+    sdkConfig.clientSecret = clientSecret;
   }
 }
 if (rcServer) {

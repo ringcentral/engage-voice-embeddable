@@ -7,18 +7,18 @@ import { transferStatuses } from '@ringcentral-integration/engage-voice-widgets/
 import { EvActiveCallControl } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallControl';
 import { EvActiveCallListUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallListUI';
 import { EvAuth } from '@ringcentral-integration/engage-voice-widgets/modules/EvAuth';
+import { EvAgentSession } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentSession';
+import { EvAgentSessionUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentSessionUI';
+import { EvAgentScript } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentScript';
 import { EvCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvCall';
 import { EvCallDisposition } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDisposition';
 import { EvCallHistory } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallHistory';
 import { EvCallMonitor } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallMonitor';
 import { EvDialerUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvDialerUI';
-import { EvInboundQueuesUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvInboundQueuesUI';
 import { EvIntegratedSoftphone } from '@ringcentral-integration/engage-voice-widgets/modules/EvIntegratedSoftphone';
 import { EvManualDialSettingsUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvManualDialSettingsUI';
 import { EvPresence } from '@ringcentral-integration/engage-voice-widgets/modules/EvPresence';
 import { EvRequeueCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvRequeueCall';
-import { EvSessionConfig } from '@ringcentral-integration/engage-voice-widgets/modules/EvSessionConfig';
-import { EvSessionConfigUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvSessionConfigUI';
 import { EvSettings } from '@ringcentral-integration/engage-voice-widgets/modules/EvSettings';
 import { EvSettingsUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvSettingsUI';
 import { EvSubscription } from '@ringcentral-integration/engage-voice-widgets/modules/EvSubscription';
@@ -27,8 +27,8 @@ import { EvTransferCallUI } from '@ringcentral-integration/engage-voice-widgets/
 import { EvWorkingState } from '@ringcentral-integration/engage-voice-widgets/modules/EvWorkingState';
 import { MainViewUI } from '@ringcentral-integration/engage-voice-widgets/modules/MainViewUI';
 
-import SDK from 'ringcentral';
-import RingCentralClient from 'ringcentral-client';
+import { SDK } from '@ringcentral/sdk';
+import { RingCentralClient } from 'ringcentral-integration/lib/RingCentralClient';
 import { ModuleFactory } from 'ringcentral-integration/lib/di';
 import LocalForageStorage from 'ringcentral-integration/lib/LocalForageStorage';
 import RcModule from 'ringcentral-integration/lib/RcModule';
@@ -76,7 +76,6 @@ import { GenericPhone } from './interface';
 
 @ModuleFactory({
   providers: [
-    { provide: 'EvSessionConfig', useClass: EvSessionConfig },
     { provide: 'LoginUI', useClass: LoginUI },
     { provide: 'EvCallHistory', useClass: EvCallHistory },
     { provide: 'EvCallDisposition', useClass: EvCallDisposition },
@@ -141,6 +140,9 @@ import { GenericPhone } from './interface';
     { provide: 'ContactMatcher', useClass: ContactMatcher },
     { provide: 'ActivityMatcher', useClass: ActivityMatcher },
     { provide: 'Presence', useClass: EvPresence },
+    { provide: 'EvAgentSession', useClass: EvAgentSession },
+    { provide: 'EvAgentSessionUI', useClass: EvAgentSessionUI },
+    { provide: 'EvAgentScript', useClass: EvAgentScript },
     { provide: 'EvSubscription', useClass: EvSubscription },
     { provide: 'EvAuth', useClass: EvAuth },
     { provide: 'EvSettings', useClass: EvSettings },
@@ -149,8 +151,6 @@ import { GenericPhone } from './interface';
     { provide: 'EvWorkingState', useClass: EvWorkingState },
     { provide: 'Adapter', useClass: Adapter },
     { provide: 'ThirdPartyService', useClass: ThirdPartyService },
-    { provide: 'EvSessionConfigUI', useClass: EvSessionConfigUI },
-    { provide: 'EvInboundQueuesUI', useClass: EvInboundQueuesUI },
     { provide: 'EvTransferCall', useClass: EvTransferCall },
     { provide: 'EvTransferCallUI', useClass: EvTransferCallUI },
     { provide: 'MainViewUI', useClass: MainViewUI },
@@ -204,14 +204,13 @@ export default class BasePhone extends RcModule {
     routerInteraction,
     adapter,
     evActivityCallUI,
-    evSessionConfig,
+    evAgentSession,
     evDialerUI,
     evCall,
     contactMatcher,
     evTransferCall,
     evClient,
     evAuth,
-    auth,
     evWorkingState,
     beforeunload,
     tabManager,
@@ -220,30 +219,16 @@ export default class BasePhone extends RcModule {
     evIntegratedSoftphone.autoAnswerCheckFn = () =>
       evAuth.autoAnswerCalls ||
       // When that is inbound call, check isMonitoring, only inbound will get currentCall first
-      evCall.getCurrentCall()?.isMonitoring;
+      evCall.currentCall?.isMonitoring;
     evIntegratedSoftphone.onRinging(() => {
       adapter.popUpWindow();
     });
-    evAuth.onLoginSuccess(async () => {
-      evSessionConfig.afterLogin();
-
-      if (!auth.isFreshLogin && evSessionConfig.configured) {
-        try {
-          return await evSessionConfig.autoConfigureAgent();
-        } catch (e) {
-          console.error(e);
-        }
-      }
-
-      evSessionConfig.setFreshConfig();
-      routerInteraction.push('/sessionConfig');
-    });
 
     evCallMonitor
-      .addCallRingHook(async () => {
+      .onCallRing(async () => {
         let isNewTab = false;
-        if (evSessionConfig.hasMultipleTabs) {
-          await waitWithCheck(() => evSessionConfig.configSuccess, {
+        if (evAgentSession.hasMultipleTabs) {
+          await waitWithCheck(() => evAgentSession.configSuccess, {
             timeout: 30 * 1000,
           }).catch(() => {
             // TODO: alert message about new tab login timeout.
@@ -278,7 +263,7 @@ export default class BasePhone extends RcModule {
           formatCallFromEVCall(call, contactMatcher.dataMapping),
         );
       })
-      .addCallEndedHook(() => {
+      .onCallEnded(() => {
         // if (routerInteraction.currentPath === '/sessionConfig') {
         //   return;
         // }
@@ -294,7 +279,7 @@ export default class BasePhone extends RcModule {
         evWorkingState.setIsPendingDisposition(true);
       });
 
-    evSessionConfig.onConfigSuccess.push(() => {
+    evAgentSession.onConfigSuccess.push(() => {
       routerInteraction.push('/dialer');
       // if not allowManualCall, just not handle c2d
       // if (!evAuth.agentPermissions.allowManualCalls) {
@@ -370,7 +355,7 @@ export function createPhone({
   const appVersion = buildHash ? `${version} (${buildHash})` : version;
   @ModuleFactory({
     providers: [
-      { provide: 'AdapterOptions', useValue: { targetWindow }, spread: true },
+      { provide: 'AdapterOptions', useValue: { targetWindow } },
       { provide: 'ModuleOptions', useValue: { prefix }, spread: true },
       {
         provide: 'SdkConfig',

@@ -12,6 +12,7 @@ import { ManualDialSettingsPage } from '@ringcentral-integration/engage-voice-wi
 import { RequeueCallGroupItemPage } from '@ringcentral-integration/engage-voice-widgets/containers/RequeueCallGroupItemPage';
 import { RequeueCallGroupPage } from '@ringcentral-integration/engage-voice-widgets/containers/RequeueCallGroupPage';
 import { SessionConfigPage } from '@ringcentral-integration/engage-voice-widgets/containers/SessionConfigPage';
+import { SessionUpdatePage } from '@ringcentral-integration/engage-voice-widgets/containers/SessionUpdatePage';
 import { SettingsPage } from '@ringcentral-integration/engage-voice-widgets/containers/SettingsPage';
 import { TransferCallPage } from '@ringcentral-integration/engage-voice-widgets/containers/TransferCallPage';
 import { TransferInternalRecipientPage } from '@ringcentral-integration/engage-voice-widgets/containers/TransferInternalRecipientPage';
@@ -20,7 +21,7 @@ import { TransferManualEntryRecipientPage } from '@ringcentral-integration/engag
 import { transferTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
 import { theme as defaultTheme } from '@ringcentral-integration/engage-voice-widgets/theme';
 // import { RcCircularProgress } from '@ringcentral-integration/rcui';
-import React, { FunctionComponent, useCallback } from 'react';
+import React, { FunctionComponent } from 'react';
 import { Provider } from 'react-redux';
 import { Route, Router } from 'react-router';
 import { BlockContainer } from 'ringcentral-widgets/containers/BlockContainer';
@@ -64,10 +65,8 @@ const App: FunctionComponent<AppProps> = ({ phone, theme }) => {
                 </LoginPage>
               )}
             />
-            <Route
-              path="/sessionConfig"
-              component={() => <SessionConfigPage />}
-            />
+            <Route path="/sessionConfig" component={SessionConfigPage} />
+            <Route path="/sessionUpdate" component={SessionUpdatePage} />
             <Route
               path="/sessionConfig/inboundQueues"
               component={() => <InboundQueuesPage />}

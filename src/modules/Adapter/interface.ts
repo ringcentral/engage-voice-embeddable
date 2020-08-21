@@ -10,9 +10,14 @@ export interface State {
   position: any;
 }
 
-export interface DepsModules {
+export interface AdapterOptions {
+  targetWindow?: Window;
+}
+
+export interface Deps {
   globalStorage: GlobalStorage;
   evDialerUI: EvDialerUI;
+  adapterOptions?: AdapterOptions;
 }
 
 export interface Interface extends State {
