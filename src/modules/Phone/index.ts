@@ -1,8 +1,6 @@
 import 'ringcentral-integration/lib/TabFreezePrevention';
 
 import { messageTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
-import { dialoutStatuses } from '@ringcentral-integration/engage-voice-widgets/enums/dialoutStatus';
-import { transferStatuses } from '@ringcentral-integration/engage-voice-widgets/enums/transferStatuses';
 // import { evStatus } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums/evStatus';
 import { EvActiveCallControl } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallControl';
 import { EvActiveCallListUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallListUI';
@@ -264,19 +262,11 @@ export default class BasePhone extends RcModule {
         );
       })
       .onCallEnded(() => {
-        // if (routerInteraction.currentPath === '/sessionConfig') {
-        //   return;
-        // }
         this._checkRouterShouldLeave(routerInteraction);
-        evCall.setDialoutStatus(dialoutStatuses.idle);
-        evTransferCall.setTransferStatus(transferStatuses.idle);
-        evTransferCall.closeLoadingNotification();
         if (!evActivityCallUI.showSubmitStep) {
-          evActivityCallUI.disposeCurrentCall();
-          evActivityCallUI.goDialer();
+          evActivityCallUI.gotoDialWithoutSubmit();
           return;
         }
-        evWorkingState.setIsPendingDisposition(true);
       });
 
     evAgentSession.onConfigSuccess.push(() => {
@@ -299,9 +289,9 @@ export default class BasePhone extends RcModule {
       return true;
     };
 
-    evAuth.beforeAgentLogout(() => {
-      // When logout
-    });
+    // evAuth.beforeAgentLogout(() => {
+    //   // When logout
+    // });
   }
 
   private _checkRouterShouldLeave(routerInteraction: RouterInteraction) {

@@ -189,11 +189,7 @@ class EvActivityCallUI extends BaseActivityCallUI<Deps> {
     } catch (e) {
       console.error(e);
     }
-    await this._deps.evCallDisposition.disposeCall(this.callId);
-  }
-
-  async disposeCurrentCall() {
-    await this.disposeCall();
+    await super.disposeCall();
   }
 
   get showSubmitStep() {
@@ -209,6 +205,12 @@ class EvActivityCallUI extends BaseActivityCallUI<Deps> {
       return true;
     }
     return false;
+  }
+
+  async gotoDialWithoutSubmit() {
+    await this.disposeCall();
+    this._deps.evWorkingState.setIsPendingDisposition(false);
+    this.goDialer();
   }
 
   getUIProps({ id }): EvActivityCallUIProps {

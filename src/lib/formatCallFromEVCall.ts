@@ -1,4 +1,6 @@
-import { EvCall } from '@ringcentral-integration/engage-voice-widgets/interfaces/EvData.interface';
+import { keys, reduce } from 'ramda';
+
+import { EvCallData } from '@ringcentral-integration/engage-voice-widgets/interfaces/EvData.interface';
 
 function getNameFromContactMapping(contactMapping: any, phoneNumber: string) {
   if (contactMapping[phoneNumber] && contactMapping[phoneNumber].length > 0) {
@@ -8,7 +10,7 @@ function getNameFromContactMapping(contactMapping: any, phoneNumber: string) {
 }
 
 export function formatCallFromEVCall(
-  rawCall: EvCall,
+  rawCall: EvCallData,
   contactMapping: any = {},
 ) {
   const { callType, dnis, uii, ani, queueDts, agentId, baggage } = rawCall;
@@ -17,7 +19,16 @@ export function formatCallFromEVCall(
   const fromNumber = callType === 'OUTBOUND' ? dnis : ani;
   // TODO confirm about  dialDest or dnis?
   const toNumber = callType === 'OUTBOUND' ? ani : dnis;
-
+  const ivrString = reduce(
+    (prev, curr) => {
+      if (/^ivr./gi.test(curr)) {
+        prev.push(`${curr}: ${baggage[curr]};`);
+      }
+      return prev;
+    },
+    [],
+    keys(baggage),
+  ).join('\r\n');
   return {
     id: uii,
     direction: callType,
@@ -38,6 +49,7 @@ export function formatCallFromEVCall(
     fromMatches: contactMapping[fromNumber],
     toMatches: contactMapping[toNumber],
     activityMatches: [],
-    ivrData: baggage,
+    baggage,
+    ivrString: ivrString,
   };
 }
