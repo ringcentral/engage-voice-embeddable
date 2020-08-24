@@ -7,19 +7,17 @@ import {
   action,
 } from '@ringcentral-integration/core/lib/RcModule';
 import messageTypes from '../../enums/messageTypes';
-import { Interface, DepsModules, State } from './interface';
-
-type AdapterState = RcModuleState<Adapter, State>;
+import { Interface, Deps } from './interface';
 
 @Module({
   deps: [
     'EvDialerUI',
     'EvCall',
-    { dep: 'GlobalStorage', optional: true },
-    { dep: 'AdapterOptions', optional: true, spread: true },
+    'GlobalStorage',
+    { dep: 'AdapterOptions', optional: true },
   ],
 })
-class Adapter extends RcModuleV2<DepsModules, AdapterState> implements Interface {
+class Adapter extends RcModuleV2<Deps> implements Interface {
   public messageTypes: typeof messageTypes;
   public transport: MessageTransport;
 
@@ -27,25 +25,15 @@ class Adapter extends RcModuleV2<DepsModules, AdapterState> implements Interface
   private _lastPosition: any;
   private _lastMinimized: any;
 
-  constructor({
-    globalStorage,
-    evDialerUI,
-    evCall,
-    enableGlobalCache = true,
-    targetWindow = window.parent,
-  }) {
+  constructor(deps: Deps) {
     super({
-      modules: {
-        globalStorage,
-        evDialerUI,
-        evCall,
-      },
-      enableGlobalCache,
+      deps,
+      enableGlobalCache: true,
       storageKey: 'Adapter',
     });
     this.messageTypes = messageTypes;
     this.transport = new MessageTransport({
-      targetWindow,
+      targetWindow: this._deps.adapterOptions?.targetWindow ?? window.parent,
     } as any);
     this.addListeners();
     this._lastPosition = {};
@@ -129,9 +117,9 @@ class Adapter extends RcModuleV2<DepsModules, AdapterState> implements Interface
   }
 
   async clickToDial(phoneNumber) {
-    this._modules.evDialerUI.setToNumber(phoneNumber);
-    this._modules.evDialerUI.setLatestDialoutNumber();
-    await this._modules.evCall.dialout(this._modules.evDialerUI.toNumber);
+    this._deps.evDialerUI.setToNumber(phoneNumber);
+    this._deps.evDialerUI.setLatestDialoutNumber();
+    await this._deps.evCall.dialout(this._deps.evDialerUI.toNumber);
   }
 
   onAppStart() {

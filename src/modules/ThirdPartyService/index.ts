@@ -8,32 +8,29 @@ import {
   action,
 } from '@ringcentral-integration/core/lib/RcModule';
 
-import { Interface, DepsModules, State } from './interface';
+import { Interface, Deps } from './interface';
 
 import messageTypes from '../../enums/messageTypes';
 
 @Module({
   deps: [
     'ContactMatcher',
-    { dep: 'ThirdPartyServiceOptions', optional: true, spread: true },
+    { dep: 'ThirdPartyServiceOptions', optional: true },
   ],
 })
-class ThirdPartyService extends RcModuleV2<DepsModules, State>
+class ThirdPartyService extends RcModuleV2<Deps>
   implements Interface {
   public transport: MessageTransport;
   public messageTypes: typeof messageTypes;
 
-  constructor({ targetWindow = window.parent, contactMatcher, ...options }) {
+  constructor(deps: Deps) {
     super({
-      modules: {
-        contactMatcher,
-      },
-      ...options,
+      deps,
     });
 
     this.messageTypes = messageTypes;
     this.transport = new MessageTransport({
-      targetWindow,
+      targetWindow: this._deps.thirdPartyServiceOptions?.targetWindow ?? window.parent,
     } as any);
     this.addListeners();
   }
@@ -47,7 +44,7 @@ class ThirdPartyService extends RcModuleV2<DepsModules, State>
 
   @action
   setService(service) {
-    this.state.service = {
+    this.service = {
       name: service.name,
       callLoggerEnabled: service.callLoggerEnabled,
       contactMatcherEnabled: service.contactMatcherEnabled,
@@ -75,16 +72,16 @@ class ThirdPartyService extends RcModuleV2<DepsModules, State>
       this.setService(data.service);
       if (data.service.contactMatcherEnabled) {
         this.registerContactMatch();
-        this._modules.contactMatcher.triggerMatch();
+        this._deps.contactMatcher.triggerMatch();
       }
     }
   }
 
   registerContactMatch() {
-    if (this._modules.contactMatcher._searchProviders.has(this.service.name)) {
+    if (this._deps.contactMatcher._searchProviders.has(this.service.name)) {
       return;
     }
-    this._modules.contactMatcher.addSearchProvider({
+    this._deps.contactMatcher.addSearchProvider({
       name: this.service.name,
       searchFn: async ({ queries }) => {
         const result = await this.matchContacts(queries);

@@ -1,4 +1,4 @@
-import SDK from 'ringcentral';
+import { SDK } from '@ringcentral/sdk';
 import { Module } from 'ringcentral-integration/lib/di';
 import BasicEnvironment from 'ringcentral-integration/modules/Environment';
 import isBlank from 'ringcentral-integration/lib/isBlank';
@@ -72,11 +72,11 @@ class Environment extends BasicEnvironment {
     if (enabled) {
       newConfig.server = server;
       if (!isBlank(clientId)) {
-        newConfig.appKey = clientId;
+        newConfig.clientId = clientId;
         if (!isBlank(clientSecret)) {
-          newConfig.appSecret = clientSecret;
+          newConfig.clientSecret = clientSecret;
         } else {
-          delete newConfig.appSecret;
+          delete newConfig.clientSecret;
         }
       }
     }

@@ -7,8 +7,13 @@ export interface State {
   service: any;
 }
 
-export interface DepsModules {
+export interface ThirdPartyServiceOptions {
+
+}
+
+export interface Deps {
   contactMatcher: ContactMatcher;
+  thirdPartyServiceOptions?: ThirdPartyServiceOptions;
 }
 
 export interface Interface extends State {
