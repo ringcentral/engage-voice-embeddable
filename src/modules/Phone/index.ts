@@ -330,7 +330,6 @@ export default class BasePhone extends RcModule {
 }
 
 export function createPhone({
-  runTimeEnvironment = 'development',
   prefix,
   brandConfig,
   version,
@@ -340,9 +339,19 @@ export function createPhone({
   evSdkConfig,
   targetWindow,
   hideCallNote,
-  authConfig,
 }) {
   const appVersion = buildHash ? `${version} (${buildHash})` : version;
+  const usePKCE = sdkConfig.clientId && !sdkConfig.clientSecret;
+  if (usePKCE) {
+    // hack clean old authorization code token if auth flow change to PKCE
+    const rawToken = localStorage.getItem(`sdk-${prefix}-platform`);
+    if (rawToken) {
+      const token = JSON.parse(rawToken);
+      if ((token.access_token || token.refresh_token) && !token.code_verifier) {
+        localStorage.removeItem(`sdk-${prefix}-platform`);
+      }
+    }
+  }
   @ModuleFactory({
     providers: [
       { provide: 'AdapterOptions', useValue: { targetWindow } },
@@ -355,7 +364,7 @@ export function createPhone({
             ...sdkConfig,
             appVersion: version,
             appName: brandConfig.appName,
-            cachePrefix: `sdk-${prefix}`,
+            cachePrefix: `sdk-${prefix}-`,
             clearCacheOnRefreshError: false,
           };
         },
@@ -394,6 +403,7 @@ export function createPhone({
         },
         spread: true,
       },
+      { provide: 'AuthOptions', useValue: { usePKCE }, spread: true },
       {
         provide: 'Version',
         useFactory() {
