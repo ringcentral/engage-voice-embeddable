@@ -57,7 +57,6 @@ Create `.env` file in project root path:
 
 ```
 RINGCENTRAL_CLIENT_ID=your_ringcentral_app_client_id
-RINGCENTRAL_CLIENT_SECRET=your_ringcentral_app_client_secret
 RINGCENTRAL_SERVER=https://platform.ringcentral.com
 
 ENGAGE_VOICE_AUTH_SERVER=https://engage.ringcentral.com

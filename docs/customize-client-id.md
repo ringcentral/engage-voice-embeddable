@@ -1,6 +1,6 @@
 # Using your own RingCentral app client id
 
-Developer can config this Widget to use their own RingCentral app client id and client secret.
+Developers can config this widget to use their own RingCentral app client id.
 
 1. Create a [RingCentral developer free account](https://developer.ringcentral.com)
 2. Create a RingCentral app with platform type - "Browser Based"
@@ -13,7 +13,7 @@ Developer can config this Widget to use their own RingCentral app client id and 
 <script>
   (function() {
     var rcs = document.createElement("script");
-    rcs.src = "https://ringcentral.github.io/engage-voice-embeddable/adapter.js?clientId=ringcentral_client_id&clientSecret=ringcentral_client_secret&rcServer=https://platform.ringcentral.com&evServer=https://engage.ringcentral.com";
+    rcs.src = "https://ringcentral.github.io/engage-voice-embeddable/adapter.js?clientId=ringcentral_client_id&rcServer=https://platform.ringcentral.com&evServer=https://engage.ringcentral.com";
     var rcs0 = document.getElementsByTagName("script")[0];
     rcs0.parentNode.insertBefore(rcs, rcs0);
   })();
@@ -25,8 +25,6 @@ Developer can config this Widget to use their own RingCentral app client id and 
 ## Iframe way
 
 ```html
-<iframe width="300" height="500" id="engage-voice-embeddable-adapter-frame" allow="microphone" src="https://ringcentral.github.io/engage-voice-embeddable/app.html?clientId=ringcentral_client_id&clientSecret=ringcentral_client_secret&rcServer=https://platform.ringcentral.com&evServer=https://engage.ringcentral.com">
+<iframe width="300" height="500" id="engage-voice-embeddable-adapter-frame" allow="microphone" src="https://ringcentral.github.io/engage-voice-embeddable/app.html?clientId=ringcentral_client_id&rcServer=https://platform.ringcentral.com&evServer=https://engage.ringcentral.com">
 </iframe>
 ```
-
-**Notice**: Now we are using authorization code in client side, so client secret is required now. In next big release, we will replace it with authorization code with PKCE. So it will only require `clientId`.
