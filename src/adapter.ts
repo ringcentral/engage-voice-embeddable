@@ -22,6 +22,7 @@ const {
   clientSecret,
   rcServer,
   evServer,
+  disableLoginPopup,
 } = parseUri((currentScript && currentScript.src) || '');
 
 function obj2uri(obj) {
@@ -42,6 +43,7 @@ const appUri = `${appUrl}?${obj2uri({
   clientSecret,
   rcServer,
   evServer,
+  disableLoginPopup,
   fromAdapter: 1,
   _t: Date.now(),
 })}`;
