@@ -59,12 +59,13 @@ import ConnectivityManager from 'ringcentral-widgets/modules/ConnectivityManager
 import LoginUI from 'ringcentral-widgets/modules/LoginUI';
 import { Modal } from 'ringcentral-widgets/modules/Modal';
 import { ModalUI } from 'ringcentral-widgets/modules/ModalUI';
-import OAuth from 'ringcentral-widgets/modules/OAuth';
+
 import RegionSettingsUI from 'ringcentral-widgets/modules/RegionSettingsUI';
 import RouterInteraction from 'ringcentral-widgets/modules/RouterInteraction';
 
 import { EvClient } from '../EvClient';
 
+import OAuth from '../OAuth';
 import { Adapter } from '../Adapter';
 import { ThirdPartyService } from '../ThirdPartyService';
 import { EvActivityCallUI } from '../EvActivityCallUI';
@@ -339,6 +340,7 @@ export function createPhone({
   evSdkConfig,
   targetWindow,
   hideCallNote,
+  disableLoginPopup,
 }) {
   const appVersion = buildHash ? `${version} (${buildHash})` : version;
   const usePKCE = sdkConfig.clientId && !sdkConfig.clientSecret;
@@ -400,6 +402,7 @@ export function createPhone({
         provide: 'OAuthOptions',
         useValue: {
           extralUIOptions: ['hide_remember_me', 'hide_tos', '-old_ui'],
+          disableLoginPopup,
         },
         spread: true,
       },

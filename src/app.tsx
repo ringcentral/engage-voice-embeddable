@@ -24,6 +24,7 @@ const {
   clientSecret,
   rcServer,
   evServer,
+  disableLoginPopup,
 } = pathParams;
 
 if (clientId) {
@@ -49,6 +50,7 @@ const phone = createPhone({
   buildHash,
   hideCallNote: !!hideCallNote,
   runTimeEnvironment: process.env.NODE_ENV,
+  disableLoginPopup: !!disableLoginPopup,
 });
 
 const store = createStore(phone.reducer);
