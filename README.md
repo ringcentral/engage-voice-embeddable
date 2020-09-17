@@ -29,6 +29,8 @@ Visit [website](https://ringcentral.github.io/engage-voice-embeddable/) in GitHu
 
 * [Get Started](docs/get-started.md)
 * [Customize Client ID and environment](docs/customize-client-id.md)
+* [Customize Redirect Uri](docs/customize-redirect-url.md)
+* [Customize Authorization](docs/customize-authorization.md)
 * [API](docs/api.md)
 * [Message Transport](docs/message-transport.md)
 
