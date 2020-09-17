@@ -3,4 +3,5 @@ import prefix from './prefix';
 
 export default new RedirectController({
   prefix,
+  appOrigin: window.location.origin,
 });

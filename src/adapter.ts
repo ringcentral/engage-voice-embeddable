@@ -20,6 +20,7 @@ if (!currentScript) {
 const {
   clientId,
   clientSecret,
+  redirectUri,
   rcServer,
   evServer,
   disableLoginPopup,
@@ -41,6 +42,7 @@ function obj2uri(obj) {
 const appUri = `${appUrl}?${obj2uri({
   clientId,
   clientSecret,
+  redirectUri,
   rcServer,
   evServer,
   disableLoginPopup,
