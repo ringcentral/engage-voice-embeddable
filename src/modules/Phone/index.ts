@@ -341,6 +341,7 @@ export function createPhone({
   targetWindow,
   hideCallNote,
   disableLoginPopup,
+  redirectUri,
 }) {
   const appVersion = buildHash ? `${version} (${buildHash})` : version;
   const usePKCE = sdkConfig.clientId && !sdkConfig.clientSecret;
@@ -368,6 +369,7 @@ export function createPhone({
             appName: brandConfig.appName,
             cachePrefix: `sdk-${prefix}-`,
             clearCacheOnRefreshError: false,
+            redirectUri,
           };
         },
       },
@@ -403,6 +405,7 @@ export function createPhone({
         useValue: {
           extralUIOptions: ['hide_remember_me', 'hide_tos', '-old_ui'],
           disableLoginPopup,
+          redirectUri,
         },
         spread: true,
       },
