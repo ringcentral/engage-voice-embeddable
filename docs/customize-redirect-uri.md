@@ -27,7 +27,7 @@ In your redirect page, it is required add following code to pass auth callback p
   // the origin is used for postMessage
   var origin = 'https://ringcentral.github.io'; // origin where the widget is deployed.
   if (window.opener) {
-    // For normal popup login window
+    // pass callbackUri to widget
     window.opener.postMessage({
       callbackUri: window.location.href,
     }, origin);
