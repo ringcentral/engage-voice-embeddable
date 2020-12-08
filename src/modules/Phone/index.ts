@@ -4,11 +4,12 @@ import { messageTypes } from '@ringcentral-integration/engage-voice-widgets/enum
 // import { evStatus } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums/evStatus';
 import { EvActiveCallControl } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallControl';
 import { EvActiveCallListUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallListUI';
-import { EvAuth } from '@ringcentral-integration/engage-voice-widgets/modules/EvAuth';
 import { EvAgentSession } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentSession';
 import { EvAgentSessionUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentSessionUI';
 import { EvAgentScript } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentScript';
+import { EvAuth } from '@ringcentral-integration/engage-voice-widgets/modules/EvAuth';
 import { EvCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvCall';
+import { EvCallDataSource } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDataSource';
 import { EvCallDisposition } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDisposition';
 import { EvCallHistory } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallHistory';
 import { EvCallMonitor } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallMonitor';
@@ -23,10 +24,12 @@ import { EvSubscription } from '@ringcentral-integration/engage-voice-widgets/mo
 import { EvTransferCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvTransferCall';
 import { EvTransferCallUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvTransferCallUI';
 import { EvWorkingState } from '@ringcentral-integration/engage-voice-widgets/modules/EvWorkingState';
+import { EvTabManager } from '@ringcentral-integration/engage-voice-widgets/modules/EvTabManager';
 import { MainViewUI } from '@ringcentral-integration/engage-voice-widgets/modules/MainViewUI';
 
 import { SDK } from '@ringcentral/sdk';
 import { RingCentralClient } from 'ringcentral-integration/lib/RingCentralClient';
+import sleep from 'ringcentral-integration/lib/sleep';
 import { ModuleFactory } from 'ringcentral-integration/lib/di';
 import LocalForageStorage from 'ringcentral-integration/lib/LocalForageStorage';
 import RcModule from 'ringcentral-integration/lib/RcModule';
@@ -89,7 +92,6 @@ import { GenericPhone } from './interface';
     { provide: 'Brand', useClass: Brand },
     { provide: 'Locale', useClass: Locale },
     { provide: 'GlobalStorage', useClass: GlobalStorage },
-    { provide: 'TabManager', useClass: TabManager },
     { provide: 'ConnectivityMonitor', useClass: ConnectivityMonitor },
     { provide: 'ConnectivityManager', useClass: ConnectivityManager },
     { provide: 'ConnectivityBadgeUI', useClass: ConnectivityBadgeUI },
@@ -160,7 +162,9 @@ import { GenericPhone } from './interface';
     { provide: 'EvRequeueCall', useClass: EvRequeueCall },
     { provide: 'EvActiveCallListUI', useClass: EvActiveCallListUI },
     { provide: 'EvClient', useClass: EvClient },
+    { provide: 'EvCallDataSource', useClass: EvCallDataSource },
     { provide: 'EvIntegratedSoftphone', useClass: EvIntegratedSoftphone },
+    { provide: 'TabManager', useClass: EvTabManager },
     { provide: 'Beforeunload', useClass: Beforeunload },
   ],
 })
@@ -187,8 +191,7 @@ export default class BasePhone extends RcModule {
         this.modules.routerInteraction.push('/');
       }
       if (
-        this.modules.locale.currentLocale !==
-          this.modules.locale._defaultLocale &&
+        this.modules.locale.currentLocale !== this.modules.locale._defaultLocale &&
         !this._hasSetLocale
       ) {
         this._hasSetLocale = true;
@@ -207,12 +210,9 @@ export default class BasePhone extends RcModule {
     evDialerUI,
     evCall,
     contactMatcher,
-    evTransferCall,
     evClient,
     evAuth,
-    evWorkingState,
-    beforeunload,
-    tabManager,
+    presence,
     evIntegratedSoftphone,
   }: GenericPhone) {
     evIntegratedSoftphone.autoAnswerCheckFn = () =>
@@ -224,7 +224,20 @@ export default class BasePhone extends RcModule {
     });
 
     evCallMonitor
-      .onCallRing(async () => {
+      .onCallRinging(async () => {
+        console.log('onCallRinging');
+        await this._bindBeforeunload();
+        const call = evClient.currentCall;
+        if (call.callType === 'INBOUND' && evActivityCallUI.isActiveTab) {
+          adapter.popUpWindow();
+        }
+        contactMatcher.forceMatchNumber({
+          phoneNumber: call.ani,
+        });
+      })
+      .onCallAnswered(async (call) => {
+        await this._bindBeforeunload();
+        console.log('onCallAnswered');
         let isNewTab = false;
         if (evAgentSession.hasMultipleTabs) {
           await waitWithCheck(() => evAgentSession.configSuccess, {
@@ -232,7 +245,9 @@ export default class BasePhone extends RcModule {
           }).catch(() => {
             // TODO: alert message about new tab login timeout.
           });
-          if (!evClient.currentCall || !evClient.currentCall.uii) {
+          const call = evClient.currentCall;
+
+          if (!call || !call.uii) {
             isNewTab = true;
             const data = await evClient.loadCurrentCall();
             if (!data || !data.uii) {
@@ -241,18 +256,22 @@ export default class BasePhone extends RcModule {
             }
           }
         }
-        const [call] = evCallMonitor.calls;
+
+        const id = evClient.encodeUii(call.session);
+        evActivityCallUI.isFirstTimeHandled = true;
+        evCall.activityCallId = id;
+
         if (
           call &&
           call.callType === 'INBOUND' &&
-          tabManager.active &&
+          evActivityCallUI.isActiveTab &&
           !isNewTab
         ) {
           adapter.popUpWindow();
         }
-        const id = evClient.encodeUii(call.session);
-        evActivityCallUI.isFirstTimeHandled = true;
-        routerInteraction.push(`/activityCallLog/${id}`);
+
+        // when dialout complete, reset toNumber to empty
+        evActivityCallUI.goToActivityCallPage();
         evActivityCallUI.reset();
         evDialerUI.setToNumber('');
         contactMatcher.forceMatchNumber({
@@ -264,13 +283,14 @@ export default class BasePhone extends RcModule {
       })
       .onCallEnded(() => {
         this._checkRouterShouldLeave(routerInteraction);
+        this._removeBeforeunload();
         if (!evActivityCallUI.showSubmitStep) {
           evActivityCallUI.gotoDialWithoutSubmit();
           return;
         }
       });
 
-    evAgentSession.onConfigSuccess.push(() => {
+    evAgentSession.onConfigSuccess(() => {
       routerInteraction.push('/dialer');
       // if not allowManualCall, just not handle c2d
       // if (!evAuth.agentPermissions.allowManualCalls) {
@@ -280,7 +300,7 @@ export default class BasePhone extends RcModule {
     });
 
     evAuth.canUserLogoutFn = async () => {
-      if (beforeunload.checkShouldBlock()) {
+      if (presence.isCallConnected) {
         alert.danger({
           message: messageTypes.LOGOUT_FAIL_WITH_CALL_CONNECTED,
           ttl: 0,
@@ -293,6 +313,19 @@ export default class BasePhone extends RcModule {
     // evAuth.beforeAgentLogout(() => {
     //   // When logout
     // });
+  }
+
+  async _bindBeforeunload() {
+    this.modules.evCallMonitor.bindBeforeunload();
+    this.modules.evIntegratedSoftphone.bindBeforeunload();
+
+    // * add some sleep for some browser will slow add beforeunload.
+    await sleep(50);
+  }
+
+  private _removeBeforeunload() {
+    this.modules.evCallMonitor.removeBeforeunload();
+    this.modules.evIntegratedSoftphone.removeBeforeunload();
   }
 
   private _checkRouterShouldLeave(routerInteraction: RouterInteraction) {
