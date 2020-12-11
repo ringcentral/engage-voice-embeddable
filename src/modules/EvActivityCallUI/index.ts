@@ -1,5 +1,6 @@
 import { Module } from 'ringcentral-integration/lib/di';
 import { computed } from '@ringcentral-integration/core';
+import { format } from '@ringcentral-integration/phone-number';
 
 import {
   EvCurrentLog,
@@ -126,19 +127,26 @@ class EvActivityCallUI extends BaseActivityCallUI<Deps> {
   @computed((that: EvActivityCallUI) => [
     that.currentEvCall,
     that.activityCallLog,
+    that._deps.locale.currentLocale,
   ])
   get basicInfo() {
+    if (!this.currentEvCall) return null;
     const currentEvCall = this.currentEvCall;
     const { call } = this.activityCallLog;
     const isInbound = call.direction === 'INBOUND';
     const fromMatchName = call.from.name || call.from.phoneNumber;
     const toMatchName = call.to.name || call.to.phoneNumber;
+    const phoneNumber = isInbound ? call.from.phoneNumber : call.to.phoneNumber;
+    const formattedNumber = format({
+      phoneNumber,
+      countryCode: 'US',
+    });
 
     return {
       subject: isInbound ? fromMatchName : toMatchName,
-      callInfos: getCallInfos(currentEvCall),
+      callInfos: getCallInfos(currentEvCall, this._deps.locale.currentLocale),
       followInfos: [
-        isInbound ? call.from.phoneNumber : call.to.phoneNumber,
+        formattedNumber,
         ...(currentEvCall ? [currentEvCall.queue.name] : []),
       ],
     };
@@ -214,8 +222,9 @@ class EvActivityCallUI extends BaseActivityCallUI<Deps> {
   }
 
   getUIProps({ id }): EvActivityCallUIProps {
+    const originalProps = super.getUIProps({ id });
     return {
-      ...super.getUIProps({ id }),
+      ...originalProps,
       currentLog: this.activityCallLog,
       basicInfo: this.basicInfo,
     };

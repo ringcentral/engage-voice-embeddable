@@ -5,7 +5,6 @@ import { QueueLabel } from '@ringcentral-integration/engage-voice-widgets/compon
 import { ActiveCallListPage } from '@ringcentral-integration/engage-voice-widgets/containers/ActiveCallListPage';
 import { ActivityCallLogPage } from '@ringcentral-integration/engage-voice-widgets/containers/ActivityCallLogPage';
 import { DialerPage } from '@ringcentral-integration/engage-voice-widgets/containers/DialerPage';
-import { InboundQueuesPage } from '@ringcentral-integration/engage-voice-widgets/containers/InboundQueuesPage';
 import { LoginPage } from '@ringcentral-integration/engage-voice-widgets/containers/LoginPage';
 import { MainViewPage } from '@ringcentral-integration/engage-voice-widgets/containers/MainViewPage';
 import { ManualDialSettingsPage } from '@ringcentral-integration/engage-voice-widgets/containers/ManualDialSettingsPage';
@@ -20,7 +19,7 @@ import { TransferPhoneBookRecipientPage } from '@ringcentral-integration/engage-
 import { TransferManualEntryRecipientPage } from '@ringcentral-integration/engage-voice-widgets/containers/TransferManualEntryRecipientPage';
 import { transferTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
 import { theme as defaultTheme } from '@ringcentral-integration/engage-voice-widgets/theme';
-// import { RcCircularProgress } from '@ringcentral-integration/rcui';
+
 import React, { FunctionComponent } from 'react';
 import { Provider } from 'react-redux';
 import { Route, Router } from 'react-router';
@@ -28,7 +27,6 @@ import { BlockContainer } from 'ringcentral-widgets/containers/BlockContainer';
 import { NotificationContainer } from 'ringcentral-widgets/containers/NotificationContainer';
 import ConnectivityBadgeContainer from 'ringcentral-widgets/containers/ConnectivityBadgeContainer';
 import { ModalContainer } from 'ringcentral-widgets/containers/ModalContainer';
-import RegionSettingsPage from 'ringcentral-widgets/containers/RegionSettingsPage';
 import { PhoneProviderProps } from 'ringcentral-widgets/lib/phoneContext';
 import PhoneProvider from 'ringcentral-widgets/lib/PhoneProvider';
 
@@ -68,10 +66,6 @@ const App: FunctionComponent<AppProps> = ({ phone, theme }) => {
             <Route path="/sessionConfig" component={SessionConfigPage} />
             <Route path="/sessionUpdate" component={SessionUpdatePage} />
             <Route
-              path="/sessionConfig/inboundQueues"
-              component={() => <InboundQueuesPage />}
-            />
-            <Route
               path="/"
               component={(routerProps) => (
                 <MainViewPage>{routerProps.children}</MainViewPage>
@@ -94,10 +88,6 @@ const App: FunctionComponent<AppProps> = ({ phone, theme }) => {
                 )}
               />
               <Route
-                path="/activityCallLog/:id/transferCall"
-                component={({ params: { id } }) => <TransferCallPage id={id} />}
-              />
-              <Route
                 path="/activityCallLog/:id/transferCall/queueGroup"
                 component={({ params: { id } }) => (
                   <RequeueCallGroupPage id={id} />
@@ -108,6 +98,10 @@ const App: FunctionComponent<AppProps> = ({ phone, theme }) => {
                 component={({ params: { id, groupId } }) => (
                   <RequeueCallGroupItemPage id={id} groupId={groupId} />
                 )}
+              />
+              <Route
+                path="/activityCallLog/:id/transferCall"
+                component={({ params: { id } }) => <TransferCallPage id={id} />}
               />
               <Route
                 path={`/activityCallLog/:id/transferCall/${transferTypes.internal}`}
@@ -145,7 +139,6 @@ const App: FunctionComponent<AppProps> = ({ phone, theme }) => {
                   />
                 )}
               />
-              <Route path="/settings/region" component={RegionSettingsPage} />
             </Route>
           </Route>
         </Router>
