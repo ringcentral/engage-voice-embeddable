@@ -4,6 +4,8 @@ import { createStore } from 'redux';
 
 import { theme } from '@ringcentral-integration/engage-voice-widgets/theme';
 
+import './lib/BroadcastChannel.polyfill';
+
 import { createPhone } from './modules/Phone';
 import prefix from './prefix';
 import { parseUri } from './lib/parseURI';
