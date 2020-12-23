@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>RingCentral Engage Voice Widget demo page</title>
+  <meta name="description" content="RingCentral Engage Voice widget demo page">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, user-scalable=0, maximum-scale=1, minimum-scale=1"
+  >
+  <style>
+    h2 {
+      font-size: 18px;
+      margin: 25px 0;
+    }
+    h3 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    p {
+      margin: 10px 0;
+      line-height: 25px;
+      font-size: 15px;
+    }
+    pre {
+      padding: 5px;
+      overflow: auto;
+      font-size: 85%;
+      line-height: 1.45;
+      background-color: #f7f7f7;
+      border-radius: 3px;
+    }
+    a:focus {
+      outline: none!important;
+    }
+    a {
+      color: #0684bd;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Some tests</h2>
+    <p>Hover to Call: <a href="tel:+12345678901">+12345678901</a></p>
+    <p>Hover to Call1: +12345678901 </p>
+    <p><a id="environment" href="#environment">Click here to change environment</a></p>
+  </div>
+  <script>
+    (function () {
+      var rcs = document.createElement('script');
+      rcs.src = './adapter.js';
+      var rcs0 = document.getElementsByTagName('script')[0];
+      rcs0.parentNode.insertBefore(rcs, rcs0);
+    })();
+  </script>
+  <script src="https://unpkg.com/ringcentral-c2d@1.0.0/build/index.js"></script>
+  <script>
+    var clickToDial = new RingCentralC2D();
+    clickToDial.on(RingCentralC2D.events.call, (phoneNumber) => {
+      RCAdapter.clickToDial(phoneNumber)
+    });
+    clickToDial.update({
+      enableC2D: true,
+      enableC2SMS: false,
+      callBtnTitle: 'Call with RingCentral Engage Voice'
+    });
+    var registered = false;
+    window.addEventListener('message', function(event) {
+      var message = event.data;
+      if (!registered && message && message.type === 'rc-ev-init') {
+        console.log('initing');
+        registered = true;
+        RCAdapter.registerService({
+          name: 'TestService',
+          callLoggerEnabled: true,
+          contactMatcherEnabled: true,
+        });
+        RCAdapter.transport.addListeners({
+          push: function (data) {
+            if (data.type === 'rc-ev-newCall') {
+              console.log('new call:', data.call);
+            }
+          },
+          request: function (req) {
+            var payload = req.payload;
+            if (payload.requestType === 'rc-ev-matchContacts') {
+              var queries = payload.data;
+              console.log('matchContacts:', queries);
+              var contactMapping = {};
+              queries.forEach(function (query) {
+                contactMapping[query.phoneNumber] = [{
+                  id: query.phoneNumber,
+                  type: 'TestService',
+                  name: 'Test User ' + query.phoneNumber,
+                  phoneNumbers: [{
+                    phoneNumber: query.phoneNumber,
+                    phoneType: 'direct',
+                  }]
+                }];
+              });
+              RCAdapter.transport.response({
+                requestId: req.requestId,
+                result: contactMapping,
+              });
+              return;
+            }
+            if (payload.requestType === 'rc-ev-logCall') {
+              console.log('logCall:', payload.data);
+              RCAdapter.transport.response({
+                requestId: req.requestId,
+                result: 'ok',
+              });
+            }
+          },
+        });
+      }
+    });
+    var environmentBtn = document.getElementById('environment');
+    environmentBtn.addEventListener('click', function () {
+      RCAdapter.setEnvironment();
+    });
+  </script>
+</body>
+</html>
