@@ -1,5 +1,13 @@
 import { EventEmitter } from 'events';
 
+let environment;
+if (typeof window !== 'undefined') {
+  environment = window;
+}
+if (typeof global !== 'undefined') {
+  environment = global.window || global;
+}
+
 export class BroadcastChannelWithStorage extends EventEmitter {
   private _name: string;
   public onmessage?: ({ data } : { data: any }) => void;
@@ -12,7 +20,7 @@ export class BroadcastChannelWithStorage extends EventEmitter {
   }
 
   _initStorageListener() {
-    window.addEventListener('storage', this._onStorageMessage);
+    environment.addEventListener('storage', this._onStorageMessage);
   }
 
   _onStorageMessage = (e) => {
@@ -35,26 +43,13 @@ export class BroadcastChannelWithStorage extends EventEmitter {
     }
   }
 
-  _safeStringify(data) {
-    // remove Circular object
-    const seen = new WeakSet();
-    return JSON.stringify(
-      data,
-      (key, value) => {
-        if (typeof value === "object" && value !== null) {
-          if (seen.has(value)) {
-            return;
-          }
-          seen.add(value);
-        }
-        return value;
-      }
-    );
-  }
-
   postMessage(message: any) {
-    localStorage.setItem(this._name, this._safeStringify(message));
+    localStorage.setItem(this._name, JSON.stringify(message));
     localStorage.removeItem(this._name);
+  }
+  
+  close() {
+    environment.removeEventListener('storage', this._onStorageMessage);
   }
 
   addEventListener(event: 'message' | 'messageerror', listener: ({ data }: { data: any}) => void) {
@@ -68,14 +63,6 @@ export class BroadcastChannelWithStorage extends EventEmitter {
   get name() {
     return this._name;
   }
-}
-
-let environment;
-if (typeof window !== 'undefined') {
-  environment = window;
-}
-if (typeof global !== 'undefined') {
-  environment = global.window || global;
 }
 
 if (environment && !environment.BroadcastChannel) {
