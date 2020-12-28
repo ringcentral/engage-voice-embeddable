@@ -1,6 +1,6 @@
 # Engage Voice Embeddable (Beta)
 
-[![Build Status](https://travis-ci.org/ringcentral/engage-voice-embeddable.svg?branch=master)](https://travis-ci.org/ringcentral/engage-voice-embeddable)
+[![Build Status](https://github.com/ringcentral/engage-voice-embeddable/workflows/Deploy/badge.svg?branch=master)](https://github.com/ringcentral/engage-voice-embeddable/actions)
 
 ## Introduction
 
