@@ -12,13 +12,14 @@ import { RequeueCallGroupItemPage } from '@ringcentral-integration/engage-voice-
 import { RequeueCallGroupPage } from '@ringcentral-integration/engage-voice-widgets/containers/RequeueCallGroupPage';
 import { SessionConfigPage } from '@ringcentral-integration/engage-voice-widgets/containers/SessionConfigPage';
 import { SessionUpdatePage } from '@ringcentral-integration/engage-voice-widgets/containers/SessionUpdatePage';
+import { CallHistoryPage } from '@ringcentral-integration/engage-voice-widgets/containers/CallHistoryPage';
 import { SettingsPage } from '@ringcentral-integration/engage-voice-widgets/containers/SettingsPage';
+import { ChooseAccountPage } from '@ringcentral-integration/engage-voice-widgets/containers/ChooseAccountPage';
 import { TransferCallPage } from '@ringcentral-integration/engage-voice-widgets/containers/TransferCallPage';
 import { TransferInternalRecipientPage } from '@ringcentral-integration/engage-voice-widgets/containers/TransferInternalRecipientPage';
 import { TransferPhoneBookRecipientPage } from '@ringcentral-integration/engage-voice-widgets/containers/TransferPhoneBookRecipientPage';
 import { TransferManualEntryRecipientPage } from '@ringcentral-integration/engage-voice-widgets/containers/TransferManualEntryRecipientPage';
 import { transferTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
-import { theme as defaultTheme } from '@ringcentral-integration/engage-voice-widgets/theme';
 
 import React, { FunctionComponent } from 'react';
 import { Provider } from 'react-redux';
@@ -34,9 +35,9 @@ import { AppView } from '../AppView';
 
 type AppProps = PhoneProviderProps;
 
-const App: FunctionComponent<AppProps> = ({ phone, theme }) => {
+const App: FunctionComponent<AppProps> = ({ phone }) => {
   return (
-    <PhoneProvider phone={phone} theme={theme}>
+    <PhoneProvider phone={phone} theme={{}}>
       <Provider store={phone.store}>
         <Router history={phone.routerInteraction.history}>
           <Route
@@ -63,6 +64,7 @@ const App: FunctionComponent<AppProps> = ({ phone, theme }) => {
                 </LoginPage>
               )}
             />
+            <Route path="/chooseAccount" component={ChooseAccountPage} />
             <Route path="/sessionConfig" component={SessionConfigPage} />
             <Route path="/sessionUpdate" component={SessionUpdatePage} />
             <Route
@@ -72,6 +74,7 @@ const App: FunctionComponent<AppProps> = ({ phone, theme }) => {
               )}
             >
               <Route path="/dialer" component={() => <DialerPage />} />
+              <Route path="/history" component={CallHistoryPage} />
               <Route
                 path="/manualDialSettings"
                 component={() => (
@@ -130,13 +133,7 @@ const App: FunctionComponent<AppProps> = ({ phone, theme }) => {
               <Route
                 path="/settings"
                 component={(routerProps) => (
-                  <SettingsPage
-                    params={routerProps.location.query}
-                    regionSettingsUrl="/settings/region"
-                    showAudio={false}
-                    showUserGuide={false}
-                    showFeedback={false}
-                  />
+                  <SettingsPage params={routerProps.location.query} />
                 )}
               />
             </Route>
@@ -145,10 +142,6 @@ const App: FunctionComponent<AppProps> = ({ phone, theme }) => {
       </Provider>
     </PhoneProvider>
   );
-};
-
-App.defaultProps = {
-  theme: defaultTheme,
 };
 
 export { App };

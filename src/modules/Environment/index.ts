@@ -3,11 +3,8 @@ import { Module } from 'ringcentral-integration/lib/di';
 import BasicEnvironment from 'ringcentral-integration/modules/Environment';
 import isBlank from 'ringcentral-integration/lib/isBlank';
 
-import { theme } from '@ringcentral-integration/engage-voice-widgets/theme';
-
 const environment = {
   mode: 'sf-lightning',
-  theme,
 };
 
 import {
