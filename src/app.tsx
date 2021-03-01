@@ -2,8 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import { createStore } from 'redux';
 
-import { theme } from '@ringcentral-integration/engage-voice-widgets/theme';
-
 import './lib/BroadcastChannel.polyfill';
 
 import { createPhone } from './modules/Phone';
@@ -64,6 +62,6 @@ phone.setStore(store);
 window.phone = phone;
 
 ReactDOM.render(
-  <App phone={phone} theme={theme} />,
+  <App phone={phone} />,
   document.querySelector('div#viewport'),
 );

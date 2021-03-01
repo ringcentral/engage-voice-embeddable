@@ -25,6 +25,7 @@ import { EvTransferCall } from '@ringcentral-integration/engage-voice-widgets/mo
 import { EvTransferCallUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvTransferCallUI';
 import { EvWorkingState } from '@ringcentral-integration/engage-voice-widgets/modules/EvWorkingState';
 import { EvTabManager } from '@ringcentral-integration/engage-voice-widgets/modules/EvTabManager';
+import { EvChooseAccountUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvChooseAccountUI';
 import { MainViewUI } from '@ringcentral-integration/engage-voice-widgets/modules/MainViewUI';
 
 import { SDK } from '@ringcentral/sdk';
@@ -60,8 +61,7 @@ import { BlockUI } from 'ringcentral-widgets/modules/BlockUI';
 import ConnectivityBadgeUI from 'ringcentral-widgets/modules/ConnectivityBadgeUI';
 import ConnectivityManager from 'ringcentral-widgets/modules/ConnectivityManager';
 import LoginUI from 'ringcentral-widgets/modules/LoginUI';
-import { Modal } from 'ringcentral-widgets/modules/Modal';
-import { ModalUI } from 'ringcentral-widgets/modules/ModalUI';
+import { ModalUI } from 'ringcentral-widgets/modules/ModalUIV2';
 
 import RegionSettingsUI from 'ringcentral-widgets/modules/RegionSettingsUI';
 import RouterInteraction from 'ringcentral-widgets/modules/RouterInteraction';
@@ -72,6 +72,7 @@ import OAuth from '../OAuth';
 import { Adapter } from '../Adapter';
 import { ThirdPartyService } from '../ThirdPartyService';
 import { EvActivityCallUI } from '../EvActivityCallUI';
+import { EvCallHistoryUI } from '../EvCallHistoryUI';
 import { Environment } from '../Environment';
 import { formatCallFromEVCall } from '../../lib/formatCallFromEVCall';
 import { GenericPhone } from './interface';
@@ -80,13 +81,14 @@ import { GenericPhone } from './interface';
   providers: [
     { provide: 'LoginUI', useClass: LoginUI },
     { provide: 'EvCallHistory', useClass: EvCallHistory },
+    { provide: 'EvCallHistoryUI', useClass: EvCallHistoryUI },
     { provide: 'EvCallDisposition', useClass: EvCallDisposition },
     { provide: 'EvSettingsUI', useClass: EvSettingsUI },
+    { provide: 'EvChooseAccountUI', useClass: EvChooseAccountUI },
     { provide: 'Alert', useClass: Alert },
     { provide: 'AlertUI', useClass: AlertUI },
     { provide: 'Block', useClass: Block },
     { provide: 'BlockUI', useClass: BlockUI },
-    { provide: 'Modal', useClass: Modal },
     { provide: 'ModalUI', useClass: ModalUI },
     { provide: 'RegionSettingsUI', useClass: RegionSettingsUI },
     { provide: 'Brand', useClass: Brand },
@@ -221,6 +223,19 @@ export default class BasePhone extends RcModule {
       evCall.currentCall?.isMonitoring;
     evIntegratedSoftphone.onRinging(() => {
       adapter.popUpWindow();
+    });
+
+    evAuth.onAuthSuccess(async () => {
+      if (evAuth.isOnlyOneAgent) {
+        evAuth.setAgentId(evAuth.authenticateResponse.agents[0].agentId);
+        await evAuth.openSocketWithSelectedAgentId();
+      } else if (
+        !evAuth.agentId &&
+        routerInteraction.currentPath !== '/chooseAccount'
+      ) {
+        routerInteraction.push('/chooseAccount');
+      }
+      evAuth.closeAuthBlock();
     });
 
     evCallMonitor
