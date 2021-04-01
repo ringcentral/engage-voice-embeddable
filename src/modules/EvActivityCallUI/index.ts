@@ -10,8 +10,6 @@ import i18n from '@ringcentral-integration/engage-voice-widgets/modules/EvActivi
 import { EvActivityCallUI as BaseActivityCallUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvActivityCallUI';
 import { logTypes, tabManagerEvents } from '@ringcentral-integration/engage-voice-widgets/enums';
 
-import { formatCallFromEVCall } from '../../lib/formatCallFromEVCall';
-
 import { getCallInfos } from './utils/getCallInfos';
 import { Deps } from './interface';
 

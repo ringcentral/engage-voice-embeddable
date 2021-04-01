@@ -296,9 +296,7 @@ export default class BasePhone extends RcModule {
         contactMatcher.forceMatchNumber({
           phoneNumber: contactMatchIdentifyEncode({phoneNumber: call.ani, callType: call.callType}),
         });
-        adapter.onNewCall(
-          formatCallFromEVCall(call, contactMatcher.dataMapping),
-        );
+        adapter.onNewCall(evActivityCallUI.myActivityCallLog.call);
       })
       .onCallEnded(() => {
         this._checkRouterShouldLeave(routerInteraction);
