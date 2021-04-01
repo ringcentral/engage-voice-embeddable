@@ -109,12 +109,13 @@ class ThirdPartyService extends RcModuleV2<Deps>
       if (!data || Object.keys(data).length === 0) {
         return result;
       }
-      decodedQueries.forEach((query) => {
-        const phoneNumber = query.phoneNumber;
+      queries.forEach((query) => {
+        const decodedQuery = contactMatchIdentifyDecode(query);
+        const phoneNumber = decodedQuery.phoneNumber;
         if (data[phoneNumber] && Array.isArray(data[phoneNumber])) {
-          result[phoneNumber] = data[phoneNumber];
+          result[query] = data[phoneNumber];
         } else {
-          result[phoneNumber] = [];
+          result[query] = [];
         }
       });
       return result;

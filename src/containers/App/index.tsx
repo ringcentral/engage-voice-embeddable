@@ -4,6 +4,7 @@ import { CallerIdLabel } from '@ringcentral-integration/engage-voice-widgets/com
 import { QueueLabel } from '@ringcentral-integration/engage-voice-widgets/components/ManualDialSettingsPanel/QueueLabel';
 import { ActiveCallListPage } from '@ringcentral-integration/engage-voice-widgets/containers/ActiveCallListPage';
 import { ActivityCallLogPage } from '@ringcentral-integration/engage-voice-widgets/containers/ActivityCallLogPage';
+import { CallHistoryCallLogPage } from '@ringcentral-integration/engage-voice-widgets/containers/CallHistoryCallLogPage';
 import { DialerPage } from '@ringcentral-integration/engage-voice-widgets/containers/DialerPage';
 import { LoginPage } from '@ringcentral-integration/engage-voice-widgets/containers/LoginPage';
 import { MainViewPage } from '@ringcentral-integration/engage-voice-widgets/containers/MainViewPage';
@@ -75,6 +76,17 @@ const App: FunctionComponent<AppProps> = ({ phone }) => {
             >
               <Route path="/dialer" component={() => <DialerPage />} />
               <Route path="/history" component={CallHistoryPage} />
+              <Route
+                path="/history/callLog/:id/:method"
+                component={({
+                  params: { id, method },
+                }) => (
+                  <CallHistoryCallLogPage
+                    id={id}
+                    method={method}
+                  />
+                )}
+              />
               <Route
                 path="/manualDialSettings"
                 component={() => (

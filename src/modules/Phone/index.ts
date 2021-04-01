@@ -1,6 +1,8 @@
 import 'ringcentral-integration/lib/TabFreezePrevention';
 
 import { messageTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
+import { dialoutStatuses } from '@ringcentral-integration/engage-voice-widgets/enums/dialoutStatus';
+import { contactMatchIdentifyEncode } from '@ringcentral-integration/engage-voice-widgets/lib/contactMatchIdentify';
 // import { evStatus } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums/evStatus';
 import { EvActiveCallControl } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallControl';
 import { EvActiveCallListUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallListUI';
@@ -11,7 +13,6 @@ import { EvAuth } from '@ringcentral-integration/engage-voice-widgets/modules/Ev
 import { EvCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvCall';
 import { EvCallDataSource } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDataSource';
 import { EvCallDisposition } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDisposition';
-import { EvCallHistory } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallHistory';
 import { EvCallMonitor } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallMonitor';
 import { EvDialerUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvDialerUI';
 import { EvIntegratedSoftphone } from '@ringcentral-integration/engage-voice-widgets/modules/EvIntegratedSoftphone';
@@ -51,9 +52,11 @@ import Locale from 'ringcentral-integration/modules/Locale';
 import RateLimiter from 'ringcentral-integration/modules/RateLimiter';
 import RegionSettings from 'ringcentral-integration/modules/RegionSettings';
 import RolesAndPermissions from 'ringcentral-integration/modules/RolesAndPermissions';
-import Storage from 'ringcentral-integration/modules/Storage';
+import {
+  EvStorage,
+  EvStorageOptions,
+} from '@ringcentral-integration/engage-voice-widgets/modules/EvStorage';
 import Subscription from 'ringcentral-integration/modules/Subscription';
-import TabManager from 'ringcentral-integration/modules/TabManager';
 import AlertUI from 'ringcentral-widgets/modules/AlertUI';
 import { Beforeunload } from 'ringcentral-widgets/modules/Beforeunload';
 import { Block } from 'ringcentral-widgets/modules/Block';
@@ -73,6 +76,7 @@ import { Adapter } from '../Adapter';
 import { ThirdPartyService } from '../ThirdPartyService';
 import { EvActivityCallUI } from '../EvActivityCallUI';
 import { EvCallHistoryUI } from '../EvCallHistoryUI';
+import { EvCallHistory } from '../EvCallHistory';
 import { Environment } from '../Environment';
 import { formatCallFromEVCall } from '../../lib/formatCallFromEVCall';
 import { GenericPhone } from './interface';
@@ -99,7 +103,7 @@ import { GenericPhone } from './interface';
     { provide: 'ConnectivityBadgeUI', useClass: ConnectivityBadgeUI },
     { provide: 'Auth', useClass: Auth },
     { provide: 'OAuth', useClass: OAuth },
-    { provide: 'Storage', useClass: Storage },
+    { provide: 'Storage', useClass: EvStorage },
     { provide: 'RateLimiter', useClass: RateLimiter },
     { provide: 'Subscription', useClass: Subscription },
     { provide: 'DateTimeFormat', useClass: DateTimeFormat },
@@ -137,8 +141,8 @@ import { GenericPhone } from './interface';
       provide: 'StorageOptions',
       useValue: {
         StorageProvider: LocalForageStorage,
-      },
-      spread: true,
+        disableInactiveTabsWrite: true,
+      } as EvStorageOptions,
     },
     { provide: 'ContactMatcher', useClass: ContactMatcher },
     { provide: 'ActivityMatcher', useClass: ActivityMatcher },
@@ -235,7 +239,6 @@ export default class BasePhone extends RcModule {
       ) {
         routerInteraction.push('/chooseAccount');
       }
-      evAuth.closeAuthBlock();
     });
 
     evCallMonitor
@@ -247,11 +250,12 @@ export default class BasePhone extends RcModule {
           adapter.popUpWindow();
         }
         contactMatcher.forceMatchNumber({
-          phoneNumber: call.ani,
+          phoneNumber: contactMatchIdentifyEncode({phoneNumber: call.ani, callType: call.callType}),
         });
       })
       .onCallAnswered(async (call) => {
         await this._bindBeforeunload();
+        presence.setDialoutStatus(dialoutStatuses.callConnected);
         console.log('onCallAnswered');
         let isNewTab = false;
         if (evAgentSession.hasMultipleTabs) {
@@ -290,11 +294,9 @@ export default class BasePhone extends RcModule {
         evActivityCallUI.reset();
         evDialerUI.setToNumber('');
         contactMatcher.forceMatchNumber({
-          phoneNumber: call.ani,
+          phoneNumber: contactMatchIdentifyEncode({phoneNumber: call.ani, callType: call.callType}),
         });
-        adapter.onNewCall(
-          formatCallFromEVCall(call, contactMatcher.dataMapping),
-        );
+        adapter.onNewCall(evActivityCallUI.myActivityCallLog.call);
       })
       .onCallEnded(() => {
         this._checkRouterShouldLeave(routerInteraction);
