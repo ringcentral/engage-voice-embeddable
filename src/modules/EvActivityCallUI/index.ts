@@ -90,29 +90,41 @@ class EvActivityCallUI extends BaseActivityCallUI<Deps> {
     that._deps.evCallDisposition.callsMapping[that.callId],
     that.validated,
     that.required,
-    that._deps.contactMatcher.dataMapping,
     that._deps.locale.currentLocale,
     that.dispositionPickList,
   ])
-  get activityCallLog() : EvCurrentLog {
+  get myActivityCallLog() : EvCurrentLog {
     const currentCall = this.currentEvCall;
     if (!currentCall) {
-      return undefined;
+      return null;
     }
+    const { contactMatches = [], callType } = this.currentEvCall;
     const callId = this.callId;
     const callDisposition = this._deps.evCallDisposition.callsMapping[callId];
     const { dispositionId, notes } = callDisposition || {};
-    const contactMapping = this._deps.contactMatcher.dataMapping;
+    const name = contactMatches[0] && contactMatches[0].name;
     return {
-      currentEvRawCall: currentCall,
-      // the call which maps for rc component
-      call: formatCallFromEVCall(currentCall, contactMapping),
-      currentSessionId: callId,
-      // TODO: this will be remove when api can using.
-      currentLogCall: {
-        isFailed: false,
-        isAutoSave: false,
-        isCreated: false,
+      ...this.activityCallLog,
+      call: {
+        ...this.activityCallLog.call,
+        to: {
+          ...this.activityCallLog.call.to,
+          name:
+            callType === 'OUTBOUND'
+              ? name
+              : this.activityCallLog.call.to.name,
+        },
+        from: {
+          ...this.activityCallLog.call.from,
+          name:
+            callType !== 'OUTBOUND'
+              ? name
+              : this.activityCallLog.call.from.name,
+        },
+      },
+      showInfoMeta: {
+        title: '',
+        entity: null,
       },
       customLogFields: this.getCustomLogFields({ required: this.required, validated: this.validated }),
       task: {
@@ -126,13 +138,13 @@ class EvActivityCallUI extends BaseActivityCallUI<Deps> {
 
   @computed((that: EvActivityCallUI) => [
     that.currentEvCall,
-    that.activityCallLog,
+    that.myActivityCallLog,
     that._deps.locale.currentLocale,
   ])
   get basicInfo() {
     if (!this.currentEvCall) return null;
     const currentEvCall = this.currentEvCall;
-    const { call } = this.activityCallLog;
+    const { call } = this.myActivityCallLog;
     const isInbound = call.direction === 'INBOUND';
     const fromMatchName = call.from.name || call.from.phoneNumber;
     const toMatchName = call.to.name || call.to.phoneNumber;
@@ -189,7 +201,7 @@ class EvActivityCallUI extends BaseActivityCallUI<Deps> {
 
   async disposeCall() {
     try {
-      const callLog = this.activityCallLog;
+      const callLog = this.myActivityCallLog;
       await this._deps.thirdPartyService.logCall({
         call: callLog.call,
         task: callLog.task,
@@ -208,7 +220,7 @@ class EvActivityCallUI extends BaseActivityCallUI<Deps> {
     if (dispositionPickList.length === 0) {
       return false;
     }
-    const activityCallLog = this.activityCallLog;
+    const activityCallLog = this.myActivityCallLog;
     if (activityCallLog.call.direction === 'INBOUND') {
       return true;
     }
@@ -225,7 +237,7 @@ class EvActivityCallUI extends BaseActivityCallUI<Deps> {
     const originalProps = super.getUIProps({ id });
     return {
       ...originalProps,
-      currentLog: this.activityCallLog,
+      currentLog: this.myActivityCallLog,
       basicInfo: this.basicInfo,
     };
   }

@@ -2,16 +2,18 @@ import { keys, reduce } from 'ramda';
 
 import { EvCallData } from '@ringcentral-integration/engage-voice-widgets/interfaces/EvData.interface';
 
-function getNameFromContactMapping(contactMapping: any, phoneNumber: string) {
-  if (contactMapping[phoneNumber] && contactMapping[phoneNumber].length > 0) {
-    return contactMapping[phoneNumber][0].name;
-  }
+function getNameFromContactMapping(contactMatches: any[], phoneNumber: string) {
+  // const result = contactMatches.find(contactMatch => contactMatch.)
+  // if (contactMapping[phoneNumber] && contactMapping[phoneNumber].length > 0) {
+  //   return contactMapping[phoneNumber][0].name;
+  // }
+  // return phoneNumber;
   return phoneNumber;
 }
 
 export function formatCallFromEVCall(
   rawCall: EvCallData,
-  contactMapping: any = {},
+  contactMatches: any = [],
 ) {
   const { callType, dnis, uii, ani, queueDts, agentId, baggage } = rawCall;
 
@@ -34,11 +36,11 @@ export function formatCallFromEVCall(
     direction: callType,
     from: {
       phoneNumber: fromNumber,
-      name: getNameFromContactMapping(contactMapping, fromNumber),
+      name: getNameFromContactMapping(contactMatches, fromNumber),
     },
     to: {
       phoneNumber: toNumber,
-      name: getNameFromContactMapping(contactMapping, toNumber),
+      name: getNameFromContactMapping(contactMatches, toNumber),
     },
     telephonyStatus: 'CallConnected', // TODO handle with call state and agent state
     sessionId: rawCall.session.sessionId,
@@ -46,8 +48,8 @@ export function formatCallFromEVCall(
     partyId: agentId,
     startTime: new Date(queueDts).getTime(),
     offset: 0,
-    fromMatches: contactMapping[fromNumber],
-    toMatches: contactMapping[toNumber],
+    fromMatches: [],
+    toMatches: [],
     activityMatches: [],
     baggage,
     ivrString: ivrString,

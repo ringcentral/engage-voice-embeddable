@@ -40,13 +40,13 @@
     "yargs": "^14.0.0"
   },
   "dependencies": {
-    "@ringcentral/sdk": "^4.3.3",
-    "@ringcentral/juno": "^1.3.2-beta.3102-608720c9",
-    "@ringcentral/subscriptions": "^4.3.3",
-    "@ringcentral-integration/core": "^0.12.5",
+    "@ringcentral/sdk": "^4.4.1",
+    "@ringcentral/juno": "^1.4.1",
+    "@ringcentral/subscriptions": "^4.4.1",
+    "@ringcentral-integration/core": "^0.12.6",
     "@ringcentral-integration/i18n": "^2.0.1",
     "@ringcentral-integration/phone-number": "^1.0.7",
-    "@ringcentral-integration/engage-voice-widgets": "^0.12.5",
+    "@ringcentral-integration/engage-voice-widgets": "^0.12.6",
     "@rc-ex/core": "^0.4.2",
     "classnames": "^2.2.5",
     "dotenv": "^6.2.0",
@@ -64,8 +64,8 @@
     "react-router-redux": "^4.0.7",
     "redux": "^4.0.4",
     "ringcentral-client": "^1.0.0-beta.2",
-    "ringcentral-integration": "^0.12.5",
-    "ringcentral-widgets": "^0.12.5",
+    "ringcentral-integration": "^0.12.6",
+    "ringcentral-widgets": "^0.12.6",
     "styled-components": "^5.2.0"
   }
 }
