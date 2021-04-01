@@ -118,7 +118,6 @@ class ThirdPartyService extends RcModuleV2<Deps>
           result[query] = [];
         }
       });
-      console.log(result);
       return result;
     } catch (e) {
       console.error(e);
