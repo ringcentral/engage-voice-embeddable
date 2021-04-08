@@ -7,7 +7,7 @@ export default ObjectMap.prefixKeys([
   'popUpWindow',
   'searchAndScreenPop',
   'matchContacts',
-  'matchActivities',
+  'matchCallLogs',
   'logCall',
   'syncClosed',
   'syncMinimized',

@@ -21,7 +21,8 @@ window.addEventListener('message', function(event) {
     RCAdapter.registerService({
       name: 'TestService',
       callLoggerEnabled: true,
-      contactMatcherEnabled: true,
+      contactMatcherEnabled: true, // match contact with phone number
+      callLogMatcherEnabled: true, // match call log entity with call id
     });
     RCAdapter.transport.addListeners({
       push: function (data) { // listen push event from rc widget
@@ -60,6 +61,20 @@ window.addEventListener('message', function(event) {
           RCAdapter.transport.response({
             requestId: req.requestId,
             result: contactMapping,
+          });
+          return;
+        }
+        if (payload.requestType === 'rc-ev-matchCallLogs') {
+          var queries = payload.data;
+          console.log('matchCallLogs:', queries);
+          var callLogMapping = {};
+          // match the logged call entity
+          callLogMapping[queries[0]] = [{
+            id: your_logged_call_entity_id, // logged call entity id
+          }];
+          RCAdapter.transport.response({
+            requestId: req.requestId,
+            result: callLogMapping,
           });
           return;
         }

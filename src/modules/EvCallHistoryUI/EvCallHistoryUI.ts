@@ -54,10 +54,12 @@ class EvCallHistoryUI
     newCalls = newCalls.map((call) => {
       const dispositionCall = this._deps.evCallDisposition
         .dispositionStateMapping[call.id];
-
+      const isDisposed =
+        Boolean(dispositionCall && dispositionCall?.disposed) ||
+        call.activityMatches.length > 0
       return {
         ...call,
-        isDisposed: Boolean(dispositionCall && dispositionCall?.disposed),
+        isDisposed,
       };
     });
 
@@ -69,7 +71,7 @@ class EvCallHistoryUI
 
   getUIFunctions() {
     return {
-      // getActionMenu: (call: CallLog) => this.getActionMenu(call),
+      getActionMenu: (call: CallLog) => this.getActionMenu(call),
     };
   }
 

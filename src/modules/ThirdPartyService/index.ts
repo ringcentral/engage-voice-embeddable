@@ -15,6 +15,7 @@ import messageTypes from '../../enums/messageTypes';
 @Module({
   deps: [
     'ContactMatcher',
+    'ActivityMatcher',
     { dep: 'ThirdPartyServiceOptions', optional: true },
   ],
 })
@@ -40,6 +41,7 @@ class ThirdPartyService extends RcModuleV2<Deps>
     name: '',
     callLoggerEnabled: false,
     contactMatcherEnabled: false,
+    callLogMatcherEnabled: false,
   };
 
   @action
@@ -48,6 +50,7 @@ class ThirdPartyService extends RcModuleV2<Deps>
       name: service.name,
       callLoggerEnabled: service.callLoggerEnabled,
       contactMatcherEnabled: service.contactMatcherEnabled,
+      callLogMatcherEnabled: service.callLogMatcherEnabled,
     };
   }
 
@@ -73,6 +76,10 @@ class ThirdPartyService extends RcModuleV2<Deps>
       if (data.service.contactMatcherEnabled) {
         this.registerContactMatch();
         this._deps.contactMatcher.triggerMatch();
+      }
+      if (data.service.callLogMatcherEnabled) {
+        this.registerActivityMatch();
+        this._deps.activityMatcher.triggerMatch();
       }
     }
   }
@@ -125,6 +132,48 @@ class ThirdPartyService extends RcModuleV2<Deps>
     }
   }
 
+  registerActivityMatch() {
+    if (this._deps.activityMatcher._searchProviders.has(this.service.name))
+      return;
+    this._deps.activityMatcher.addSearchProvider({
+      name: this.service.name,
+      searchFn: async ({ queries }: any) => {
+        const result = await this.matchActivities(queries);
+        return result;
+      },
+      readyCheckFn: () => true,
+    });
+  }
+
+  async matchActivities(queries: any[]) {
+    try {
+      const result = {};
+      if (!this.service.callLogMatcherEnabled) {
+        return result;
+      }
+      const data = await this.transport.request({
+        payload: {
+          requestType: this.messageTypes.matchCallLogs,
+          data: queries,
+        },
+      });
+      if (!data || Object.keys(data).length === 0) {
+        return result;
+      }
+      queries.forEach((query) => {
+        if (data[query] && Array.isArray(data[query])) {
+          result[query] = data[query];
+        } else {
+          result[query] = [];
+        }
+      });
+      return result;
+    } catch (e) {
+      console.error(e);
+      return {};
+    }
+  }
+
   async logCall(data) {
     if (!this.service.callLoggerEnabled) {
       return;
@@ -135,6 +184,12 @@ class ThirdPartyService extends RcModuleV2<Deps>
         data,
       },
     });
+    if (this.service.callLogMatcherEnabled) {
+      this._deps.activityMatcher.match({
+        queries: [data.sessionId],
+        ignoreCache: true
+      });
+    }
   }
 }
 

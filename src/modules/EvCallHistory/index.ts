@@ -44,11 +44,9 @@ class EvCallHistory extends BaseEvCallHistory {
         name = contactMatches[0].name;
       }
       if (contactMatches.length && activityMatches.length) {
-        // need to convert 18 digit ID to 15 for compatible in classic mode
-        // https://developer.salesforce.com/forums/?id=906F0000000BQGnIAO
-        const activity = activityMatches[0].slice(0, 15);
+        const contactId = activityMatches[0]?.contactId;
         const matched = contactMatches.find(
-          (match: { id: string }) => match.id.slice(0, 15) === activity,
+          (match: { id: string }) => match.id === contactId,
         );
         if (matched) {
           name = matched.name;
