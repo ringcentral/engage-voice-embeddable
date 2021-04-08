@@ -119,6 +119,7 @@ class EvActivityCallUI extends BaseActivityCallUI<Deps> {
               ? name
               : this.activityCallLog.call.from.name,
         },
+        recordingUrl: this.activityCallLog.currentEvRawCall?.session?.recordingUrl,
       },
       showInfoMeta: {
         title: '',
