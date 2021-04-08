@@ -203,6 +203,7 @@ class EvActivityCallUI extends BaseActivityCallUI<Deps> {
       await this._deps.thirdPartyService.logCall({
         call: callLog.call,
         task: callLog.task,
+        sessionId: callLog.currentSessionId,
       });
     } catch (e) {
       console.error(e);
