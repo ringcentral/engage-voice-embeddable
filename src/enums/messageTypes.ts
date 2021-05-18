@@ -18,5 +18,6 @@ export default ObjectMap.prefixKeys([
   'pushLocale',
   'setEnvironment',
   'newCall',
+  'ringCall',
   'loginPopup',
 ], 'rc-ev');

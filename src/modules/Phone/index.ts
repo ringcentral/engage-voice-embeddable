@@ -78,7 +78,7 @@ import { EvActivityCallUI } from '../EvActivityCallUI';
 import { EvCallHistoryUI } from '../EvCallHistoryUI';
 import { EvCallHistory } from '../EvCallHistory';
 import { Environment } from '../Environment';
-import { formatCallFromEVCall } from '../../lib/formatCallFromEVCall';
+import { formatEVCall } from '../../lib/formatEVCall';
 import { GenericPhone } from './interface';
 
 @ModuleFactory({
@@ -246,8 +246,9 @@ export default class BasePhone extends RcModule {
         console.log('onCallRinging');
         await this._bindBeforeunload();
         const call = evClient.currentCall;
-        if (call.callType === 'INBOUND' && evActivityCallUI.isActiveTab) {
+        if (call.callType === 'INBOUND') {
           adapter.popUpWindow();
+          adapter.onRingCall(formatEVCall(call));
         }
         contactMatcher.forceMatchNumber({
           phoneNumber: contactMatchIdentifyEncode({phoneNumber: call.ani, callType: call.callType}),
