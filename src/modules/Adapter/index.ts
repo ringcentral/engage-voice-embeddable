@@ -135,6 +135,13 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
     });
   }
 
+  onRingCall(call) {
+    this._postMessage({
+      type: this.messageTypes.ringCall,
+      call,
+    });
+  }
+
   setEnvironment() {
     if (window.toggleEnv) {
       window.toggleEnv();
