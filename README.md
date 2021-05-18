@@ -33,6 +33,7 @@ Visit [website](https://ringcentral.github.io/engage-voice-embeddable/) in GitHu
 * [Customize Authorization](docs/customize-authorization.md)
 * [API](docs/api.md)
 * [Message Transport](docs/message-transport.md)
+* [Call Events](docs/call-events.md)
 
 ## Awesome Embeddable projects
 

@@ -30,6 +30,9 @@ window.addEventListener('message', function(event) {
         if (data.type === 'rc-ev-newCall') {
           console.log('new call:', data.call);
         }
+        if (data.type === 'rc-ev-ringCall') {
+          console.log('ringing call:', data.call);
+        }
       },
       request: function (req) { // listen request event from rc widget
         var payload = req.payload;
