@@ -1,6 +1,6 @@
 import { EvCallData } from '@ringcentral-integration/engage-voice-widgets/interfaces';
 
-export function formatEVCall(evCall: EvCallData) {
+export function formatEvCall(evCall: EvCallData) {
   const { callType, dnis, uii, ani, queueDts, agentId, message } = evCall;
   const fromNumber = callType === 'OUTBOUND' ? dnis : ani;
   const toNumber = callType === 'OUTBOUND' ? ani : dnis;
