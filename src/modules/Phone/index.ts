@@ -248,8 +248,8 @@ export default class BasePhone extends RcModule {
         const call = evClient.currentCall;
         if (call.callType === 'INBOUND') {
           adapter.popUpWindow();
-          adapter.onRingCall(formatEvCall(call));
         }
+        adapter.onRingCall(formatEvCall(call));
         contactMatcher.forceMatchNumber({
           phoneNumber: contactMatchIdentifyEncode({phoneNumber: call.ani, callType: call.callType}),
         });
@@ -302,6 +302,7 @@ export default class BasePhone extends RcModule {
       .onCallEnded(() => {
         this._checkRouterShouldLeave(routerInteraction);
         this._removeBeforeunload();
+        adapter.onEndCall(evActivityCallUI.myActivityCallLog.call);
         if (!evActivityCallUI.showSubmitStep) {
           evActivityCallUI.gotoDialWithoutSubmit();
           return;

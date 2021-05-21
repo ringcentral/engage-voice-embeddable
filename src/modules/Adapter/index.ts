@@ -142,6 +142,13 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
     });
   }
 
+  onEndCall(call) {
+    this._postMessage({
+      type: this.messageTypes.endCall,
+      call,
+    });
+  }
+
   setEnvironment() {
     if (window.toggleEnv) {
       window.toggleEnv();
