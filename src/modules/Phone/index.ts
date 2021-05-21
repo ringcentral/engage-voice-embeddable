@@ -302,6 +302,7 @@ export default class BasePhone extends RcModule {
       .onCallEnded(() => {
         this._checkRouterShouldLeave(routerInteraction);
         this._removeBeforeunload();
+        adapter.onEndCall(evActivityCallUI.myActivityCallLog.call);
         if (!evActivityCallUI.showSubmitStep) {
           evActivityCallUI.gotoDialWithoutSubmit();
           return;
