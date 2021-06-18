@@ -142,6 +142,13 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
     });
   }
 
+  onSIPRingCall(message) {
+    this._postMessage({
+      type: this.messageTypes.sipRingCall,
+      message,
+    });
+  }
+
   onEndCall(call) {
     this._postMessage({
       type: this.messageTypes.endCall,

@@ -13,6 +13,9 @@ window.addEventListener('message', (e) => {
     if (data.payload.type === 'rc-ev-ringCall') {
       console.log(data.payload.call)
     }
+    if (data.payload.type === 'rc-ev-sipRingCall') {
+      console.log(data.payload) // Fired on Integrated softphone ringing, not call information
+    }
   }
 });
 ```
