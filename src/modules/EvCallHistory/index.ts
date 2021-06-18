@@ -15,13 +15,7 @@ class EvCallHistory extends BaseEvCallHistory {
     that.activityMatches,
   ])
   get formattedCalls() {
-    const lastWeekDayTimestamp = this._getLastWeekDayTimestamp();
-    // max 250 and 7 days
-    const calls = this.rawCalls
-      .slice(0, 250)
-      .filter((call) => call.timestamp >= lastWeekDayTimestamp);
-
-    return calls.map((call) => {
+    return this.rawCalls.slice(0, 250).map((call) => {
       const contactMatchIdentify = contactMatchIdentifyEncode({
         phoneNumber: call.ani,
         callType: call.callType,

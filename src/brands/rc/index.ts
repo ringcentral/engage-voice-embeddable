@@ -3,6 +3,7 @@ export default {
   brandCode: 'rc',
   code: 'rc',
   name: 'RingCentral',
-  appName: 'RingCentral',
-  fullName: 'RingCentral',
+  appName: 'RingCentral Engage Cloud Contact Center',
+  fullName: 'RingCentral Engage Cloud Contact Center',
+  application: 'RingCentral Engage Cloud Contact Center',
 };

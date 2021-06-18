@@ -32,32 +32,26 @@ import { MainViewUI } from '@ringcentral-integration/engage-voice-widgets/module
 import { SDK } from '@ringcentral/sdk';
 import { RingCentralClient } from 'ringcentral-integration/lib/RingCentralClient';
 import sleep from 'ringcentral-integration/lib/sleep';
+import { TabManagerOptions } from 'ringcentral-integration/modules/TabManagerV2';
 import { ModuleFactory } from 'ringcentral-integration/lib/di';
 import LocalForageStorage from 'ringcentral-integration/lib/LocalForageStorage';
 import RcModule from 'ringcentral-integration/lib/RcModule';
 import { waitWithCheck } from 'ringcentral-integration/lib/time';
-import AccountInfo from 'ringcentral-integration/modules/AccountInfo';
-import ActivityMatcher from 'ringcentral-integration/modules/ActivityMatcher';
-import Alert from 'ringcentral-integration/modules/Alert';
-import Auth from 'ringcentral-integration/modules/Auth';
-import AvailabilityMonitor from 'ringcentral-integration/modules/AvailabilityMonitor';
-import Brand from 'ringcentral-integration/modules/Brand';
-import ConnectivityMonitor from 'ringcentral-integration/modules/ConnectivityMonitor';
-import ContactMatcher from 'ringcentral-integration/modules/ContactMatcher';
-import DateTimeFormat from 'ringcentral-integration/modules/DateTimeFormat';
-import DialingPlan from 'ringcentral-integration/modules/DialingPlan';
-import ExtensionInfo from 'ringcentral-integration/modules/ExtensionInfo';
-import GlobalStorage from 'ringcentral-integration/modules/GlobalStorage';
-import Locale from 'ringcentral-integration/modules/Locale';
-import RateLimiter from 'ringcentral-integration/modules/RateLimiter';
-import RegionSettings from 'ringcentral-integration/modules/RegionSettings';
-import RolesAndPermissions from 'ringcentral-integration/modules/RolesAndPermissions';
+import { ActivityMatcher } from 'ringcentral-integration/modules/ActivityMatcherV2';
+import { Alert } from 'ringcentral-integration/modules/AlertV2';
+import { Auth } from 'ringcentral-integration/modules/AuthV2';
+import { Brand } from 'ringcentral-integration/modules/BrandV2';
+import { ConnectivityMonitor } from 'ringcentral-integration/modules/ConnectivityMonitorV2';
+import { ContactMatcher } from 'ringcentral-integration/modules/ContactMatcherV2';
+import { DateTimeFormat } from 'ringcentral-integration/modules/DateTimeFormatV2';
+import { GlobalStorage, GlobalStorageOptions } from 'ringcentral-integration/modules/GlobalStorageV2';
+import { Locale } from 'ringcentral-integration/modules/LocaleV2';
+import { RateLimiter } from 'ringcentral-integration/modules/RateLimiterV2';
 import {
   EvStorage,
   EvStorageOptions,
 } from '@ringcentral-integration/engage-voice-widgets/modules/EvStorage';
-import Subscription from 'ringcentral-integration/modules/Subscription';
-import AlertUI from 'ringcentral-widgets/modules/AlertUI';
+import { AlertUI } from 'ringcentral-widgets/modules/AlertUI';
 import { Beforeunload } from 'ringcentral-widgets/modules/Beforeunload';
 import { Block } from 'ringcentral-widgets/modules/Block';
 import { BlockUI } from 'ringcentral-widgets/modules/BlockUI';
@@ -66,7 +60,6 @@ import ConnectivityManager from 'ringcentral-widgets/modules/ConnectivityManager
 import LoginUI from 'ringcentral-widgets/modules/LoginUI';
 import { ModalUI } from 'ringcentral-widgets/modules/ModalUIV2';
 
-import RegionSettingsUI from 'ringcentral-widgets/modules/RegionSettingsUI';
 import RouterInteraction from 'ringcentral-widgets/modules/RouterInteraction';
 
 import { EvClient } from '../EvClient';
@@ -94,7 +87,6 @@ import { GenericPhone } from './interface';
     { provide: 'Block', useClass: Block },
     { provide: 'BlockUI', useClass: BlockUI },
     { provide: 'ModalUI', useClass: ModalUI },
-    { provide: 'RegionSettingsUI', useClass: RegionSettingsUI },
     { provide: 'Brand', useClass: Brand },
     { provide: 'Locale', useClass: Locale },
     { provide: 'GlobalStorage', useClass: GlobalStorage },
@@ -105,23 +97,9 @@ import { GenericPhone } from './interface';
     { provide: 'OAuth', useClass: OAuth },
     { provide: 'Storage', useClass: EvStorage },
     { provide: 'RateLimiter', useClass: RateLimiter },
-    { provide: 'Subscription', useClass: Subscription },
     { provide: 'DateTimeFormat', useClass: DateTimeFormat },
     { provide: 'RouterInteraction', useClass: RouterInteraction },
-    { provide: 'AccountInfo', useClass: AccountInfo },
     { provide: 'Environment', useClass: Environment },
-    { provide: 'RegionSettings', useClass: RegionSettings },
-    { provide: 'RolesAndPermissions', useClass: RolesAndPermissions },
-    { provide: 'ExtensionInfo', useClass: ExtensionInfo },
-    { provide: 'DialingPlan', useClass: DialingPlan },
-    { provide: 'AvailabilityMonitor', useClass: AvailabilityMonitor },
-    {
-      provide: 'AvailabilityMonitorOptions',
-      spread: true,
-      useValue: {
-        enabled: true,
-      },
-    },
     {
       provide: 'EnvironmentOptions',
       useFactory({ sdkConfig }) {
@@ -143,6 +121,18 @@ import { GenericPhone } from './interface';
         StorageProvider: LocalForageStorage,
         disableInactiveTabsWrite: true,
       } as EvStorageOptions,
+    },
+    {
+      provide: 'TabManagerOptions',
+      useValue: {
+        enableCache: true,
+      } as TabManagerOptions,
+    },
+    {
+      provide: 'GlobalStorageOptions',
+      useValue: {
+        StorageProvider: LocalForageStorage,
+      } as GlobalStorageOptions,
     },
     { provide: 'ContactMatcher', useClass: ContactMatcher },
     { provide: 'ActivityMatcher', useClass: ActivityMatcher },
@@ -451,7 +441,7 @@ export function createPhone({
           hideCallNote,
         },
       },
-      { provide: 'BrandOptions', useValue: brandConfig, spread: true },
+      { provide: 'BrandConfig', useValue: brandConfig },
       {
         provide: 'OAuthOptions',
         useValue: {
