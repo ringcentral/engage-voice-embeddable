@@ -451,7 +451,7 @@ export function createPhone({
         },
         spread: true,
       },
-      { provide: 'AuthOptions', useValue: { usePKCE }, spread: true },
+      { provide: 'AuthOptions', useValue: { usePKCE } },
       {
         provide: 'Version',
         useFactory() {
