@@ -51,7 +51,7 @@ $ git clone https://github.com/ringcentral/engage-voice-embeddable.git
 
 1. Create a [RingCentral developer free account](https://developer.ringcentral.com)
 2. Create a RingCentral app with platform type - "Browser Based"
-3. Add permissions `Read Accounts` and `Webhook Subscription` to your app.
+3. Add permissions `Read Accounts` to your app.
 4. Add redirect uri `http://localhost:8080/redirect.html` to your app settings.
 
 ### Create environment variables file in project root path
