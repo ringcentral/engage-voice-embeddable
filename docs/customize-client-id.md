@@ -4,7 +4,7 @@ Developers can config this widget to use their own RingCentral app client id.
 
 1. Create a [RingCentral developer free account](https://developer.ringcentral.com)
 2. Create a RingCentral app with platform type - "Browser Based"
-3. And add permissions `Read Accounts` and `Webhook Subscriptions` to your app.
+3. And add permissions `Read Accounts` to your app.
 4. Add redirect uri `https://ringcentral.github.io/engage-voice-embeddable/redirect.html` to your app settings.
 
 ## Adapter JS way
