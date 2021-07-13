@@ -80,16 +80,19 @@
         RCAdapter.transport.addListeners({
           push: function (data) {
             if (data.type === 'rc-ev-newCall') {
-              console.log('new call:', data.call);
+              console.log('New call:', data.call);
             }
             if (data.type === 'rc-ev-ringCall') {
-              console.log('ringing call:', data.call);
+              console.log('Call Ringing:', data.call);
             }
             if (data.type === 'rc-ev-sipRingCall') {
-              console.log('SIP ringing call.');
+              console.log('SIP call ringing.');
             }
             if (data.type === 'rc-ev-endCall') {
-              console.log('end call:', data.call);
+              console.log('Call ended:', data.call);
+            }
+            if (data.type === 'rc-ev-sipEndCall') {
+              console.log('SIP call ended.');
             }
           },
           request: function (req) {

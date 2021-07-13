@@ -14,7 +14,7 @@ window.addEventListener('message', (e) => {
       console.log(data.payload.call)
     }
     if (data.payload.type === 'rc-ev-sipRingCall') {
-      console.log(data.payload) // Fired on Integrated softphone ringing, not call information
+      console.log(data.payload) // Fired on Integrated softphone ringing, no call information
     }
   }
 });
@@ -48,7 +48,10 @@ window.addEventListener('message', (e) => {
   const data = e.data;
   if (data.type === "MessageTransport-push") {
     if (data.payload.type === 'rc-ev-endCall') {
-      console.log(data.payload.call)
+      console.log(data.payload.call);
+    }
+    if (data.payload.type === 'rc-ev-sipEndCall') {
+      console.log(data.payload); // Fired on Integrated softphone call ended, no call information
     }
   }
 });

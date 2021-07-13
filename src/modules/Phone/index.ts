@@ -1,6 +1,7 @@
 import 'ringcentral-integration/lib/TabFreezePrevention';
 
 import { messageTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
+import { EvCallbackTypes } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums';
 import { dialoutStatuses } from '@ringcentral-integration/engage-voice-widgets/enums/dialoutStatus';
 import { contactMatchIdentifyEncode } from '@ringcentral-integration/engage-voice-widgets/lib/contactMatchIdentify';
 // import { evStatus } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums/evStatus';
@@ -210,6 +211,7 @@ export default class BasePhone extends RcModule {
     evAuth,
     presence,
     evIntegratedSoftphone,
+    evSubscription,
   }: GenericPhone) {
     evIntegratedSoftphone.autoAnswerCheckFn = () =>
       evAuth.autoAnswerCalls ||
@@ -218,6 +220,9 @@ export default class BasePhone extends RcModule {
     evIntegratedSoftphone.onRinging(() => {
       adapter.popUpWindow();
       adapter.onSIPRingCall({ message: 'SIP Ringing' });
+      evSubscription.once(EvCallbackTypes.SIP_ENDED, () => {
+        adapter.onSIPEndCall({ message: 'SIP Call Ended' });
+      });
     });
 
     evAuth.onAuthSuccess(async () => {

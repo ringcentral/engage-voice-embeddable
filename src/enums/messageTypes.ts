@@ -19,7 +19,8 @@ export default ObjectMap.prefixKeys([
   'setEnvironment',
   'newCall',
   'ringCall',
-  'sipRingCall',
   'endCall',
+  'sipRingCall',
+  'sipEndCall',
   'loginPopup',
 ], 'rc-ev');
