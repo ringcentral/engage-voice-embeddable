@@ -1,6 +1,6 @@
 import { EvClient as EvClientBase } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient';
 
-import { Module } from 'ringcentral-integration/lib/di';
+import { Module } from '@ringcentral-integration/commons/lib/di';
 
 @Module({
   name: 'EvClient',

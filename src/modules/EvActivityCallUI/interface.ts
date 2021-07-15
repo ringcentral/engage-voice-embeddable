@@ -1,5 +1,5 @@
-import Storage from 'ringcentral-integration/modules/Storage';
-import ContactMatcher from 'ringcentral-integration/modules/ContactMatcher';
+import Storage from '@ringcentral-integration/commons/modules/Storage';
+import ContactMatcher from '@ringcentral-integration/commons/modules/ContactMatcher';
 import { ThirdPartyService } from '../ThirdPartyService';
 
 export interface Deps {

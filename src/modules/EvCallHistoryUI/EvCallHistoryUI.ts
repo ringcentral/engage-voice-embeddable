@@ -1,13 +1,12 @@
 import { RcUIModuleV2 } from '@ringcentral-integration/core';
-import { Module } from 'ringcentral-integration/lib/di';
-import { callDirection } from 'ringcentral-integration/enums/callDirections';
-import { callLogMethods } from '@ringcentral-integration/engage-voice-widgets/interfaces/EvActivityCallUI.interface';
+import { Module } from '@ringcentral-integration/commons/lib/di';
+import { callDirection } from '@ringcentral-integration/commons/enums/callDirections';
 import { NewNote } from '@ringcentral/juno/icon';
 
 import {
   CallLog,
   CallLogMenu,
-} from 'ringcentral-integration/interfaces/CallLog.interface';
+} from '@ringcentral-integration/widgets/components/CallHistoryPanel/CallHistoryPanel.interface';
 
 import EditCallLogSvg from '../../assets/icon-edit-call-log.svg'; // TODO: wait for edit_note icon
 
@@ -75,13 +74,8 @@ class EvCallHistoryUI
     };
   }
 
-  createUpdateCallLog(id: string, isDisposed: boolean) {
-    this._deps.evActivityCallUI.changeSavingStatus(
-      isDisposed ? callLogMethods.update : callLogMethods.create,
-    );
-    const url = `/history/callLog/${id}/${
-      isDisposed ? callLogMethods.update : callLogMethods.create
-    }`;
+  goCreateCallLogPage(id: string) {
+    const url = `/history/callLog/${id}/create`;
     this._deps.routerInteraction.push(url);
   }
 
@@ -96,7 +90,7 @@ class EvCallHistoryUI
           `${isDisposed ? 'update' : 'create'}CallLog`,
           currentLocale,
         ),
-        action: () => this.createUpdateCallLog(id, isDisposed),
+        action: () => this.goCreateCallLogPage(id),
       },
     ];
   }

@@ -1,7 +1,7 @@
 import webpack from 'webpack';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import path from 'path';
-import getBaseConfig from 'ringcentral-widgets/lib/getWebpackConfig';
+import getBaseConfig from '@ringcentral-integration/widgets/lib/getWebpackConfig';
 import { getBrandConfig } from '../brands';
 import * as packageConfig from '../../package.json';
 

@@ -1,5 +1,5 @@
 import { EvPhone } from '@ringcentral-integration/engage-voice-widgets/interfaces';
-import ContactMatcher from 'ringcentral-integration/modules/ContactMatcher';
+import ContactMatcher from '@ringcentral-integration/commons/modules/ContactMatcher';
 
 import { Adapter } from '../Adapter';
 import { ThirdPartyService } from '../ThirdPartyService';
