@@ -1314,19 +1314,44 @@
     core-js "^2.6.11"
     typescript "^3.9.2"
 
-"@ringcentral-integration/core@^0.13.0":
-  version "0.13.0"
-  resolved "https://registry.yarnpkg.com/@ringcentral-integration/core/-/core-0.13.0.tgz#d4675465c54e508ace4b4467925e98c84a367e9a"
-  integrity sha512-FxcQoGtm5MtnipKo3yXJd6ENSKdmDWxWkDr1x/khchljjruJyZ5ekIzBkgCXEpcBxTjrlG9tF4vML0SwNvrVew==
+"@ringcentral-integration/commons@^0.13.1":
+  version "0.13.1"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/commons/-/commons-0.13.1.tgz#7b874e40b6a8ab650b4154e62513e7ed07e990a2"
+  integrity sha512-4zWkmMj5+TfnANocnnoA/8hqLJK2aetD3F/Noa6h80fCE6RzZ9p/tlTOJVXRh2siNmxTMUeo0XN/C6F4aaa6tw==
+  dependencies:
+    "@sentry/browser" "^5.11.1"
+    bowser "^2.5.3"
+    camelcase "^6.0.0"
+    data-transport "^1.3.0"
+    file-loader "^3.0.1"
+    json-mask "^0.3.8"
+    localforage "^1.7.3"
+    moment "^2.24.0"
+    prettier "^2.1.0"
+    pubnub "^4.20.1"
+    ramda "^0.27.0"
+    redux "^4.0.5"
+    reselect "^2.5.4"
+    ringcentral-call "^0.2.13"
+    ringcentral-call-control "^0.2.5"
+    ringcentral-web-phone "^0.8.6"
+    url-loader "^1.1.2"
+    uuid "^8.3.0"
+    yards "^0.1.4"
+
+"@ringcentral-integration/core@^0.13.1":
+  version "0.13.1"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/core/-/core-0.13.1.tgz#29d4e02132d3bc667a469b05723de23f6dec1f7a"
+  integrity sha512-nTbhQeSqrQa/S/0ipv8NzdcRW/q6gRCobf+IIZluveywIMHQ5dK+YZoAylXMlZ45Z4dS6BwPzsUCor3n+gi32g==
   dependencies:
     immer "^9.0.2"
     ramda "^0.27.0"
     redux "^4.0.5"
 
-"@ringcentral-integration/engage-voice-widgets@^0.13.0":
-  version "0.13.0"
-  resolved "https://registry.yarnpkg.com/@ringcentral-integration/engage-voice-widgets/-/engage-voice-widgets-0.13.0.tgz#6442c205ba54c6dcfec560c59812159a7800afbd"
-  integrity sha512-OlT9rXQGwn/dZdTv6Xnc8ZlZT8P8IhDah6ixcmcyoNtCVzLPHTGhUaHxKVoVYnSSAfc0gQQC50K9xZQwIRGOrg==
+"@ringcentral-integration/engage-voice-widgets@^0.13.1":
+  version "0.13.1"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/engage-voice-widgets/-/engage-voice-widgets-0.13.1.tgz#1457fa6ebf5333c9d3b144c1282b503c35599222"
+  integrity sha512-Sv83h9qWjbB3jZmUQUmQVVDWKUBZxMtgwxU3bjTxi6xDPnv7GOgMOnX3Dq4X0UWBF6n2KnigdeUwq73EoZN/nA==
   dependencies:
     classnames "^2.2.6"
     format-message "^6.2.3"
@@ -1371,6 +1396,29 @@
   dependencies:
     libphonenumber-js "^1.7.29"
     ramda "^0.26.1"
+
+"@ringcentral-integration/widgets@^0.13.1":
+  version "0.13.1"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/widgets/-/widgets-0.13.1.tgz#da307d9c984944ce64af1ce5489e616a6688494e"
+  integrity sha512-QKiVfU384qcdOkUWCVa+d6jYp9Mfut21FAzNXMcUWMnTjbZK/5S+58RKGsEyReRYlVib72rrH/aezP4zKFf4Cw==
+  dependencies:
+    animate.css "^3.5.2"
+    classnames "^2.2.5"
+    dedent "^0.7.0"
+    normalize-css "^2.3.1"
+    prop-types "^15.7.2"
+    qs "^6.8.0"
+    ramda "^0.27.0"
+    rc-tooltip "^3.4.6"
+    react-svg-loader "^3.0.3"
+    react-transition-group "^2.2.1"
+    react-virtualized "^9.19.1"
+    react-widgets "^4.1.1"
+    react-widgets-moment "^4.0.4"
+    reselect "^2.5.4"
+    through2 "^2.0.5"
+    url-parse "^1.2.0"
+    uuid "^8.3.0"
 
 "@ringcentral/juno@^1.8.3-beta.4905-adf6ee90":
   version "1.8.4"
@@ -8229,31 +8277,6 @@ ringcentral-client@^1.0.0-beta.2:
     form-data "^2.1.2"
     isomorphic-fetch "^2.2.1"
 
-ringcentral-integration@^0.13.0:
-  version "0.13.0"
-  resolved "https://registry.yarnpkg.com/ringcentral-integration/-/ringcentral-integration-0.13.0.tgz#bfe9b77b665602bc83d5df4842e7f874f0fa3c75"
-  integrity sha512-OOWpw0UD8zo2yeQRnpaR7xiclu1r20qUXev4mpsimcVNnA6/m2+CSqVn1oPtyVPHPNiXTWLSYjzXBRYXGPrZpA==
-  dependencies:
-    "@sentry/browser" "^5.11.1"
-    bowser "^2.5.3"
-    camelcase "^6.0.0"
-    data-transport "^1.3.0"
-    file-loader "^3.0.1"
-    json-mask "^0.3.8"
-    localforage "^1.7.3"
-    moment "^2.24.0"
-    prettier "^2.1.0"
-    pubnub "^4.20.1"
-    ramda "^0.27.0"
-    redux "^4.0.5"
-    reselect "^2.5.4"
-    ringcentral-call "^0.2.13"
-    ringcentral-call-control "^0.2.5"
-    ringcentral-web-phone "^0.8.6"
-    url-loader "^1.1.2"
-    uuid "^8.3.0"
-    yards "^0.1.4"
-
 ringcentral-web-phone@^0.8.6:
   version "0.8.6"
   resolved "https://registry.yarnpkg.com/ringcentral-web-phone/-/ringcentral-web-phone-0.8.6.tgz#0a052f7b5d70e65c2154d5ead600546d4643f355"
@@ -8261,29 +8284,6 @@ ringcentral-web-phone@^0.8.6:
   dependencies:
     getstats "1.2.0"
     sip.js "0.13.5"
-
-ringcentral-widgets@^0.13.0:
-  version "0.13.0"
-  resolved "https://registry.yarnpkg.com/ringcentral-widgets/-/ringcentral-widgets-0.13.0.tgz#d6903ad147ff8cc55baf128cbc47a45cf5ae1456"
-  integrity sha512-kL99sT1TBehD5wcVkG24y75lQGd7u5fuOXYJciNWgk2kbA/9rsuHukItiXDOeij0exHEubdnUvlqe4Xi7T1ghg==
-  dependencies:
-    animate.css "^3.5.2"
-    classnames "^2.2.5"
-    dedent "^0.7.0"
-    normalize-css "^2.3.1"
-    prop-types "^15.7.2"
-    qs "^6.8.0"
-    ramda "^0.27.0"
-    rc-tooltip "^3.4.6"
-    react-svg-loader "^3.0.3"
-    react-transition-group "^2.2.1"
-    react-virtualized "^9.19.1"
-    react-widgets "^4.1.1"
-    react-widgets-moment "^4.0.4"
-    reselect "^2.5.4"
-    through2 "^2.0.5"
-    url-parse "^1.2.0"
-    uuid "^8.3.0"
 
 ripemd160@^2.0.0, ripemd160@^2.0.1:
   version "2.0.2"

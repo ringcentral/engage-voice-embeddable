@@ -1,6 +1,6 @@
-import { Module } from 'ringcentral-integration/lib/di';
+import { Module } from '@ringcentral-integration/commons/lib/di';
 import { computed } from '@ringcentral-integration/core';
-import { callDirection } from 'ringcentral-integration/enums/callDirections';
+import { callDirection } from '@ringcentral-integration/commons/enums/callDirections';
 
 import { contactMatchIdentifyEncode } from '@ringcentral-integration/engage-voice-widgets/lib/contactMatchIdentify';
 import { EvCallHistory as BaseEvCallHistory } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallHistory';

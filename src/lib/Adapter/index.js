@@ -1,6 +1,6 @@
 import classnames from 'classnames';
-import AdapterCore from 'ringcentral-widgets/lib/AdapterCore';
-import MessageTransport from 'ringcentral-integration/lib/MessageTransport';
+import AdapterCore from '@ringcentral-integration/widgets/lib/AdapterCore';
+import MessageTransport from '@ringcentral-integration/commons/lib/MessageTransport';
 
 import url from 'url';
 

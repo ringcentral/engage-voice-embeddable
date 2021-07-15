@@ -1,5 +1,5 @@
-import { Module } from 'ringcentral-integration/lib/di';
-import MessageTransport from 'ringcentral-integration/lib/MessageTransport';
+import { Module } from '@ringcentral-integration/commons/lib/di';
+import MessageTransport from '@ringcentral-integration/commons/lib/MessageTransport';
 import {
   RcModuleV2,
   state,

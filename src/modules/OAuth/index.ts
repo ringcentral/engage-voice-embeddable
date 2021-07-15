@@ -1,5 +1,5 @@
-import { Module } from 'ringcentral-integration/lib/di';
-import OAuthBase from 'ringcentral-widgets/modules/OAuth';
+import { Module } from '@ringcentral-integration/commons/lib/di';
+import OAuthBase from '@ringcentral-integration/widgets/modules/OAuth';
 
 import messageTypes from '../../enums/messageTypes';
 

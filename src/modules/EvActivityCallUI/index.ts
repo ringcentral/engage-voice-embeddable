@@ -1,4 +1,4 @@
-import { Module } from 'ringcentral-integration/lib/di';
+import { Module } from '@ringcentral-integration/commons/lib/di';
 import { computed } from '@ringcentral-integration/core';
 import { format } from '@ringcentral-integration/phone-number';
 
@@ -234,9 +234,8 @@ class EvActivityCallUI extends BaseActivityCallUI<Deps> {
   }
 
   getUIProps({ id }): EvActivityCallUIProps {
-    const originalProps = super.getUIProps({ id });
     return {
-      ...originalProps,
+      ...super.getUIProps({ id }),
       currentLog: this.myActivityCallLog,
       basicInfo: this.basicInfo,
     };

@@ -1,5 +1,5 @@
-import GlobalStorage from 'ringcentral-integration/modules/GlobalStorage';
-import MessageTransport from 'ringcentral-integration/lib/MessageTransport';
+import GlobalStorage from '@ringcentral-integration/commons/modules/GlobalStorage';
+import MessageTransport from '@ringcentral-integration/commons/lib/MessageTransport';
 import { EvDialerUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvDialerUI';
 import messageTypes from '../../enums/messageTypes';
 

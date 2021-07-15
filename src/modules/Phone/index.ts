@@ -1,4 +1,4 @@
-import 'ringcentral-integration/lib/TabFreezePrevention';
+import '@ringcentral-integration/commons/lib/TabFreezePrevention';
 
 import { messageTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
 import { EvCallbackTypes } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums';
@@ -11,7 +11,6 @@ import { EvAgentSession } from '@ringcentral-integration/engage-voice-widgets/mo
 import { EvAgentSessionUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentSessionUI';
 import { EvAgentScript } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentScript';
 import { EvAuth } from '@ringcentral-integration/engage-voice-widgets/modules/EvAuth';
-import { EvCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvCall';
 import { EvCallDataSource } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDataSource';
 import { EvCallDisposition } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDisposition';
 import { EvCallMonitor } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallMonitor';
@@ -31,43 +30,44 @@ import { EvChooseAccountUI } from '@ringcentral-integration/engage-voice-widgets
 import { MainViewUI } from '@ringcentral-integration/engage-voice-widgets/modules/MainViewUI';
 
 import { SDK } from '@ringcentral/sdk';
-import { RingCentralClient } from 'ringcentral-integration/lib/RingCentralClient';
-import sleep from 'ringcentral-integration/lib/sleep';
-import { TabManagerOptions } from 'ringcentral-integration/modules/TabManagerV2';
-import { ModuleFactory } from 'ringcentral-integration/lib/di';
-import LocalForageStorage from 'ringcentral-integration/lib/LocalForageStorage';
-import RcModule from 'ringcentral-integration/lib/RcModule';
-import { waitWithCheck } from 'ringcentral-integration/lib/time';
-import { ActivityMatcher } from 'ringcentral-integration/modules/ActivityMatcherV2';
-import { Alert } from 'ringcentral-integration/modules/AlertV2';
-import { Auth } from 'ringcentral-integration/modules/AuthV2';
-import { Brand } from 'ringcentral-integration/modules/BrandV2';
-import { ConnectivityMonitor } from 'ringcentral-integration/modules/ConnectivityMonitorV2';
-import { ContactMatcher } from 'ringcentral-integration/modules/ContactMatcherV2';
-import { DateTimeFormat } from 'ringcentral-integration/modules/DateTimeFormatV2';
-import { GlobalStorage, GlobalStorageOptions } from 'ringcentral-integration/modules/GlobalStorageV2';
-import { Locale } from 'ringcentral-integration/modules/LocaleV2';
-import { RateLimiter } from 'ringcentral-integration/modules/RateLimiterV2';
+import { RingCentralClient } from '@ringcentral-integration/commons/lib/RingCentralClient';
+import sleep from '@ringcentral-integration/commons/lib/sleep';
+import { TabManagerOptions } from '@ringcentral-integration/commons/modules/TabManagerV2';
+import { ModuleFactory } from '@ringcentral-integration/commons/lib/di';
+import { LocalForageStorage } from '@ringcentral-integration/commons/lib/LocalForageStorage';
+import RcModule from '@ringcentral-integration/commons/lib/RcModule';
+import { waitWithCheck } from '@ringcentral-integration/commons/lib/time';
+import { ActivityMatcher } from '@ringcentral-integration/commons/modules/ActivityMatcherV2';
+import { Alert } from '@ringcentral-integration/commons/modules/AlertV2';
+import { Auth } from '@ringcentral-integration/commons/modules/AuthV2';
+import { Brand } from '@ringcentral-integration/commons/modules/BrandV2';
+import { ConnectivityMonitor } from '@ringcentral-integration/commons/modules/ConnectivityMonitorV2';
+import { ContactMatcher } from '@ringcentral-integration/commons/modules/ContactMatcherV2';
+import { DateTimeFormat } from '@ringcentral-integration/commons/modules/DateTimeFormatV2';
+import { GlobalStorage, GlobalStorageOptions } from '@ringcentral-integration/commons/modules/GlobalStorageV2';
+import { Locale } from '@ringcentral-integration/commons/modules/LocaleV2';
+import { RateLimiter } from '@ringcentral-integration/commons/modules/RateLimiterV2';
 import {
   EvStorage,
   EvStorageOptions,
 } from '@ringcentral-integration/engage-voice-widgets/modules/EvStorage';
-import { AlertUI } from 'ringcentral-widgets/modules/AlertUI';
-import { Beforeunload } from 'ringcentral-widgets/modules/Beforeunload';
-import { Block } from 'ringcentral-widgets/modules/Block';
-import { BlockUI } from 'ringcentral-widgets/modules/BlockUI';
-import ConnectivityBadgeUI from 'ringcentral-widgets/modules/ConnectivityBadgeUI';
-import ConnectivityManager from 'ringcentral-widgets/modules/ConnectivityManager';
-import LoginUI from 'ringcentral-widgets/modules/LoginUI';
-import { ModalUI } from 'ringcentral-widgets/modules/ModalUIV2';
+import { AlertUI } from '@ringcentral-integration/widgets/modules/AlertUI';
+import { Beforeunload } from '@ringcentral-integration/widgets/modules/Beforeunload';
+import { Block } from '@ringcentral-integration/widgets/modules/Block';
+import { BlockUI } from '@ringcentral-integration/widgets/modules/BlockUI';
+import ConnectivityBadgeUI from '@ringcentral-integration/widgets/modules/ConnectivityBadgeUI';
+import { ConnectivityManager } from '@ringcentral-integration/widgets/modules/ConnectivityManager';
+import LoginUI from '@ringcentral-integration/widgets/modules/LoginUI';
+import { ModalUI } from '@ringcentral-integration/widgets/modules/ModalUIV2';
 
-import RouterInteraction from 'ringcentral-widgets/modules/RouterInteraction';
+import RouterInteraction from '@ringcentral-integration/widgets/modules/RouterInteraction';
 
 import { EvClient } from '../EvClient';
 
 import OAuth from '../OAuth';
 import { Adapter } from '../Adapter';
 import { ThirdPartyService } from '../ThirdPartyService';
+import { EvCall } from '../EvCall';
 import { EvActivityCallUI } from '../EvActivityCallUI';
 import { EvCallHistoryUI } from '../EvCallHistoryUI';
 import { EvCallHistory } from '../EvCallHistory';

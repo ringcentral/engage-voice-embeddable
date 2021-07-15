@@ -1,6 +1,6 @@
 import React, { FunctionComponent } from 'react';
 import { connect } from 'react-redux';
-import withPhone from 'ringcentral-widgets/lib/withPhone';
+import withPhone from '@ringcentral-integration/widgets/lib/withPhone';
 
 import styles from '@ringcentral-integration/engage-voice-widgets/containers/AppView/styles.scss';
 
