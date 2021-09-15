@@ -32,7 +32,7 @@ import { MainViewUI } from '@ringcentral-integration/engage-voice-widgets/module
 import { SDK } from '@ringcentral/sdk';
 import { RingCentralClient } from '@ringcentral-integration/commons/lib/RingCentralClient';
 import sleep from '@ringcentral-integration/commons/lib/sleep';
-import { TabManagerOptions } from '@ringcentral-integration/commons/modules/TabManagerV2';
+import { TabManagerOptions } from '@ringcentral-integration/commons/modules/TabManager';
 import { ModuleFactory } from '@ringcentral-integration/commons/lib/di';
 import { LocalForageStorage } from '@ringcentral-integration/commons/lib/LocalForageStorage';
 import RcModule from '@ringcentral-integration/commons/lib/RcModule';
@@ -40,12 +40,12 @@ import { waitWithCheck } from '@ringcentral-integration/commons/lib/time';
 import { ActivityMatcher } from '@ringcentral-integration/commons/modules/ActivityMatcherV2';
 import { Alert } from '@ringcentral-integration/commons/modules/AlertV2';
 import { Auth } from '@ringcentral-integration/commons/modules/AuthV2';
-import { Brand } from '@ringcentral-integration/commons/modules/BrandV2';
+import { Brand } from '@ringcentral-integration/commons/modules/Brand';
 import { ConnectivityMonitor } from '@ringcentral-integration/commons/modules/ConnectivityMonitorV2';
 import { ContactMatcher } from '@ringcentral-integration/commons/modules/ContactMatcherV2';
 import { DateTimeFormat } from '@ringcentral-integration/commons/modules/DateTimeFormatV2';
 import { GlobalStorage, GlobalStorageOptions } from '@ringcentral-integration/commons/modules/GlobalStorageV2';
-import { Locale } from '@ringcentral-integration/commons/modules/LocaleV2';
+import { Locale } from '@ringcentral-integration/commons/modules/Locale';
 import { RateLimiter } from '@ringcentral-integration/commons/modules/RateLimiterV2';
 import {
   EvStorage,
@@ -406,7 +406,7 @@ export function createPhone({
   @ModuleFactory({
     providers: [
       { provide: 'AdapterOptions', useValue: { targetWindow } },
-      { provide: 'ModuleOptions', useValue: { prefix }, spread: true },
+      { provide: 'Prefix', useValue: prefix },
       {
         provide: 'SdkConfig',
         deps: ['Version'],
