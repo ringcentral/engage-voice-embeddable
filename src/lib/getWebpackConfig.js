@@ -49,12 +49,14 @@ function getWebpackConfig({
           AUTH_CONFIG: JSON.stringify(authConfig),
         },
       }),
-      new CopyWebpackPlugin([
-        { from: './src/index.html', to: 'index.html' },
-        { from: './src/redirect.html', to: 'redirect.html' },
-        { from: './src/app.html', to: 'app.html' },
-        { from: './src/favicon.ico', to: 'favicon.ico' },
-      ]),
+      new CopyWebpackPlugin({
+        patterns: [
+          { from: './src/index.html', to: 'index.html' },
+          { from: './src/redirect.html', to: 'redirect.html' },
+          { from: './src/app.html', to: 'app.html' },
+          { from: './src/favicon.ico', to: 'favicon.ico' },
+        ]
+      }),
     ],
     resolve: {
       ...base.resolve,
