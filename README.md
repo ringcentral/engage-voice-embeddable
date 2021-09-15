@@ -10,7 +10,7 @@ This is an out-of-the-box embeddable web application that help developers to int
 
 Visit [website](https://ringcentral.github.io/engage-voice-embeddable/) in GitHub pages.
 
-![demo](https://user-images.githubusercontent.com/7036536/80361025-d2c67880-88b2-11ea-9f46-d99303efb46d.png)
+![demo](https://user-images.githubusercontent.com/7036536/133401087-2e60c93c-c9dc-48d1-9f24-f8419c5618ca.png)
 
 ## Inject
 
