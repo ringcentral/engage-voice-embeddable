@@ -53,6 +53,7 @@ function getWebpackConfig({
         { from: './src/index.html', to: 'index.html' },
         { from: './src/redirect.html', to: 'redirect.html' },
         { from: './src/app.html', to: 'app.html' },
+        { from: './src/favicon.ico', to: 'favicon.ico' },
       ]),
     ],
     resolve: {
