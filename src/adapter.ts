@@ -17,6 +17,12 @@ if (!currentScript) {
   currentScript = document.querySelector('script[src*="adapter.js"]');
 }
 
+let paramsUri = (currentScript && currentScript.src) || '';
+const fromPopup = window.__ON_RC_POPUP_WINDOW;
+if (fromPopup) {
+  paramsUri = window.location.href;
+}
+
 const {
   clientId,
   clientSecret,
@@ -24,7 +30,8 @@ const {
   rcServer,
   evServer,
   disableLoginPopup,
-} = parseUri((currentScript && currentScript.src) || '');
+  enablePopup,
+} = parseUri(paramsUri);
 
 function obj2uri(obj) {
   if (!obj) {
@@ -47,6 +54,7 @@ const appUri = `${appUrl}?${obj2uri({
   evServer,
   disableLoginPopup,
   fromAdapter: 1,
+  fromPopup,
   _t: Date.now(),
 })}`;
 
@@ -60,6 +68,8 @@ function init() {
     appUrl: appUri,
     version,
     prefix,
+    enablePopup,
+    fromPopup: !!fromPopup,
   });
 }
 

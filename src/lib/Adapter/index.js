@@ -1,6 +1,10 @@
 import classnames from 'classnames';
 import AdapterCore from '@ringcentral-integration/widgets/lib/AdapterCore';
 import MessageTransport from '@ringcentral-integration/commons/lib/MessageTransport';
+import popWindow from '@ringcentral-integration/widgets/lib/popWindow';
+
+// eslint-disable-next-line
+import popupIconUrl from '!url-loader!../../assets/popup.svg';
 
 import url from 'url';
 
@@ -31,6 +35,8 @@ class Adapter extends AdapterCore {
     appWidth = 300,
     appHeight = 500,
     zIndex = 999,
+    enablePopup = false,
+    fromPopup = false,
   } = {}) {
     const container = document.createElement('div');
     container.id = prefix;
@@ -47,6 +53,8 @@ class Adapter extends AdapterCore {
     this._zIndex = zIndex;
     this._appWidth = appWidth;
     this._appHeight = appHeight;
+    this._fromPopup = fromPopup;
+    this._enablePopup = enablePopup;
     this._strings = {};
     this._generateContentDOM();
     this._messageTransport = new MessageTransport({
@@ -99,6 +107,23 @@ class Adapter extends AdapterCore {
     }
   }
 
+  _onPushAdapterState(options) {
+    if (!this._fromPopup) {
+      return super._onPushAdapterState(options);
+    }
+    return super._onPushAdapterState({
+      ...options,
+      minimized: false,
+    });
+  }
+
+  _onSyncMinimized(minimized) {
+    if (this._fromPopup) {
+      return;
+    }
+    super._onSyncMinimized(minimized);
+  }
+
   _getContentDOM(sanboxAttributeValue, allowAttributeValue) {
     return `
       <header class="${this._styles.header}" draggable="false">
@@ -108,6 +133,11 @@ class Adapter extends AdapterCore {
         </div>
         <div class="${this._styles.iconContainer}">
           <img class="${this._styles.icon}" draggable="false"></img>
+        </div>
+        <div class="${this._styles.button} ${this._styles.popup}">
+          <div class="${this._styles.popupIcon}">
+            <img src="${popupIconUrl}" draggable="false" />
+          </div>
         </div>
         <div class="${this._styles.button} ${this._styles.toggle}" data-sign="adapterToggle">
           <div class="${this._styles.minimizeIcon}">
@@ -229,15 +259,60 @@ class Adapter extends AdapterCore {
 
   _beforeRender() {
     this._iconEl = this._root.querySelector(`.${this._styles.icon}`);
+    this._popupEl = this._root.querySelector(
+      `.${this._styles.popup}`
+    );
     this._iconEl.addEventListener('dragstart', () => false);
     this._iconContainerEl = this._root.querySelector(
       `.${this._styles.iconContainer}`,
     );
+    this._popupEl.addEventListener('click', (evt) => {
+      evt.stopPropagation();
+      this.popupWindow();
+    });
+  }
+
+  renderPosition() {
+    if (this._fromPopup) {
+      return;
+    }
+    super.renderPosition();
+  }
+
+  _syncPosition() {
+    if (this._fromPopup) {
+      return;
+    }
+    super._syncPosition();
   }
 
   renderPresence() {}
 
   _renderCallsBar() {}
+
+  _renderMainClass() {
+    this._container.setAttribute(
+      'class',
+      classnames(
+        this._styles.root,
+        this._styles[this._defaultDirection],
+        this._closed && this._styles.closed,
+        this._minimized && this._styles.minimized,
+        this._dragging && this._styles.dragging,
+        this._hover && this._styles.hover,
+        this._loading && this._styles.loading,
+        this._enablePopup && this._styles.showPopup,
+      ),
+    );
+    this._headerEl.setAttribute(
+      'class',
+      classnames(
+        this._styles.header,
+        this._minimized && this._styles.minimized,
+        this._ringing && this._styles.ringing,
+      ),
+    );
+  }
 
   _renderMinimizedBar() {
     this._logoEl.setAttribute(
@@ -262,6 +337,34 @@ class Adapter extends AdapterCore {
       this.contentFrameEl.src = appUrl;
       this.contentFrameEl.id = `${this._prefix}-adapter-frame`;
     }
+  }
+
+  async popupWindow() {
+    if (!this._popupWindowPromise) {
+      this._popupWindowPromise = this._popupWindow();
+    }
+    try {
+      await this._popupWindowPromise;
+    } catch (e) {
+      console.error(e);
+    }
+    this._popupWindowPromise = null;
+  }
+
+  async _popupWindow() {
+    // const isWindowPopuped = await this._requestWithPostMessage('/check-popup-window');
+    // if (isWindowPopuped) {
+    //   if (this._popupedWindow && this._popupedWindow.focus) {
+    //     this._popupedWindow.focus();
+    //   }
+    //   return;
+    // }
+    let popupUri = this._appUrl.replace('app.html', 'popup.html');
+    if (this._popupPageUri) {
+      popupUri = `${this._popupPageUri}?${popupUri.split('?')[1]}`; 
+    }
+    this._popupedWindow = popWindow(popupUri, 'RCEVPopupWindow', 300, 536);
+    this.setMinimized(true);
   }
 
   _setIconUrl(iconUrl) {
