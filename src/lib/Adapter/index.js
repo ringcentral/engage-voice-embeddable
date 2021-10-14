@@ -37,6 +37,7 @@ class Adapter extends AdapterCore {
     zIndex = 999,
     enablePopup = false,
     fromPopup = false,
+    popupPageUri,
   } = {}) {
     const container = document.createElement('div');
     container.id = prefix;
@@ -55,6 +56,7 @@ class Adapter extends AdapterCore {
     this._appHeight = appHeight;
     this._fromPopup = fromPopup;
     this._enablePopup = enablePopup;
+    this._popupPageUri = popupPageUri;
     this._strings = {};
     this._generateContentDOM();
     this._messageTransport = new MessageTransport({

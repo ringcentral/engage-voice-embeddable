@@ -31,6 +31,7 @@ const {
   evServer,
   disableLoginPopup,
   enablePopup,
+  popupPageUri,
 } = parseUri(paramsUri);
 
 function obj2uri(obj) {
@@ -70,6 +71,7 @@ function init() {
     prefix,
     enablePopup,
     fromPopup: !!fromPopup,
+    popupPageUri,
   });
 }
 
