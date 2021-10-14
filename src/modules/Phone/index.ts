@@ -7,7 +7,6 @@ import { contactMatchIdentifyEncode } from '@ringcentral-integration/engage-voic
 // import { evStatus } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums/evStatus';
 import { EvActiveCallControl } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallControl';
 import { EvActiveCallListUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallListUI';
-import { EvAgentSession } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentSession';
 import { EvAgentSessionUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentSessionUI';
 import { EvAgentScript } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentScript';
 import { EvAuth } from '@ringcentral-integration/engage-voice-widgets/modules/EvAuth';
@@ -15,7 +14,6 @@ import { EvCallDataSource } from '@ringcentral-integration/engage-voice-widgets/
 import { EvCallDisposition } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDisposition';
 import { EvCallMonitor } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallMonitor';
 import { EvDialerUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvDialerUI';
-import { EvIntegratedSoftphone } from '@ringcentral-integration/engage-voice-widgets/modules/EvIntegratedSoftphone';
 import { EvManualDialSettingsUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvManualDialSettingsUI';
 import { EvPresence } from '@ringcentral-integration/engage-voice-widgets/modules/EvPresence';
 import { EvRequeueCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvRequeueCall';
@@ -64,6 +62,8 @@ import RouterInteraction from '@ringcentral-integration/widgets/modules/RouterIn
 
 import { EvClient } from '../EvClient';
 
+import { EvIntegratedSoftphone } from '../EvIntegratedSoftphone';
+import { EvAgentSession } from '../EvAgentSession';
 import OAuth from '../OAuth';
 import { Adapter } from '../Adapter';
 import { ThirdPartyService } from '../ThirdPartyService';
@@ -390,6 +390,7 @@ export function createPhone({
   hideCallNote,
   disableLoginPopup,
   redirectUri,
+  fromPopup,
 }) {
   const appVersion = buildHash ? `${version} (${buildHash})` : version;
   const usePKCE = sdkConfig.clientId && !sdkConfig.clientSecret;
@@ -406,6 +407,7 @@ export function createPhone({
   @ModuleFactory({
     providers: [
       { provide: 'AdapterOptions', useValue: { targetWindow } },
+      { provide: 'EvAgentSessionOptions', useValue: { fromPopup } },
       { provide: 'Prefix', useValue: prefix },
       {
         provide: 'SdkConfig',
