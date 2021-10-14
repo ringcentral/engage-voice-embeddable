@@ -352,13 +352,13 @@ class Adapter extends AdapterCore {
   }
 
   async _popupWindow() {
-    // const isWindowPopuped = await this._requestWithPostMessage('/check-popup-window');
-    // if (isWindowPopuped) {
-    //   if (this._popupedWindow && this._popupedWindow.focus) {
-    //     this._popupedWindow.focus();
-    //   }
-    //   return;
-    // }
+    const isWindowPopuped = await this.transport.request({ payload: { type: messageTypes.checkPopupWindow } });
+    if (isWindowPopuped) {
+      if (this._popupedWindow && this._popupedWindow.focus) {
+        this._popupedWindow.focus();
+      }
+      return;
+    }
     let popupUri = this._appUrl.replace('app.html', 'popup.html');
     if (this._popupPageUri) {
       popupUri = `${this._popupPageUri}?${popupUri.split('?')[1]}`; 

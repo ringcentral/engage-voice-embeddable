@@ -406,7 +406,7 @@ export function createPhone({
   }
   @ModuleFactory({
     providers: [
-      { provide: 'AdapterOptions', useValue: { targetWindow } },
+      { provide: 'AdapterOptions', useValue: { targetWindow, fromPopup } },
       { provide: 'EvAgentSessionOptions', useValue: { fromPopup } },
       { provide: 'Prefix', useValue: prefix },
       {

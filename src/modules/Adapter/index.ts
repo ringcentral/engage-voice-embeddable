@@ -7,13 +7,18 @@ import {
   action,
 } from '@ringcentral-integration/core/lib/RcModule';
 import messageTypes from '../../enums/messageTypes';
+import PopupWindowManager from '../../lib/PopupWindowManager';
+
 import { Interface, Deps } from './interface';
 
 @Module({
   deps: [
+    'Alert',
     'EvDialerUI',
     'EvCall',
+    'EvAgentSession',
     'GlobalStorage',
+    'Presence',
     { dep: 'AdapterOptions', optional: true },
   ],
 })
@@ -24,6 +29,7 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
   private _lastClosed: boolean;
   private _lastPosition: any;
   private _lastMinimized: any;
+  private _popupWindowManager: PopupWindowManager;
 
   constructor(deps: Deps) {
     super({
@@ -35,6 +41,10 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
     this.transport = new MessageTransport({
       targetWindow: this._deps.adapterOptions?.targetWindow ?? window.parent,
     } as any);
+    this._popupWindowManager = new PopupWindowManager({
+      prefix: this._deps.prefix,
+      isPopupWindow: this._deps.adapterOptions.fromPopup
+    });
     this.addListeners();
     this._lastPosition = {};
     this.onAppStart();
@@ -109,6 +119,23 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
             break;
         }
       },
+      request: async({ requestId, payload }) => {
+        if (payload.type === messageTypes.checkPopupWindow) {
+          let result = await this._popupWindowManager.checkPopupWindowOpened();
+          if (result) {
+            this._deps.alert.warning({ message: 'popupWindowOpened' });
+          }
+          if (
+            !result &&
+            this._deps.evAgentSession.isIntegratedSoftphone &&
+            this._deps.presence.calls.length > 0
+          ) {
+            result = true;
+            this._deps.alert.warning({ message: 'cannotPopupWindowWithCall' });
+          }
+          this.response({ requestId, result });
+        }
+      }
     });
   }
 
