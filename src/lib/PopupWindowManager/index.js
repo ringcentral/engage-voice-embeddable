@@ -1,11 +1,23 @@
 import uuid from 'uuid';
+import { EventEmitter } from 'events';
 
-export default class PopupWindowManager {
+export default class PopupWindowManager extends EventEmitter {
   constructor({ prefix, isPopupWindow }) {
+    super();
     this._requests = new Map();
     this._isPopupWindow = isPopupWindow;
     this._channel = new BroadcastChannel(`${prefix}-popup-win-manager`);
     this._channel.addEventListener('message', this._onChannelMessage);
+    if (isPopupWindow) {
+      window.addEventListener('unload', () => {
+        this._channel.postMessage({
+          type: 'popupWindowClosed',
+        });
+      });
+      this._channel.postMessage({
+        type: 'popupWindowOpened',
+      });
+    }
   }
 
   _onChannelMessage = ({ data: { type } }) => {
@@ -18,6 +30,12 @@ export default class PopupWindowManager {
       this._requests.forEach((request) => {
         request.resolve(true);
       });
+    }
+    if (type === 'popupWindowClosed') {
+      this.emit('popupWindowClosed');
+    }
+    if (type === 'popupWindowOpened') {
+      this.emit('popupWindowOpened');
     }
   }
 

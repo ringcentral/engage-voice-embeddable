@@ -19,6 +19,7 @@ import { Interface, Deps } from './interface';
     'EvAgentSession',
     'GlobalStorage',
     'Presence',
+    'TabManager',
     { dep: 'AdapterOptions', optional: true },
   ],
 })
@@ -29,7 +30,6 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
   private _lastClosed: boolean;
   private _lastPosition: any;
   private _lastMinimized: any;
-  private _popupWindowManager: PopupWindowManager;
 
   constructor(deps: Deps) {
     super({
@@ -41,10 +41,6 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
     this.transport = new MessageTransport({
       targetWindow: this._deps.adapterOptions?.targetWindow ?? window.parent,
     } as any);
-    this._popupWindowManager = new PopupWindowManager({
-      prefix: this._deps.prefix,
-      isPopupWindow: this._deps.adapterOptions.fromPopup
-    });
     this.addListeners();
     this._lastPosition = {};
     this.onAppStart();
@@ -121,7 +117,7 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
       },
       request: async({ requestId, payload }) => {
         if (payload.type === messageTypes.checkPopupWindow) {
-          let result = await this._popupWindowManager.checkPopupWindowOpened();
+          let result = await this._deps.tabManager.popupWindowManager.checkPopupWindowOpened();
           if (result) {
             this._deps.alert.warning({ message: 'popupWindowOpened' });
           }

@@ -23,7 +23,6 @@ import { EvSubscription } from '@ringcentral-integration/engage-voice-widgets/mo
 import { EvTransferCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvTransferCall';
 import { EvTransferCallUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvTransferCallUI';
 import { EvWorkingState } from '@ringcentral-integration/engage-voice-widgets/modules/EvWorkingState';
-import { EvTabManager } from '@ringcentral-integration/engage-voice-widgets/modules/EvTabManager';
 import { EvChooseAccountUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvChooseAccountUI';
 import { MainViewUI } from '@ringcentral-integration/engage-voice-widgets/modules/MainViewUI';
 
@@ -62,6 +61,7 @@ import RouterInteraction from '@ringcentral-integration/widgets/modules/RouterIn
 
 import { EvClient } from '../EvClient';
 
+import { EvTabManager } from '../EvTabManager';
 import { EvIntegratedSoftphone } from '../EvIntegratedSoftphone';
 import { EvAgentSession } from '../EvAgentSession';
 import OAuth from '../OAuth';
@@ -122,12 +122,6 @@ import { GenericPhone } from './interface';
         StorageProvider: LocalForageStorage,
         disableInactiveTabsWrite: true,
       } as EvStorageOptions,
-    },
-    {
-      provide: 'TabManagerOptions',
-      useValue: {
-        enableCache: true,
-      } as TabManagerOptions,
     },
     {
       provide: 'GlobalStorageOptions',
@@ -406,8 +400,15 @@ export function createPhone({
   }
   @ModuleFactory({
     providers: [
-      { provide: 'AdapterOptions', useValue: { targetWindow, fromPopup } },
+      { provide: 'AdapterOptions', useValue: { targetWindow } },
       { provide: 'EvAgentSessionOptions', useValue: { fromPopup } },
+      {
+        provide: 'TabManagerOptions',
+        useValue: {
+          enableCache: true,
+          fromPopup,
+        } as TabManagerOptions,
+      },
       { provide: 'Prefix', useValue: prefix },
       {
         provide: 'SdkConfig',

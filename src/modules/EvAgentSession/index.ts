@@ -19,4 +19,23 @@ export class EvAgentSession extends EvAgentSessionBase {
       });
     }
   }
+
+  // override
+  private async _newMainTabReConfig() {
+    console.log(
+      '_newMainTabReConfig~',
+      this._deps.evAuth.connected,
+      this.configSuccess,
+      this.isMainTab,
+    );
+
+    if (
+      this._deps.evAuth.connected &&
+      this.configSuccess &&
+      this.isMainTab
+    ) {
+      console.log('_newMainTabReConfig success~');
+      await this._tabReConfig();
+    }
+  }
 }
