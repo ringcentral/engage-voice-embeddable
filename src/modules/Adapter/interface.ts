@@ -12,6 +12,7 @@ export interface State {
 
 export interface AdapterOptions {
   targetWindow?: Window;
+  fromPopup?: boolean;
 }
 
 export interface Deps {

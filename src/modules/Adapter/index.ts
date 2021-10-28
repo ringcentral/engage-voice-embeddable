@@ -7,13 +7,19 @@ import {
   action,
 } from '@ringcentral-integration/core/lib/RcModule';
 import messageTypes from '../../enums/messageTypes';
+import PopupWindowManager from '../../lib/PopupWindowManager';
+
 import { Interface, Deps } from './interface';
 
 @Module({
   deps: [
+    'Alert',
     'EvDialerUI',
     'EvCall',
+    'EvAgentSession',
     'GlobalStorage',
+    'Presence',
+    'TabManager',
     { dep: 'AdapterOptions', optional: true },
   ],
 })
@@ -109,6 +115,23 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
             break;
         }
       },
+      request: async({ requestId, payload }) => {
+        if (payload.type === messageTypes.checkPopupWindow) {
+          let result = await this._deps.tabManager.popupWindowManager.checkPopupWindowOpened();
+          if (result) {
+            this._deps.alert.warning({ message: 'popupWindowOpened' });
+          }
+          if (
+            !result &&
+            this._deps.evAgentSession.isIntegratedSoftphone &&
+            this._deps.presence.calls.length > 0
+          ) {
+            result = true;
+            this._deps.alert.warning({ message: 'cannotPopupWindowWithCall' });
+          }
+          this.response({ requestId, result });
+        }
+      }
     });
   }
 

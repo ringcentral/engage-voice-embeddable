@@ -34,6 +34,7 @@ Visit [website](https://ringcentral.github.io/engage-voice-embeddable/) in GitHu
 * [API](docs/api.md)
 * [Message Transport](docs/message-transport.md)
 * [Call Events](docs/call-events.md)
+* [Popup a standalone widget](docs/popup-window.md)
 
 ## Awesome Embeddable projects
 

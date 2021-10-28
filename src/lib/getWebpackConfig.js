@@ -55,6 +55,7 @@ function getWebpackConfig({
           { from: './src/redirect.html', to: 'redirect.html' },
           { from: './src/app.html', to: 'app.html' },
           { from: './src/favicon.ico', to: 'favicon.ico' },
+          { from: './src/popup.html', to: 'popup.html' },
         ]
       }),
     ],
