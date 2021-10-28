@@ -25,6 +25,7 @@ After enabled, user will get a popup button at header:
 * App can't make a opened popup window into desktop top (Browser limitation)
 * App can't open popup window when user have a active call (or call will be disconnected)
 * User need to focus at popup window when start or answer a call at popup window for microphone permission at Firefox
+* User can't connect Integrated Phone if user close and reopen popup window frequently.
 
 
 ## Host the popup window
