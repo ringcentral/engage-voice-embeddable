@@ -27,7 +27,7 @@
     "fs-extra": "^7.0.1",
     "gulp": "^4.0.2",
     "gulp-replace": "^1.0.0",
-    "node-sass": "^4.12.0",
+    "node-sass": "^7.0.0",
     "postcss-loader": "^3.0.0",
     "react-svg-loader": "^3.0.3",
     "sass-loader": "^7.1.0",
