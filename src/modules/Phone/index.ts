@@ -9,7 +9,7 @@ import { EvActiveCallControl } from '@ringcentral-integration/engage-voice-widge
 import { EvActiveCallListUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallListUI';
 import { EvAgentSessionUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentSessionUI';
 import { EvAgentScript } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentScript';
-import { EvAuth } from '@ringcentral-integration/engage-voice-widgets/modules/EvAuth';
+// import { EvAuth } from '@ringcentral-integration/engage-voice-widgets/modules/EvAuth';
 import { EvCallDataSource } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDataSource';
 import { EvCallDisposition } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDisposition';
 import { EvCallMonitor } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallMonitor';
@@ -59,7 +59,7 @@ import { ModalUI } from '@ringcentral-integration/widgets/modules/ModalUI';
 import RouterInteraction from '@ringcentral-integration/widgets/modules/RouterInteraction';
 
 import { EvClient } from '../EvClient';
-
+import { EvAuth } from '../EvAuth';
 import { EvTabManager } from '../EvTabManager';
 import { EvIntegratedSoftphone } from '../EvIntegratedSoftphone';
 import { EvAgentSession } from '../EvAgentSession';
@@ -108,7 +108,6 @@ import { GenericPhone } from './interface';
         };
       },
       deps: ['SdkConfig'],
-      spread: true,
     },
     {
       provide: 'Client',
@@ -458,7 +457,6 @@ export function createPhone({
           disableLoginPopup,
           redirectUri,
         },
-        spread: true,
       },
       { provide: 'AuthOptions', useValue: { usePKCE } },
       {

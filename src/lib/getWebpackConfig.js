@@ -23,6 +23,7 @@ function getWebpackConfig({
   const base = getBaseWebpackConfig({
     mode: environment,
     themeFolder: brandFolder,
+    babelLoaderExcludes: /node_modules|engage-voice-agent/
   });
   const scssLoader = base.module.rules.find((rule) => rule.test.test('x.scss'));
   // TODO: fix scss syntax error in widgets
@@ -33,7 +34,6 @@ function getWebpackConfig({
       replace: 'and (max-width',
     },
   });
-  console.log(scssLoader);
   return {
     ...base,
     entry: {
@@ -73,7 +73,7 @@ function getWebpackConfig({
       ...base.resolve,
       alias: {
         'brand-logo-path': brandFolder,
-        '@SDK': '@ringcentral-integration/engage-voice-widgets/lib/EvClient/__SDK__/agentLibrary.js',
+        '@SDK': path.resolve(__dirname, '../../vendor/agentLibrary.js'),
       },
       extensions: ['.js', '.jsx', '.ts', '.tsx']
     },
