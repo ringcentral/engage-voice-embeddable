@@ -1,7 +1,7 @@
 import webpack from 'webpack';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import path from 'path';
-import getBaseConfig from '@ringcentral-integration/widgets/lib/getWebpackConfig';
+import { getBaseWebpackConfig } from '@ringcentral-integration/widgets/lib/getBaseWebpackConfig';
 import { getBrandConfig } from '../brands';
 import * as packageConfig from '../../package.json';
 
@@ -20,10 +20,20 @@ function getWebpackConfig({
   const brandConfig = getBrandConfig({ brand });
   const brandFolder = path.resolve(__dirname, `../brands/${brand}`);
   const environment = env === 'prod' ? 'production' : 'development';
-  const base = getBaseConfig({
-    env: environment,
+  const base = getBaseWebpackConfig({
+    mode: environment,
     themeFolder: brandFolder,
   });
+  const scssLoader = base.module.rules.find((rule) => rule.test.test('x.scss'));
+  // TODO: fix scss syntax error in widgets
+  scssLoader.use.push({
+    loader: 'string-replace-loader',
+    options: {
+      search: /and\(max-width/g, /// fix typo in scss
+      replace: 'and (max-width',
+    },
+  });
+  console.log(scssLoader);
   return {
     ...base,
     entry: {

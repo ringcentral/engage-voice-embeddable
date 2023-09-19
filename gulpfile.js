@@ -123,19 +123,17 @@ export async function devServer() {
     authConfig,
   });
   const compiler = webpack(config);
-  const server = new WebpackDevServer(compiler, {
-    contentBase: __dirname,
-    publicPath: '/',
-    hot: true,
-    inline: true,
-    // noInfo: true,
-    stats: {
-      warnings: false,
-      chunks: false,
-      colors: true,
+  const server = new WebpackDevServer({
+    static: {
+      directory: path.resolve(__dirname, './'),
     },
-  });
-  server.listen(port);
+    devMiddleware: {
+      publicPath: '/',
+    },
+    port,
+    hot: true,
+  }, compiler);
+  await server.start();
   console.log(`Brand: ${brand}: server listening to ${port}...`);
 }
 
