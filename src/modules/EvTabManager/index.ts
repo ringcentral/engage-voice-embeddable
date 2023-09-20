@@ -12,6 +12,8 @@ class EvTabManager extends BaseEvTabManager {
 
   constructor(deps) {
     super(deps);
+    this.tabbie._heartBeatExpire = 70000;
+    this.tabbie._heartBeatInterval = 50000;
     this._popupWindowManager = new PopupWindowManager({
       prefix: this._deps.prefix,
       isPopupWindow: this._deps.tabManagerOptions.fromPopup
