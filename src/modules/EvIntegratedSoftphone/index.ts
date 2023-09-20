@@ -31,4 +31,19 @@ export class EvIntegratedSoftphone extends EvIntegratedSoftphoneBase {
       this._realSipConnected = true;
     });
   }
+
+  private async _connectedWebRTC() {
+    try {
+      await this._deps.evClient.sipInitAndRegister({
+        agentId: this._deps.evAuth.getAgentId(),
+        authToken: this._deps.evAuth.authenticateResponse.accessToken,
+      });
+      await this.onceRegistered();
+
+      this.setSipRegistering(false);
+      this._closeWebRTCConnectingMask();
+    } catch (error) {
+      console.error(error);
+    }
+  }
 }

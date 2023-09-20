@@ -26,7 +26,7 @@ import { Provider } from 'react-redux';
 import { Route, Router } from 'react-router';
 import { BlockContainer } from '@ringcentral-integration/widgets/containers/BlockContainer';
 import { NotificationContainer } from '@ringcentral-integration/widgets/containers/NotificationContainer';
-import ConnectivityBadgeContainer from '@ringcentral-integration/widgets/containers/ConnectivityBadgeContainer';
+import { ConnectivityBadgeContainer } from '@ringcentral-integration/widgets/containers/ConnectivityBadgeContainer';
 import { ModalContainer } from '@ringcentral-integration/widgets/containers/ModalContainer';
 import { PhoneProviderProps } from '@ringcentral-integration/widgets/lib/phoneContext';
 import PhoneProvider from '@ringcentral-integration/widgets/lib/PhoneProvider';

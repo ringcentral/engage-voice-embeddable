@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import classnames from 'classnames';
-import styles from '@ringcentral-integration/widgets/components/Environment/styles.scss';
+import styles from '@ringcentral-integration/widgets/components/EnvironmentPanel/styles.scss';
 
 import BackHeader from '@ringcentral-integration/widgets/components/BackHeader';
 import Panel from '@ringcentral-integration/widgets/components/Panel';

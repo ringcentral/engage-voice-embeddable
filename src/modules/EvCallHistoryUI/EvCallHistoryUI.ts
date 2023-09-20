@@ -1,7 +1,7 @@
 import { RcUIModuleV2 } from '@ringcentral-integration/core';
 import { Module } from '@ringcentral-integration/commons/lib/di';
 import { callDirection } from '@ringcentral-integration/commons/enums/callDirections';
-import { NewNote } from '@ringcentral/juno/icon';
+import { NewNote } from '@ringcentral/juno-icon';
 
 import {
   CallLog,
