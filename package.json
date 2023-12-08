@@ -1,7 +1,7 @@
 {
   "name": "engage-voice-embeddable",
   "version": "0.2.0",
-  "description": "RingCentral Engage Voice Embeddable widget",
+  "description": "RingCentral RingCX Embeddable widget",
   "browserslist": "> 0.25%, ie > 10",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 0",

@@ -1,4 +1,3 @@
-import { EvLoginHeader } from '@ringcentral-integration/engage-voice-widgets/components/EvLoginHeader';
 import { CallerIdLabel } from '@ringcentral-integration/engage-voice-widgets/components/ManualDialSettingsPanel/CallerIdLabel';
 import { QueueLabel } from '@ringcentral-integration/engage-voice-widgets/components/ManualDialSettingsPanel/QueueLabel';
 import { ActiveCallListPage } from '@ringcentral-integration/engage-voice-widgets/containers/ActiveCallListPage';
@@ -33,6 +32,7 @@ import PhoneProvider from '@ringcentral-integration/widgets/lib/PhoneProvider';
 
 import { getAlertRenderer } from '../../components/AlertRenderer';
 import { AppView } from '../AppView';
+import { EvLoginHeader } from '../../components/EvLoginHeader';
 
 type AppProps = PhoneProviderProps;
 

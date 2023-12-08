@@ -1,10 +1,10 @@
-# Engage Voice Embeddable (Beta)
+# RingCX Embeddable (Beta)
 
 [![Build Status](https://github.com/ringcentral/engage-voice-embeddable/workflows/Deploy/badge.svg?branch=master)](https://github.com/ringcentral/engage-voice-embeddable/actions)
 
 ## Introduction
 
-This is an out-of-the-box embeddable web application that help developers to integrate [RingCentral Engage Voice](https://www.ringcentral.com/engage/engage-voice.html) services to their web applications with few code.
+This is an out-of-the-box embeddable web application that help developers to integrate [RingCentral RingCX](https://www.ringcentral.com/ringcx.html) services to their web applications with few code.
 
 ## Visit Online
 
@@ -38,7 +38,7 @@ Visit [website](https://ringcentral.github.io/engage-voice-embeddable/) in GitHu
 
 ## Awesome Embeddable projects
 
-* RingCentral Engage Voice Embeddable phone for Hubspot CRM - [repo](https://github.com/ringcentral/hubspot-embeddable-engage-phone)
+* RingCentral RingCX Embeddable phone for Hubspot CRM - [repo](https://github.com/ringcentral/hubspot-embeddable-engage-phone)
 
 ## Contribution and Development
 
@@ -65,7 +65,7 @@ RINGCENTRAL_SERVER=https://platform.ringcentral.com
 
 ENGAGE_VOICE_AUTH_SERVER=https://engage.ringcentral.com
 ```
-**Notice**: Now the Engage Voice service only is supported on production environment. Please make sure your key is graduated into RingCentral production environment.
+**Notice**: Now the RingCX service only is supported on production environment. Please make sure your key is graduated into RingCentral production environment.
 
 ### Start development server
 

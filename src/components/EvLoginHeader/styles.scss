@@ -1,0 +1,12 @@
+@import '~@ringcentral-integration/engage-voice-widgets/scss/variables.scss';
+
+.evLogin {
+  padding-top: 66px;
+  position: absolute;
+  top: 0;
+
+  svg {
+    width: 220px;
+    height: auto;
+  }
+}
