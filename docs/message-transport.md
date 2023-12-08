@@ -1,6 +1,6 @@
 # Message Transport
 
-We are using `postMessage` to interact with Engage Voice widget. For developers who are using `Adapter JS way` to integrate this widget, you don't need to case about the message transport as you can use `function` provide from `RCAdapter` object to interact with widget.
+We are using `postMessage` to interact with RingCX widget. For developers who are using `Adapter JS way` to integrate this widget, you don't need to case about the message transport as you can use `function` provide from `RCAdapter` object to interact with widget.
 
 For who are using iframe way or can't access `RCAdapter` object, you can create message transport by yourself:
 

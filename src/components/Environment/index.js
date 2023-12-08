@@ -147,7 +147,7 @@ class Environment extends Component {
             />
           </Line>
           <Line>
-            Engage Voice Auth server
+            RingCX Auth server
             <TextInput
               value={this.state.evAuthServerValue}
               onChange={this.onEvAuthServerChange}

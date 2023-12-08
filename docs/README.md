@@ -1,6 +1,6 @@
-# Engage Voice Embeddable
+# RingCX Embeddable
 
-This is an out-of-the-box embeddable web application that help developers to integrate [RingCentral Engage Voice](https://www.ringcentral.com/engage/engage-voice.html) services to their web applications with few code.
+This is an out-of-the-box embeddable web application that help developers to integrate [RingCentral RingCX](https://www.ringcentral.com/ringcx.html) services to their web applications with few code.
 
 ## Table of Contents
 

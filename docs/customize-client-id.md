@@ -20,7 +20,7 @@ Developers can config this widget to use their own RingCentral app client id.
 </script>
 ```
 
-`rcServer` and `evServer` is used to set environment. But we only support Engage Voice in production environment now. They are optional.
+`rcServer` and `evServer` is used to set environment. But we only support RingCX in production environment now. They are optional.
 
 ## Iframe way
 

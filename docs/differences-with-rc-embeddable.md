@@ -1,8 +1,8 @@
-# Differences between RingCentral Embeddable and Engage Voice Embeddable
+# Differences between RingCentral Embeddable and RingCX Embeddable
 
-[RingCentral Embeddable](https://github.com/ringcentral/ringcentral-embeddable) is built for [RingCentral Office](https://www.ringcentral.sg/office/plans.html#office) (Message Video Phone) customers. And Engage Voice Embeddable is built for [Engage Voice](https://www.ringcentral.sg/office/plans.html#cc) (Contact Center) customers.
+[RingCentral Embeddable](https://github.com/ringcentral/ringcentral-embeddable) is built for [RingCentral Office](https://www.ringcentral.sg/office/plans.html#office) (Message Video Phone) customers. And RingCX Embeddable is built for [RingCX](https://www.ringcentral.com/office/plansandpricing.html?tabs=ringcx#cx) (Contact Center) customers.
 
-### Features at Engage Voice Embeddable
+### Features at RingCX Embeddable
 
 * Agent states
 * Voice queues
