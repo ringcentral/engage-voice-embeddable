@@ -1,4 +1,4 @@
-import webpack from 'webpack';
+import webpack, { NormalModuleReplacementPlugin } from 'webpack';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import path from 'path';
 import { getBaseWebpackConfig } from '@ringcentral-integration/widgets/lib/getBaseWebpackConfig';
@@ -68,6 +68,10 @@ function getWebpackConfig({
           { from: './src/popup.html', to: 'popup.html' },
         ]
       }),
+      new NormalModuleReplacementPlugin(
+        /assets\/icons\/engageVoiceLogo\.svg/,
+        path.resolve(__dirname, '../assets/ringCXLogo.svg'),
+      ),
     ],
     resolve: {
       ...base.resolve,
