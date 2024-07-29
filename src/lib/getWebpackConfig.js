@@ -23,7 +23,7 @@ function getWebpackConfig({
   const base = getBaseWebpackConfig({
     mode: environment,
     themeFolder: brandFolder,
-    babelLoaderExcludes: /node_modules|engage-voice-agent/
+    babelLoaderExcludes: /node_modules|vendor/
   });
   const scssLoader = base.module.rules.find((rule) => rule.test.test('x.scss'));
   // TODO: fix scss syntax error in widgets
@@ -33,6 +33,16 @@ function getWebpackConfig({
       search: /and\(max-width/g, /// fix typo in scss
       replace: 'and (max-width',
     },
+  });
+  base.module.rules.push({
+    test: /agentLibrary\.js$/,
+    use: {
+      loader: 'string-replace-loader',
+      options: {
+        search: 'window.location.origin',
+        replace: 'window.evAuthHost',
+      },
+    }
   });
   return {
     ...base,
