@@ -21,6 +21,10 @@ const evAgentConfig = {
   isSecureSocket: true,
   allowMultiSocket: true,
   authHost: process.env.ENGAGE_VOICE_AUTH_SERVER,
+  clientAppType: "RCX_Embeddable",
+  clientAppVersion: "0.2.0",
+  componentName: "EAG",
+  isI18nEnabled: false,
 };
 
 const authConfig = {
@@ -131,7 +135,8 @@ export async function devServer() {
       publicPath: '/',
     },
     port,
-    hot: true,
+    hot: false,
+    webSocketServer: false,
   }, compiler);
   await server.start();
   console.log(`Brand: ${brand}: server listening to ${port}...`);

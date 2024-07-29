@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { createStore } from 'redux';
-
+import './lib/patch';
 import './lib/BroadcastChannel.polyfill';
 
 import { createPhone } from './modules/Phone';
@@ -40,7 +40,9 @@ if (rcServer) {
 }
 if (evServer) {
   evSdkConfig.authHost = evServer;
+  window.evAuthHost = evServer;
 }
+
 // @ts-ignore
 const phone = createPhone({
   sdkConfig,

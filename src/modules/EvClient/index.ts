@@ -1,11 +1,24 @@
 import { EvClient as EvClientBase } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient';
-import { EvCallbackTypes } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums/callbackTypes';
+import { EvCallbackTypes, evStatus } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums';
 import { Module } from '@ringcentral-integration/commons/lib/di';
+
+import type {
+  EvACKResponse,
+  EvAuthenticateAgentWithRcAccessTokenRes,
+  EvTokenType,
+  RawEvAuthenticateAgentWithRcAccessTokenRes,
+} from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/interfaces';
+
+const AGENT_TYPES = {
+  AGENT: 'agent',
+  SUPERVISOR: 'supervisor',
+};
 
 @Module({
   name: 'EvClient',
   deps: [
     { dep: 'Environment' },
+    { dep: 'Locale' },
     { dep: 'EvClientOptions', optional: true }
   ],
 })
@@ -49,6 +62,41 @@ export class EvClient extends EvClientBase {
       authHost: this._options.authHost,
       ssoLogin, // else goes to freeswitch
       dialDest,
+    });
+  }
+
+  authenticateAgent(rcAccessToken: string, tokenType: EvTokenType) {
+    return new Promise<EvAuthenticateAgentWithRcAccessTokenRes>((resolve) => {
+      this.setAppStatus(evStatus.LOGIN);
+      this._sdk.authenticateAgentWithRcAccessToken(
+        rcAccessToken,
+        tokenType,
+        async (res: RawEvAuthenticateAgentWithRcAccessTokenRes) => {
+          // For Session in Agent SDK
+          localStorage.setItem('engage-auth:tokenType', res.tokenType);
+          localStorage.setItem('engage-auth:accessToken', res.accessToken);
+          localStorage.setItem('engage-auth:refreshToken', res.refreshToken);
+          // here just auth with engage access token, not need handle response data, that handle by Agent SDK.
+          await this.authenticateAgentWithEngageAccessToken(res.accessToken);
+
+          let locale = res.regionalSettings?.language;
+          if (locale) {
+            this._deps.locale.setLocale(locale);
+            this._eventEmitter.emit('setLocale', locale);
+          }
+          this.setAppStatus(evStatus.LOGINED);
+          const _agents = (res || {}).agents || [];
+          const agents = _agents.map((agent) => ({
+            ...agent,
+            agentId: agent && agent.agentId ? `${agent.agentId}` : '',
+            agentType: AGENT_TYPES[agent.agentType],
+          }));
+          resolve({
+            ...res,
+            agents,
+          });
+        },
+      );
     });
   }
 }
