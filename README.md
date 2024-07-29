@@ -1,6 +1,6 @@
 # RingCX Embeddable (Beta)
 
-[![Build Status](https://github.com/ringcentral/engage-voice-embeddable/workflows/Deploy/badge.svg?branch=master)](https://github.com/ringcentral/engage-voice-embeddable/actions)
+[![Build Status](https://github.com/ringcentral/engage-voice-embeddable/actions/workflows/deploy.yml/badge.svg?branch=master)](https://github.com/ringcentral/engage-voice-embeddable/actions)
 
 ## Introduction
 
