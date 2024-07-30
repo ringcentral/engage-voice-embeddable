@@ -7,7 +7,6 @@ import { contactMatchIdentifyEncode } from '@ringcentral-integration/engage-voic
 // import { evStatus } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums/evStatus';
 import { EvActiveCallControl } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallControl';
 import { EvActiveCallListUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallListUI';
-import { EvAgentSessionUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentSessionUI';
 import { EvAgentScript } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentScript';
 // import { EvAuth } from '@ringcentral-integration/engage-voice-widgets/modules/EvAuth';
 import { EvCallDataSource } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDataSource';
@@ -63,6 +62,7 @@ import { EvAuth } from '../EvAuth';
 import { EvTabManager } from '../EvTabManager';
 import { EvIntegratedSoftphone } from '../EvIntegratedSoftphone';
 import { EvAgentSession } from '../EvAgentSession';
+import { EvAgentSessionUI } from '../EvAgentSessionUI';
 import OAuth from '../OAuth';
 import { Adapter } from '../Adapter';
 import { ThirdPartyService } from '../ThirdPartyService';
