@@ -9,8 +9,6 @@ import { MainViewPage } from '@ringcentral-integration/engage-voice-widgets/cont
 import { ManualDialSettingsPage } from '@ringcentral-integration/engage-voice-widgets/containers/ManualDialSettingsPage';
 import { RequeueCallGroupItemPage } from '@ringcentral-integration/engage-voice-widgets/containers/RequeueCallGroupItemPage';
 import { RequeueCallGroupPage } from '@ringcentral-integration/engage-voice-widgets/containers/RequeueCallGroupPage';
-import { SessionConfigPage } from '@ringcentral-integration/engage-voice-widgets/containers/SessionConfigPage';
-import { SessionUpdatePage } from '@ringcentral-integration/engage-voice-widgets/containers/SessionUpdatePage';
 import { CallHistoryPage } from '@ringcentral-integration/engage-voice-widgets/containers/CallHistoryPage';
 import { SettingsPage } from '@ringcentral-integration/engage-voice-widgets/containers/SettingsPage';
 import { ChooseAccountPage } from '@ringcentral-integration/engage-voice-widgets/containers/ChooseAccountPage';
@@ -33,6 +31,8 @@ import PhoneProvider from '@ringcentral-integration/widgets/lib/PhoneProvider';
 import { getAlertRenderer } from '../../components/AlertRenderer';
 import { AppView } from '../AppView';
 import { EvLoginHeader } from '../../components/EvLoginHeader';
+import { SessionConfigPage } from '../SessionConfigPage';
+import { SessionUpdatePage } from '../SessionUpdatePage';
 
 type AppProps = PhoneProviderProps;
 

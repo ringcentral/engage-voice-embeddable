@@ -12,7 +12,7 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@ringcentral-integration/babel-settings": "^0.2.0",
+    "@ringcentral-integration/babel-settings": "^0.3.0",
     "@ringcentral-integration/locale-loader": "^2.2.1",
     "@types/classnames": "^2.2.7",
     "@types/react-dom": "^16.9.3",
