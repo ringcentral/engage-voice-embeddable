@@ -14,7 +14,6 @@ import { EvCallDisposition } from '@ringcentral-integration/engage-voice-widgets
 import { EvCallMonitor } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallMonitor';
 import { EvDialerUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvDialerUI';
 import { EvManualDialSettingsUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvManualDialSettingsUI';
-import { EvPresence } from '@ringcentral-integration/engage-voice-widgets/modules/EvPresence';
 import { EvRequeueCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvRequeueCall';
 import { EvSettings } from '@ringcentral-integration/engage-voice-widgets/modules/EvSettings';
 import { EvSettingsUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvSettingsUI';
@@ -59,6 +58,7 @@ import RouterInteraction from '@ringcentral-integration/widgets/modules/RouterIn
 
 import { EvClient } from '../EvClient';
 import { EvAuth } from '../EvAuth';
+import { EvPresence } from '../EvPresence';
 import { EvTabManager } from '../EvTabManager';
 import { EvIntegratedSoftphone } from '../EvIntegratedSoftphone';
 import { EvAgentSession } from '../EvAgentSession';
