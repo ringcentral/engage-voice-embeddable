@@ -297,7 +297,9 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
       outboundSettings: { availableOutdialGroups = [] },
     } = agentConfig;
 
-    return [noneItem].concat(availableOutdialGroups.map((group) => ({
+    return [noneItem].concat(availableOutdialGroups.filter((g) => {
+      return g.dialMode === 'PREDICTIVE';
+    }).map((group) => ({
       groupId: group.dialGroupId,
       groupName: group.dialGroupName,
       groupDesc: group.dialGroupDesc,
