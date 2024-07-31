@@ -180,11 +180,11 @@ export default class BasePhone extends RcModule {
         this.modules.routerInteraction.push('/');
       }
       if (
-        this.modules.locale.currentLocale !== this.modules.locale._defaultLocale &&
+        this.modules.locale.currentLocale !== this.modules.locale.defaultLocale &&
         !this._hasSetLocale
       ) {
         this._hasSetLocale = true;
-        this.modules.locale.setLocale(this.modules.locale._defaultLocale);
+        this.modules.locale.setLocale(this.modules.locale.defaultLocale);
       }
     });
   }
