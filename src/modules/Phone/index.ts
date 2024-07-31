@@ -127,6 +127,23 @@ import { GenericPhone } from './interface';
         StorageProvider: LocalForageStorage,
       } as GlobalStorageOptions,
     },
+    {
+      provide: 'ConnectivityMonitorOptions',
+      useValue: {
+        checkConnectionFunc: async () => {
+          const response = await fetch(
+            'https://apps.ringcentral.com/integrations/ping',
+            {
+              method: 'HEAD',
+              mode: 'no-cors',
+            },
+          );
+          if (response.type !== 'opaque' && response.status !== 200) {
+            throw new Error('Network check failed');
+          }
+        },
+      },
+    },
     { provide: 'ContactMatcher', useClass: ContactMatcher },
     { provide: 'ActivityMatcher', useClass: ActivityMatcher },
     { provide: 'Presence', useClass: EvPresence },
