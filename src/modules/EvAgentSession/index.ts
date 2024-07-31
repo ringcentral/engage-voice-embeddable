@@ -1306,7 +1306,7 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
   }
 
   private async _connectEvServer(config: EvConfigureAgentOptions) {
-    console.log('configure ev agent in _connectEvServer~~', config);
+    // console.log('configure ev agent in _connectEvServer~~', config);
     let result = await this._deps.evClient.configureAgent(config);
     const { status } = result.data;
     const existingLoginFound = status === messageTypes.EXISTING_LOGIN_FOUND;
