@@ -10,4 +10,8 @@ export class EvAuth extends EvAuthBase {
   getAgentId() {
     return this.agentId;
   }
+
+  get isI18nEnabled() {
+    return !!this.agent?.isI18nEnabled;
+  }
 }
