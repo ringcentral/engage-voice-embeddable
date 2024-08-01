@@ -278,6 +278,7 @@ export default class BasePhone extends RcModule {
             const data = await evClient.loadCurrentCall();
             if (!data || !data.uii) {
               // TODO: alert message about sync up unexpected data for current call.
+              console.log('go to dialer when no call');
               return routerInteraction.push('/dialer');
             }
           }
@@ -303,26 +304,17 @@ export default class BasePhone extends RcModule {
         contactMatcher.forceMatchNumber({
           phoneNumber: contactMatchIdentifyEncode({phoneNumber: call.ani, callType: call.callType}),
         });
-        adapter.onNewCall(evActivityCallUI.myActivityCallLog.call);
+        adapter.onNewCall(evActivityCallUI.activityCallLog.call);
       })
       .onCallEnded(() => {
         this._checkRouterShouldLeave(routerInteraction);
         this._removeBeforeunload();
-        adapter.onEndCall(evActivityCallUI.myActivityCallLog.call);
+        adapter.onEndCall(evActivityCallUI.activityCallLog.call);
         if (!evActivityCallUI.showSubmitStep) {
           evActivityCallUI.gotoDialWithoutSubmit();
           return;
         }
       });
-
-    evAgentSession.onConfigSuccess(() => {
-      routerInteraction.push('/dialer');
-      // if not allowManualCall, just not handle c2d
-      // if (!evAuth.agentPermissions.allowManualCalls) {
-      //   return;
-      // }
-      // enable c2d
-    });
 
     evAuth.canUserLogoutFn = async () => {
       if (presence.isCallConnected) {

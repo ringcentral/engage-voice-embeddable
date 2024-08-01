@@ -46,4 +46,9 @@ export class EvIntegratedSoftphone extends EvIntegratedSoftphoneBase {
       console.error(error);
     }
   }
+
+  // remove disable multiple tabs ringing
+  override async _checkTabManagerEvent() {
+    // ignore
+  }
 }
