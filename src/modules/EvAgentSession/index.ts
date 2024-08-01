@@ -61,12 +61,6 @@ type NewFormGroup = FormGroup & {
   dialGroupId: string;
 };
 
-type AutoConfigType =
-  | 'already success'
-  | 'other tab config'
-  | 'config'
-  | 'retry';
-
 type ConfigureAgentParams = {
   config?: EvConfigureAgentOptions;
   triggerEvent?: boolean;
@@ -164,14 +158,14 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
     );
     
     // New feature about popup window
-    if (this._deps.evAgentSessionOptions.fromPopup) {
-      this.onConfigSuccess(() => {
-        if (this.isMainTab) {
-          return;
-        }
-        this._tabReConfig();
-      });
-    }
+    // if (this._deps.evAgentSessionOptions.fromPopup) {
+    //   this.onConfigSuccess(() => {
+    //     if (this.isMainTab) {
+    //       return;
+    //     }
+    //     this._tabReConfig();
+    //   });
+    // }
   }
 
   @storage
@@ -733,7 +727,13 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
 
     console.log('autoconfig~', !this._deps.auth.isFreshLogin, this.configured);
 
-    if (this._deps.auth.isFreshLogin === false && this.configured) {
+    if (
+      this._deps.auth.isFreshLogin === false &&
+      this.configured && (
+        !this.tabManagerEnabled ||
+        !this.hasMultipleTabs
+      )
+    ) {
       try {
         return this._autoConfigureAgent();
       } catch (e) {
@@ -780,99 +780,6 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
     this._deps.beforeunload.removeAfterUnloadListener(
       this._mainTabAfterUnloadHandler,
     );
-  }
-
-  override async onStateChange() {
-    if (this.ready && this.tabManagerEnabled && this._deps.tabManager.ready) {
-      await this._checkTabManagerEvent();
-    }
-  }
-
-  private async _checkTabManagerEvent() {
-    const { event } = this._deps.tabManager;
-    const data = event?.args[0];
-    if (event) {
-      switch (event.name) {
-        case tabManagerEvents.AGENT_CONFIG_SUCCESS:
-          console.log(
-            '_othersTabConfigureAgent from tabManagerEvents.AGENT_CONFIG_SUCCESS~~',
-          );
-          try {
-            await this._othersTabConfigureAgent();
-          } catch (error) {
-            this._configureFail();
-          }
-          break;
-        case tabManagerEvents.UPDATE_SESSION:
-          this._updateSessionBlockId = this._deps.block.block();
-          this.isAgentUpdating = true;
-
-          // if voiceConnectionChanged
-          if (data) {
-            this.onceLogoutThenLogin().then((loginPromise) => {
-              this._loginPromise = loginPromise;
-            });
-          }
-          break;
-        case tabManagerEvents.MAIN_TAB_WILL_UNLOAD:
-          console.log(
-            'MAIN_TAB_WILL_UNLOAD~~',
-            data === this._deps.tabManager.tabbie.id,
-            this.isMainTab,
-          );
-          if (data === this._deps.tabManager.tabbie.id || this.isMainTab) {
-            // now this tab is the new main tab
-            await this._newMainTabReConfig();
-          }
-          break;
-        case tabManagerEvents.SET_MIAN_TAB_ID:
-          if (this._deps.tabManager.mainTabId !== data) {
-            console.log('SET_MIAN_TAB_ID in this tab~');
-            this._deps.tabManager.setMainTabIdInThisTab(data);
-          }
-          break;
-        case tabManagerEvents.UPDATE_SESSION_SUCCESS:
-          try {
-            console.log('UPDATE_SESSION_SUCCESS~~', data);
-            // if voiceConnectionChanged
-            if (data) {
-              this._destroyTabLife();
-              this._initTabLife();
-              await this._loginPromise;
-              await this._othersTabConfigureAgent();
-            } else {
-              this.setConfigSuccess(true);
-            }
-
-            this._unblockUpdateSession();
-
-            this.isAgentUpdating = false;
-          } catch (error) {
-            // when that auto config fail, just reload that tab
-            console.log(error);
-            window.location.reload();
-          }
-          break;
-        case tabManagerEvents.UPDATE_SESSION_SUCCESS_ALERT:
-          this._showUpdateSuccessAlert();
-          break;
-        case tabManagerEvents.UPDATE_SESSION_FAIL:
-          this._unblockUpdateSession();
-          break;
-        case tabManagerEvents.RELOGIN:
-          await this.reLoginAgent({
-            isBlock: true,
-            alertMessage: messageTypes.NOT_INBOUND_QUEUE_SELECTED,
-          });
-          break;
-        case tabManagerEvents.CONFIGURE_FAIL:
-          console.log('other tab be called to invoke _configureFail~~');
-          this._configureFail();
-          break;
-        default:
-          break;
-      }
-    }
   }
 
   private _unblockUpdateSession() {
@@ -1154,117 +1061,16 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
   }
 
   private async _autoConfigureAgent(): Promise<void> {
-    console.log('_autoConfigureAgent~', this.tabManagerEnabled);
+    console.log('_autoConfigureAgent~');
 
-    const isFirstTab = this._deps.tabManager.isFirstTab;
-
-    if (this._autoConfigureRetryTimes >= 5) {
-      console.log('stop autoConfigureRetry~~', this._autoConfigureRetryTimes);
-      this._autoConfigureRetryTimes = 0;
-      return this._configureFail(isFirstTab);
-    }
-
-    let timeoutId: NodeJS.Timeout = null;
-    if (this.tabManagerEnabled) {
-      const resolves: ((
-        value?: AutoConfigType | PromiseLike<AutoConfigType>,
-      ) => void)[] = [null, null, null];
-      return Promise.race<AutoConfigType>([
-        new Promise<AutoConfigType>((res) => {
-          console.log('res already success~~');
-          resolves[0] = () => res('already success');
-
-          this._eventEmitter.once(
-            agentSessionEvents.CONFIG_SUCCESS,
-            resolves[0],
-          );
-        }),
-        new Promise<AutoConfigType>((res) => {
-          resolves[1] = res;
-          // check isSuccess first
-          if (this.isAgentUpdating || this._deps.tabManager.tabs.length !== 1) {
-            const checkIsAlive = () => {
-              console.log('checkIsAlive~~');
-              this._tabConfigSuccess.isAlive().then(async (result) => {
-                console.log('isAlive ?~', result);
-                if (result) {
-                  console.log('res other tab config~~');
-                  res('other tab config');
-                } else {
-                  checkIsAlive();
-                }
-              });
-            };
-
-            checkIsAlive();
-          }
-        }),
-        new Promise<AutoConfigType>((res) => {
-          resolves[2] = res;
-          // when there is too many tab, that event will block
-          // then check local
-          if (isFirstTab) {
-            this._tabConfigWorking.isLeave().then(async (result) => {
-              console.log('isLeave ?~', result);
-              if (result) {
-                this._configWorkingAlive();
-                console.log('res config~~');
-                res('config');
-              }
-            });
-          }
-        }),
-        new Promise<AutoConfigType>((res) => {
-          timeoutId = setTimeout(() => {
-            res('retry');
-          }, 10000);
-        }),
-      ])
-        .then((result) => {
-          clearTimeout(timeoutId);
-          this._eventEmitter.off(
-            agentSessionEvents.CONFIG_SUCCESS,
-            resolves[0],
-          );
-          console.log('clear all memory with promise~');
-          // clear all memory with promise
-          resolves.forEach((r) => r());
-          resolves.length = 0;
-
-          console.log('!!!!!', result);
-
-          switch (result) {
-            case 'retry':
-              console.log('retry auto config~');
-              this._autoConfigureRetryTimes++;
-              return this._autoConfigureAgent();
-            case 'other tab config':
-              console.log('_othersTabConfigureAgent in auto config~~');
-              return this._othersTabConfigureAgent();
-            case 'config': {
-              console.log('configureAgent in auto config~~');
-              //! when reConfig, if that change queue or others field in ev admin, that will get error, should redirect to sessionPage
-              const config = this._checkFieldsResult({
-                selectedInboundQueueIds: this.selectedInboundQueueIds,
-                selectedSkillProfileId: this.selectedSkillProfileId,
-                loginType: this.loginType,
-                extensionNumber: this.extensionNumber,
-              });
-              return this.configureAgent({ config });
-            }
-            case 'already success':
-            default:
-              return Promise.resolve();
-          }
-        })
-        .catch((e) => {
-          console.log('_autoConfigureAgent error~~', e);
-          this._configureFail(isFirstTab);
-          return e;
-        });
-    }
-
-    return this.configureAgent();
+    const config = this._checkFieldsResult({
+      selectedInboundQueueIds: this.selectedInboundQueueIds,
+      selectedSkillProfileId: this.selectedSkillProfileId,
+      loginType: this.loginType,
+      extensionNumber: this.extensionNumber,
+      dialGroupId: this.dialGroupId,
+    });
+    return this.configureAgent({ config });
   }
 
   _configureFail(needAsyncAllTabs = false) {
