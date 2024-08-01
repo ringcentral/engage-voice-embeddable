@@ -112,5 +112,3 @@ object-assign
 //! moment.js locale configuration
 
 //! version : 0.5.35
-
-//! when reConfig, if that change queue or others field in ev admin, that will get error, should redirect to sessionPage
