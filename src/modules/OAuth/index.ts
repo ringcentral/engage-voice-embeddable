@@ -10,18 +10,8 @@ import messageTypes from '../../enums/messageTypes';
   ]
 })
 export default class OAuth extends OAuthBase {
-  private _disableLoginPopup: boolean;
-
-  constructor({
-    disableLoginPopup = false,
-    ...options
-  }) {
-    super(options);
-    this._disableLoginPopup = disableLoginPopup;
-  }
-
   openOAuthPage() {
-    if (this._disableLoginPopup) {
+    if (this._deps.oAuthOptions.disableLoginPopup) {
       window.parent.postMessage({
         type: messageTypes.loginPopup,
         oAuthUri: this.oAuthUri,
