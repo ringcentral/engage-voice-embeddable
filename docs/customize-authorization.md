@@ -38,7 +38,7 @@ window.addEventListener('message', (e) => {
 ## Pass RingCentral authorization code:
 
 ```js
-document.querySelector("#rc-widget-adapter-frame").contentWindow.postMessage({
+document.querySelector("#engage-voice-embeddable-adapter-frame").contentWindow.postMessage({
   type: 'rc-ev-authorization-code',
   callbackUri: "http://localhost:8080/redirect.html?code=authorization_code&state=MTU5OTE0MzE5NTQ5OQ%3D%3D"
 }, '*');
