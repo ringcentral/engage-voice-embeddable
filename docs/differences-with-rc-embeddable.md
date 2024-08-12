@@ -1,6 +1,6 @@
 # Differences between RingCentral Embeddable and RingCX Embeddable
 
-[RingCentral Embeddable](https://github.com/ringcentral/ringcentral-embeddable) is built for [RingCentral Office](https://www.ringcentral.sg/office/plans.html#office) (Message Video Phone) customers. And RingCX Embeddable is built for [RingCX](https://www.ringcentral.com/office/plansandpricing.html?tabs=ringcx#cx) (Contact Center) customers.
+[RingCentral Embeddable](https://github.com/ringcentral/ringcentral-embeddable) is built for [RingCentral RingEX](https://www.ringcentral.com/ringex.html) (Calls, messages and meetings) customers. And RingCX Embeddable is built for [RingCX](https://www.ringcentral.com/ringcx.html) (Contact Center) customers.
 
 ### Features at RingCX Embeddable
 
