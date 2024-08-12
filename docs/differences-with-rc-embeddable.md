@@ -6,7 +6,10 @@
 
 * Agent states
 * Voice queues
-* Outbound Campaigns (TODO)
+* Outbound Campaigns
+   - Predictive dial mode
+   - Preview dial mode (TODO)
+   - Progressive dial mode (TODO)
 * Agent scripts (TODO)
 * A online device limitation
 
