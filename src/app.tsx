@@ -27,6 +27,7 @@ const {
   evServer,
   disableLoginPopup,
   fromPopup,
+  jwt,
 } = pathParams;
 
 if (clientId) {
@@ -48,8 +49,7 @@ const phone = createPhone({
   sdkConfig,
   brandConfig,
   evSdkConfig,
-  redirectUri,
-  authConfig,
+  redirectUri: redirectUri || authConfig.redirectUri,
   prefix,
   version,
   buildHash,
@@ -57,6 +57,7 @@ const phone = createPhone({
   runTimeEnvironment: process.env.NODE_ENV,
   disableLoginPopup: !!disableLoginPopup,
   fromPopup,
+  jwt,
 });
 
 const store = createStore(phone.reducer);

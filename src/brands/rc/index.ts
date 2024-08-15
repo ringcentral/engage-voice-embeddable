@@ -3,7 +3,7 @@ export default {
   brandCode: 'rc',
   code: 'rc',
   name: 'RingCentral',
-  appName: 'RingCentral Engage Cloud Contact Center',
-  fullName: 'RingCentral Engage Cloud Contact Center',
-  application: 'RingCentral Engage Cloud Contact Center',
+  appName: 'RingCX Embeddable',
+  fullName: 'RingCentral RingCX Embeddable',
+  application: 'RingCX Embeddable',
 };

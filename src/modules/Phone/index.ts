@@ -393,6 +393,7 @@ export function createPhone({
   disableLoginPopup,
   redirectUri,
   fromPopup,
+  jwt,
 }) {
   const appVersion = buildHash ? `${version} (${buildHash})` : version;
   const usePKCE = sdkConfig.clientId && !sdkConfig.clientSecret;
@@ -465,6 +466,7 @@ export function createPhone({
           extralUIOptions: ['hide_remember_me', 'hide_tos', '-old_ui'],
           disableLoginPopup,
           redirectUri,
+          jwt,
         },
       },
       { provide: 'AuthOptions', useValue: { usePKCE } },
