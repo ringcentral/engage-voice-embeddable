@@ -10,7 +10,6 @@ import { EvActiveCallListUI } from '@ringcentral-integration/engage-voice-widget
 import { EvAgentScript } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentScript';
 // import { EvAuth } from '@ringcentral-integration/engage-voice-widgets/modules/EvAuth';
 import { EvCallDataSource } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDataSource';
-import { EvCallDisposition } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDisposition';
 import { EvCallMonitor } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallMonitor';
 import { EvDialerUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvDialerUI';
 import { EvManualDialSettingsUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvManualDialSettingsUI';
@@ -67,6 +66,7 @@ import OAuth from '../OAuth';
 import { Adapter } from '../Adapter';
 import { ThirdPartyService } from '../ThirdPartyService';
 import { EvCall } from '../EvCall';
+import { EvCallDisposition } from '../EvCallDisposition';
 import { EvActivityCallUI } from '../EvActivityCallUI';
 import { EvCallHistoryUI } from '../EvCallHistoryUI';
 import { EvCallHistory } from '../EvCallHistory';

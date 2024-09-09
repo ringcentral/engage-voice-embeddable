@@ -33,6 +33,7 @@ const {
   enablePopup,
   popupPageUri,
   jwt,
+  hideCallNote,
 } = parseUri(paramsUri);
 
 function obj2uri(obj) {
@@ -58,6 +59,7 @@ const appUri = `${appUrl}?${obj2uri({
   fromAdapter: 1,
   fromPopup,
   jwt,
+  hideCallNote,
   _t: Date.now(),
 })}`;
 
