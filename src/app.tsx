@@ -28,6 +28,7 @@ const {
   disableLoginPopup,
   fromPopup,
   jwt,
+  jwtOwnerId,
 } = pathParams;
 
 if (clientId) {
@@ -58,6 +59,7 @@ const phone = createPhone({
   disableLoginPopup: !!disableLoginPopup,
   fromPopup,
   jwt,
+  jwtOwnerId,
 });
 
 const store = createStore(phone.reducer);

@@ -34,6 +34,7 @@ const DEFAULT_COUNTRIES = ['USA', 'CAN'];
   deps: [
     'EvClient',
     'Auth',
+    'OAuth',
     'Block',
     'Alert',
     'Locale',
@@ -292,7 +293,8 @@ class EvAuth extends RcModuleV2<Deps> implements Auth {
       this._deps.auth.loggedIn &&
       this.loginStatus !== loginStatus.AUTH_SUCCESS &&
       this.loginStatus !== loginStatus.LOGIN_SUCCESS &&
-      !this.connecting
+      !this.connecting &&
+      !this._deps.oAuth.jwtOwnerChanged
     ) {
       this.connecting = true;
       // when login make sure the logoutByOtherTab is false
@@ -324,7 +326,6 @@ class EvAuth extends RcModuleV2<Deps> implements Auth {
     await this._deps.block.next(this._logout);
 
     const logoutAgentResponse = await this.logoutAgent(agentId);
-
     // TODO: error handle when logout fail
     // TODO: when failed need tell other tab not logout => this._deps.tabManager.send(tabManagerEvents.LOGOUT);
     if (!logoutAgentResponse.message || logoutAgentResponse.message !== 'OK') {
