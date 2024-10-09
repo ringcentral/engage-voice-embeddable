@@ -394,6 +394,7 @@ export function createPhone({
   redirectUri,
   fromPopup,
   jwt,
+  jwtOwnerId,
 }) {
   const appVersion = buildHash ? `${version} (${buildHash})` : version;
   const usePKCE = sdkConfig.clientId && !sdkConfig.clientSecret;
@@ -467,6 +468,7 @@ export function createPhone({
           disableLoginPopup,
           redirectUri,
           jwt,
+          jwtOwnerId,
         },
       },
       { provide: 'AuthOptions', useValue: { usePKCE } },

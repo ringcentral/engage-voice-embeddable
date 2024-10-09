@@ -16,7 +16,7 @@ Developers can login to RingCX Embeddable using the [JWT auth flow](https://deve
 ```js
   (function() {
     var rcs = document.createElement("script");
-    rcs.src = "https://ringcentral.github.io/engage-voice-embeddable/adapter.js?clientId=YOU_OWN_JWT_APP_CLIENT_ID&clientSecret=YOUR_OWN_JWT_APP_CLIENT_SECRET&jwt=JWT_TOKEN";
+    rcs.src = "https://ringcentral.github.io/engage-voice-embeddable/adapter.js?clientId=YOU_OWN_JWT_APP_CLIENT_ID&clientSecret=YOUR_OWN_JWT_APP_CLIENT_SECRET&jwt=JWT_TOKEN&jwtOwnerId=optional_owner_id";
     var rcs0 = document.getElementsByTagName("script")[0];
     rcs0.parentNode.insertBefore(rcs, rcs0);
   })();
