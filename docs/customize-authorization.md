@@ -16,7 +16,7 @@ Developers can login to RingCX Embeddable using the [JWT auth flow](https://deve
 ```js
   (function() {
     var rcs = document.createElement("script");
-    rcs.src = "https://ringcentral.github.io/engage-voice-embeddable/adapter.js?clientId=YOU_OWN_JWT_APP_CLIENT_ID&clientSecret=YOUR_OWN_JWT_APP_CLIENT_SECRET&jwt=JWT_TOKEN&jwtOwnerId=optional_owner_id";
+    rcs.src = "https://ringcentral.github.io/engage-voice-embeddable/adapter.js?clientId=YOU_OWN_JWT_APP_CLIENT_ID&clientSecret=YOUR_OWN_JWT_APP_CLIENT_SECRET&jwt=JWT_TOKEN&jwtOwnerId=OPTIONAL_OWNER_ID";
     var rcs0 = document.getElementsByTagName("script")[0];
     rcs0.parentNode.insertBefore(rcs, rcs0);
   })();
@@ -25,7 +25,7 @@ Developers can login to RingCX Embeddable using the [JWT auth flow](https://deve
 ### Iframe way
 
 ```html
-<iframe width="300" height="500" id="engage-voice-embeddable-adapter-frame" allow="microphone" src="https://ringcentral.github.io/engage-voice-embeddable/app.html?clientId=YOU_OWN_JWT_APP_CLIENT_ID&clientSecret=YOUR_OWN_JWT_APP_CLIENT_SECRET&jwt=JWT_TOKEN">
+<iframe width="300" height="500" id="engage-voice-embeddable-adapter-frame" allow="microphone" src="https://ringcentral.github.io/engage-voice-embeddable/app.html?clientId=YOU_OWN_JWT_APP_CLIENT_ID&clientSecret=YOUR_OWN_JWT_APP_CLIENT_SECRET&jwt=JWT_TOKEN&jwtOwnerId=OPTIONAL_OWNER_ID">
 </iframe>
 ```
 
