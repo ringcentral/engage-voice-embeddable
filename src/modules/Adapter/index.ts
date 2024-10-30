@@ -7,7 +7,6 @@ import {
   action,
 } from '@ringcentral-integration/core/lib/RcModule';
 import messageTypes from '../../enums/messageTypes';
-import PopupWindowManager from '../../lib/PopupWindowManager';
 
 import { Interface, Deps } from './interface';
 
@@ -16,6 +15,7 @@ import { Interface, Deps } from './interface';
     'Alert',
     'EvDialerUI',
     'EvCall',
+    'EvAuth',
     'EvAgentSession',
     'GlobalStorage',
     'Presence',
@@ -111,6 +111,8 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
           case this.messageTypes.setEnvironment:
             this.setEnvironment();
             break;
+          case this.messageTypes.logout:
+            this._deps.evAuth.logout();
           default:
             break;
         }

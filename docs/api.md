@@ -7,7 +7,13 @@
 Init a call with phone number
 
 ```js
-RCAdapter.clickToDial(phoneNumber)
+RCAdapter.clickToDial(phoneNumber);
+```
+
+### Logout
+
+```js
+RCAdapter.logout();
 ```
 
 ### Register a logger and contact matcher service
