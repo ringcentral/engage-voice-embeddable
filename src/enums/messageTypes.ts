@@ -24,4 +24,5 @@ export default ObjectMap.prefixKeys([
   'sipEndCall',
   'loginPopup',
   'checkPopupWindow',
+  'logout',
 ], 'rc-ev');

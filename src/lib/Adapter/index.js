@@ -410,6 +410,12 @@ class Adapter extends AdapterCore {
     });
   }
 
+  logout() {
+    this._postMessage({
+      type: messageTypes.logout,
+    });
+  }
+
   get transport() {
     return this._messageTransport;
   }
