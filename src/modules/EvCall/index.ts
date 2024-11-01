@@ -3,6 +3,10 @@ import {
   action,
 } from '@ringcentral-integration/core';
 import { EvCall as BaseEvCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvCall';
+import { callErrors } from '@ringcentral-integration/commons/modules/Call';
+import { messageTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
+import { parseNumber } from '../../lib/parseNumber';
+import { checkCountryCode } from '../../lib/checkCountryCode';
 
 const DEFAULT_OUTBOUND_SETTING = {
   dialoutCallerId: '-1',
@@ -41,6 +45,35 @@ class EvCall extends BaseEvCall {
     if (!Number.isNaN(defaultRingTime)) {
       this.formGroup.dialoutRingTime = defaultRingTime;
       this.dialoutRingTime = defaultRingTime;
+    }
+  }
+
+  private _checkAndParseNumber(phoneNumber: string) {
+    try {
+      checkCountryCode(phoneNumber, this._deps.evAuth.availableCountries);
+
+      return parseNumber(phoneNumber);
+    } catch (error) {
+      switch (error.type) {
+        case messageTypes.NO_SUPPORT_COUNTRY:
+          this._deps.alert.danger({
+            message: messageTypes.NO_SUPPORT_COUNTRY,
+            ttl: 0,
+          });
+          break;
+        case callErrors.emergencyNumber:
+          this._deps.alert.danger({
+            message: callErrors.emergencyNumber,
+          });
+          break;
+        default:
+          this._deps.alert.danger({
+            message: callErrors.noToNumber,
+          });
+          break;
+      }
+
+      throw error;
     }
   }
 }
