@@ -16,7 +16,6 @@ import { EvRequeueCall } from '@ringcentral-integration/engage-voice-widgets/mod
 import { EvSettings } from '@ringcentral-integration/engage-voice-widgets/modules/EvSettings';
 import { EvSettingsUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvSettingsUI';
 import { EvSubscription } from '@ringcentral-integration/engage-voice-widgets/modules/EvSubscription';
-import { EvTransferCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvTransferCall';
 import { EvTransferCallUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvTransferCallUI';
 import { EvWorkingState } from '@ringcentral-integration/engage-voice-widgets/modules/EvWorkingState';
 import { EvChooseAccountUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvChooseAccountUI';
@@ -65,6 +64,7 @@ import OAuth from '../OAuth';
 import { Adapter } from '../Adapter';
 import { ThirdPartyService } from '../ThirdPartyService';
 import { EvCall } from '../EvCall';
+import { EvTransferCall } from '../EvTransferCall';
 import { EvManualDialSettingsUI } from '../EvManualDialSettingsUI';
 import { EvCallDisposition } from '../EvCallDisposition';
 import { EvActivityCallUI } from '../EvActivityCallUI';
