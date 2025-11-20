@@ -56,6 +56,7 @@ function getWebpackConfig({
       filename: '[name].js',
     },
     plugins: [
+      ...base.plugins,
       new webpack.NoEmitOnErrorsPlugin(),
       new webpack.DefinePlugin({
         'process.env': {
