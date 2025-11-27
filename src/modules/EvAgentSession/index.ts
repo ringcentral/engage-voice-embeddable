@@ -279,6 +279,7 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
     const noneItem = {
       groupId: '',
       groupName: 'None',
+      dialMode: '',
     };
     if (
       !agentConfig ||
@@ -292,12 +293,25 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
     } = agentConfig;
 
     return [noneItem].concat(availableOutdialGroups.filter((g) => {
-      return g.dialMode === 'PREDICTIVE';
+      return (g.dialMode === 'PREDICTIVE' || g.dialMode === 'PREVIEW');
     }).map((group) => ({
       groupId: group.dialGroupId,
       groupName: group.dialGroupName,
       groupDesc: group.dialGroupDesc,
+      dialMode: group.dialMode,
     })));
+  }
+
+  @computed((that: EvAgentSession) => [that.dialGroupId, that.dialGroups])
+  get currentDialMode() {
+    if (!this.dialGroupId) {
+      return '';
+    }
+    const group = this.dialGroups.find((group) => group.groupId === this.dialGroupId);
+    if (!group) {
+      return '';
+    }
+    return group.dialMode;
   }
 
   @computed((that: EvAgentSession) => [

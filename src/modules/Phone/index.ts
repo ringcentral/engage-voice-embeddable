@@ -19,7 +19,6 @@ import { EvSubscription } from '@ringcentral-integration/engage-voice-widgets/mo
 import { EvTransferCallUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvTransferCallUI';
 import { EvWorkingState } from '@ringcentral-integration/engage-voice-widgets/modules/EvWorkingState';
 import { EvChooseAccountUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvChooseAccountUI';
-import { MainViewUI } from '@ringcentral-integration/engage-voice-widgets/modules/MainViewUI';
 
 import { SDK } from '@ringcentral/sdk';
 import { RingCentralClient } from '@ringcentral-integration/commons/lib/RingCentralClient';
@@ -71,8 +70,12 @@ import { EvActivityCallUI } from '../EvActivityCallUI';
 import { EvCallHistoryUI } from '../EvCallHistoryUI';
 import { EvCallHistory } from '../EvCallHistory';
 import { Environment } from '../Environment';
+import { EvLeads } from '../EvLeads';
+import { EvLeadsUI } from '../EvLeadsUI';
+import { MainViewUI } from '../MainViewUI';
 import { formatEvCall } from '../../lib/formatEvCall';
 import { GenericPhone } from './interface';
+
 
 @ModuleFactory({
   providers: [
@@ -170,6 +173,8 @@ import { GenericPhone } from './interface';
     { provide: 'EvClient', useClass: EvClient },
     { provide: 'EvCallDataSource', useClass: EvCallDataSource },
     { provide: 'EvIntegratedSoftphone', useClass: EvIntegratedSoftphone },
+    { provide: 'EvLeads', useClass: EvLeads },
+    { provide: 'EvLeadsUI', useClass: EvLeadsUI },
     { provide: 'TabManager', useClass: EvTabManager },
     { provide: 'Beforeunload', useClass: Beforeunload },
   ],

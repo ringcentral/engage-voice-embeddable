@@ -1,0 +1,133 @@
+import type { FunctionComponent } from 'react';
+import React from 'react';
+import {
+  styled,
+  palette2,
+  RcButton,
+  RcIcon,
+  RcTypography,
+  RcList,
+} from '@ringcentral/juno';
+import {
+  Missedcall,
+  Outcall,
+} from '@ringcentral/juno-icon';
+import type { Lead } from '../../modules/EvLeads/EvLeads.interface';
+import { LeadItem } from './LeadItem';
+
+interface LeadsPanelProps {
+  leads: Lead[];
+  getLeads: () => Promise<void>;
+  currentLocale: string;
+  dialLead: (lead: Lead, destination: string) => Promise<void>;
+  loading: boolean;
+  loaded: boolean;
+  isDialing: boolean;
+  pendingDisposition: boolean;
+  agentBusy: boolean;
+}
+
+const StyledRoot = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  width: 100%;
+`;
+
+const LeadsContainer = styled.div`
+  flex: 1;
+  overflow-y: auto;
+`;
+
+const Footer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 16px;
+  border-top: 1px solid ${palette2('neutral', 'l02')};
+`;
+
+const EmptyContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+`;
+
+const EmptyTitle = styled(RcTypography)`
+  margin-top: 10px;
+`;
+
+const EmptySubtitle = styled(RcTypography)`
+  margin-top: 6px;
+`;
+
+function EmptyState({
+  isLoading,
+  loaded,
+}: {
+  isLoading: boolean;
+  loaded: boolean;
+}) {
+  return (
+    <EmptyContainer>
+      <RcIcon symbol={loaded ? Missedcall : Outcall} color="action.primary" size="xxxlarge" />
+      <EmptyTitle variant="subheading1" color="neutral.f06">
+        {loaded ? 'No leads were returned.' : 'Start outbound dialing'}
+      </EmptyTitle>
+      <EmptySubtitle variant="caption1" color="neutral.f04">
+        {isLoading ? 'Getting leads...' : 'Click Get leads to start dialing.'}
+      </EmptySubtitle>
+    </EmptyContainer>
+  );
+}
+
+export const LeadsPanel: FunctionComponent<LeadsPanelProps> = ({
+  leads,
+  getLeads,
+  currentLocale,
+  dialLead,
+  loading,
+  loaded,
+  isDialing,
+  pendingDisposition,
+  agentBusy,
+}) => {
+  return (
+    <StyledRoot>
+      <LeadsContainer>
+        {leads.length > 0 ? (
+          <RcList>
+            {leads.map((lead) => (
+              <LeadItem
+                key={lead.leadId}
+                lead={lead}
+                currentLocale={currentLocale}
+                dialLead={dialLead}
+                isDialing={isDialing}
+                pendingDisposition={pendingDisposition}
+                agentBusy={agentBusy}
+              />
+            ))}
+          </RcList>
+        ) : (
+          <EmptyState isLoading={loading} loaded={loaded} />
+        )}
+      </LeadsContainer>
+      <Footer>
+        <RcButton
+          onClick={getLeads}
+          variant="outlined"
+          color="primary"
+          loading={loading}
+          radius="round"
+        >
+          Get leads
+        </RcButton>
+      </Footer>
+    </StyledRoot>
+  );
+};

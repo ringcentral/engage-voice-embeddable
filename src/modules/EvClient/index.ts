@@ -99,4 +99,16 @@ export class EvClient extends EvClientBase {
       );
     });
   }
+
+  getPreviewDial() {
+    return new Promise((resolve) => {
+      this._sdk.previewFetch([], (res) => {
+        resolve(res);
+      });
+    });
+  }
+
+  previewDial(requestId, leadPhone, leadPhoneE164) {
+    this._sdk.previewDial(requestId, leadPhone, leadPhoneE164);
+  }
 }
