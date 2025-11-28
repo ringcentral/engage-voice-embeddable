@@ -168,8 +168,8 @@ export function LeadItem({
         campaignId={lead.campaignId}
         defaultTimezone={defaultTimezone}
         onPass={async ({ dispositionId, notes, callback, callbackDTS }) => {
-          await onPass({ lead, dispositionId, notes, callback, callbackDTS });
           setManualPassOpen(false);
+          await onPass({ lead, dispositionId, notes, callback, callbackDTS });
         }}
       />
     </StyledListItem>

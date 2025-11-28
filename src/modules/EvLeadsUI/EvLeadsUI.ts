@@ -47,7 +47,7 @@ export class EvLeadsUI extends RcUIModuleV2<Deps> {
   }
 
   getUIFunctions() {
-    const { evLeads, evCall, evClient, alert } = this._deps;
+    const { evLeads, evCall, evClient } = this._deps;
     return {
       getLeads: () => evLeads.fetchLeads(),
       dialLead: async (lead, destination) => {
@@ -64,21 +64,8 @@ export class EvLeadsUI extends RcUIModuleV2<Deps> {
           label: item.disposition,
         }));
       },
-      onPass: async ({ lead, dispositionId, notes, callback, callbackDTS }) => {
-        try {
-          await evClient.manualPass({
-            dispId: dispositionId,
-            notes,
-            callback,
-            callbackDTS: callback ? callbackDTS : '',
-            leadId: lead.leadId,
-            requestId: lead.requestId,
-            externId: lead.externId,
-          });
-          evLeads.updateLead(lead.leadId, { completed: true });
-        } catch (error) {
-          alert.danger({ message: 'leadPassFailed' });
-        }
+      onPass: async (params) => {
+        await evLeads.manualPassLead(params);
       },
     };
   }

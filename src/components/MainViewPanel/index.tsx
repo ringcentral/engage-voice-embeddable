@@ -72,20 +72,20 @@ const MainViewPanel: FunctionComponent<MainViewPanelProps> = ({
         currentPath === '/dialer' || /^\/activityCallLog/.test(currentPath),
       className: styles.tab,
     },
-    showLeadsTab && {
-      icon: () => <CustomIcon symbol={contactsBorderSvg} />,
-      activeIcon: () => <CustomIcon symbol={contactsSvg} />,
-      label: 'Leads',
-      path: '/leads',
-      isActive: (currentPath) => /^\/leads/.test(currentPath),
-      className: styles.tab,
-    },
     {
       icon: () => <CustomIcon symbol={TimeBorderSvg} />,
       activeIcon: () => <CustomIcon symbol={TimeSvg} />,
       label: i18n.getString('historyLabel', currentLocale),
       path: '/history',
       isActive: (currentPath) => /^\/history/.test(currentPath),
+      className: styles.tab,
+    },
+    showLeadsTab && {
+      icon: () => <CustomIcon symbol={contactsBorderSvg} />,
+      activeIcon: () => <CustomIcon symbol={contactsSvg} />,
+      label: 'Leads',
+      path: '/leads',
+      isActive: (currentPath) => /^\/leads/.test(currentPath),
       className: styles.tab,
     },
     {

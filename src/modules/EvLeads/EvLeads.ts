@@ -69,6 +69,7 @@ function allNumbersDialed(lead: Lead) {
     { dep: 'EvClient' },
     { dep: 'EvAuth' },
     { dep: 'EvSubscription' },
+    { dep: 'Alert' },
   ],
 })
 export class EvLeads extends RcModuleV2<Deps, EvLeadsOptions> {
@@ -152,8 +153,53 @@ export class EvLeads extends RcModuleV2<Deps, EvLeadsOptions> {
     });
   }
 
+  _requiredToCall() {
+    if (!this._deps.evAuth.agent?.agentConfig?.agentPermissions?.requireFetchedLeadsCalled) {
+      return false;
+    }
+    return this.filteredLeads.some((lead) => {
+      return (
+        !lead.completed &&
+        lead.leadState.toUpperCase() === 'PENDING'
+      );
+    });
+  }
+
+  async manualPassLead({
+    lead,
+    dispositionId,
+    notes,
+    callback,
+    callbackDTS,
+  }: {
+    lead: Lead;
+    dispositionId: string;
+    notes: string;
+    callback: boolean;
+    callbackDTS: string;
+  }) {
+    try {
+      await this._deps.evClient.manualPass({
+        dispId: dispositionId,
+        notes,
+        callback,
+        callbackDTS: callback ? callbackDTS : '',
+        leadId: lead.leadId,
+        requestId: lead.requestId,
+        externId: lead.externId,
+      });
+      this.updateLead(lead.leadId, { completed: true });
+    } catch (error) {
+      this._deps.alert.danger({ message: 'leadPassFailed' });
+    }
+  }
+
   async fetchLeads() {
     if (this.loading) {
+      return;
+    }
+    if (this._requiredToCall()) {
+      this._deps.alert.warning({ message: 'requiredLeadCall' });
       return;
     }
     try {
