@@ -4,8 +4,6 @@ import {
   computed,
   RcModuleV2,
   state,
-  storage,
-  track,
 } from '@ringcentral-integration/core';
 import { EvCallbackTypes } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums/callbackTypes';
 import { Deps, EvLeadsOptions, Lead } from './EvLeads.interface';
@@ -90,9 +88,9 @@ export class EvLeads extends RcModuleV2<Deps, EvLeadsOptions> {
   @state
   loading = false;
 
-  // to check if the leads are loaded once
+  // to check if no leads are returned
   @state
-  loaded = false;
+  noLeadsReturned = false;
 
   @state
   leadStatesMapping: Record<string, boolean> = {};
@@ -110,21 +108,28 @@ export class EvLeads extends RcModuleV2<Deps, EvLeadsOptions> {
   @action
   setLeads(leads: Lead[]) {
     this.leads = leads;
-    this.loaded = true;
+    this.noLeadsReturned = !leads || leads.length === 0;
     this.leadStatesMapping = {};
+  }
+
+  @action
+  updateLead(leadId, newProps = {}) {
+    const lead = this.leads.find((lead) => lead.leadId === leadId);
+    if (lead) {
+      Object.keys(newProps).forEach((key) => {
+        lead[key] = newProps[key];
+      });
+    }
   }
 
   @computed((that) => [that.leads, that.leadStatesMapping])
   get filteredLeads() {
     return this.leads.filter((lead) => {
       const destination = lead.destination;
-      if (!destination) {
+      if (lead.completed) {
         return false;
       }
       const leadState = this.leadStatesMapping[lead.requestId] || lead.leadState;
-      if (leadState === 'COMPLETE') {
-        return false;
-      }
       let availableLeadState =  AVAILABLE_LEAD_STATES.includes(leadState as string);
       let allDialed = false;
       if (
@@ -155,7 +160,6 @@ export class EvLeads extends RcModuleV2<Deps, EvLeadsOptions> {
       this.setLoading(true);
       const { evClient } = this._deps;
       const result = await evClient.getPreviewDial();
-      console.log(result);
       this.setLeads(result.leads as Lead[]);
     } catch (error) {
       console.error('error', error);

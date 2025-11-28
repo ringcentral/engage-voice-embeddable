@@ -38,6 +38,7 @@ export interface Lead {
   showLeadPasses: boolean;
   requestId: string;
   dialedList: string[];
+  completed: boolean;
 }
 
 export interface EvLeadsOptions {}

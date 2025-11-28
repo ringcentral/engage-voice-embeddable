@@ -21,7 +21,7 @@ interface LeadsPanelProps {
   currentLocale: string;
   dialLead: (lead: Lead, destination: string) => Promise<void>;
   loading: boolean;
-  loaded: boolean;
+  noLeadsReturned: boolean;
   isDialing: boolean;
   pendingDisposition: boolean;
   agentBusy: boolean;
@@ -83,16 +83,16 @@ const EmptySubtitle = styled(RcTypography)`
 
 function EmptyState({
   isLoading,
-  loaded,
+  noLeadsReturned,
 }: {
   isLoading: boolean;
-  loaded: boolean;
+  noLeadsReturned: boolean;
 }) {
   return (
     <EmptyContainer>
-      <RcIcon symbol={loaded ? Missedcall : Outcall} color="action.primary" size="xxxlarge" />
+      <RcIcon symbol={noLeadsReturned ? Missedcall : Outcall} color="action.primary" size="xxxlarge" />
       <EmptyTitle variant="subheading1" color="neutral.f06">
-        {loaded ? 'No leads were returned.' : 'Start outbound dialing'}
+        {noLeadsReturned ? 'No leads were returned.' : 'Start outbound dialing'}
       </EmptyTitle>
       <EmptySubtitle variant="caption1" color="neutral.f04">
         {isLoading ? 'Getting leads...' : 'Click Get leads to start dialing.'}
@@ -107,7 +107,7 @@ export const LeadsPanel: FunctionComponent<LeadsPanelProps> = ({
   currentLocale,
   dialLead,
   loading,
-  loaded,
+  noLeadsReturned,
   isDialing,
   pendingDisposition,
   agentBusy,
@@ -138,7 +138,7 @@ export const LeadsPanel: FunctionComponent<LeadsPanelProps> = ({
             ))}
           </RcList>
         ) : (
-          <EmptyState isLoading={loading} loaded={loaded} />
+          <EmptyState isLoading={loading} noLeadsReturned={noLeadsReturned} />
         )}
       </LeadsContainer>
       <Footer>

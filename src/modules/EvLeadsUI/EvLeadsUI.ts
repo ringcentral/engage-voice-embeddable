@@ -21,6 +21,7 @@ const AGENT_BUSY_STATES = ['TRANSITION', 'ENGAGED', 'RNA-STATE'];
     'EvWorkingState',
     'EvAuth',
     'EvClient',
+    'Alert',
   ],
 })
 export class EvLeadsUI extends RcUIModuleV2<Deps> {
@@ -36,7 +37,7 @@ export class EvLeadsUI extends RcUIModuleV2<Deps> {
       leads: evLeads.filteredLeads,
       currentLocale: locale.currentLocale,
       loading: evLeads.loading,
-      loaded: evLeads.loaded,
+      noLeadsReturned: evLeads.noLeadsReturned,
       isDialing: evCall.dialoutStatus === dialoutStatuses.dialing,
       pendingDisposition: evWorkingState.isPendingDisposition,
       agentBusy: AGENT_BUSY_STATES.includes(evAgentSession.agentState),
@@ -46,31 +47,38 @@ export class EvLeadsUI extends RcUIModuleV2<Deps> {
   }
 
   getUIFunctions() {
-    const { evLeads, evCall, evClient } = this._deps;
+    const { evLeads, evCall, evClient, alert } = this._deps;
     return {
       getLeads: () => evLeads.fetchLeads(),
       dialLead: async (lead, destination) => {
         let destinationE164 = isE164(destination) ? destination : undefined;
+        const dialedList = lead.dialedList || [];
+        const newDialedList = [...dialedList, destination];
+        evLeads.updateLead(lead.leadId, { dialedList: newDialedList });
         await evCall.previewDial(lead.requestId, destination, destinationE164);
       },
       fetchDispositionList: async (campaignId: string) => {
         const list = await evClient.getCampaignDispositions(campaignId);
-        console.log('list', list);
         return list.map((item) => ({
           value: item.dispositionId,
           label: item.disposition,
         }));
       },
       onPass: async ({ lead, dispositionId, notes, callback, callbackDTS }) => {
-        await evClient.manualPass({
-          dispId: dispositionId,
-          notes,
-          callback,
-          callbackDTS: callback ? callbackDTS : '',
-          leadId: lead.leadId,
-          requestId: lead.requestId,
-          externId: lead.externId,
-        });
+        try {
+          await evClient.manualPass({
+            dispId: dispositionId,
+            notes,
+            callback,
+            callbackDTS: callback ? callbackDTS : '',
+            leadId: lead.leadId,
+            requestId: lead.requestId,
+            externId: lead.externId,
+          });
+          evLeads.updateLead(lead.leadId, { completed: true });
+        } catch (error) {
+          alert.danger({ message: 'leadPassFailed' });
+        }
       },
     };
   }

@@ -13,6 +13,9 @@ export function getAlertRenderer() {
     if (message.message === 'cannotPopupWindowWithCall') {
       return () => 'Sorry, app can\'t open popup window when there are active calls.';
     }
+    if (message.message === 'leadPassFailed') {
+      return () => 'Lead pass failed.';
+    }
     return null;
   };
 }
