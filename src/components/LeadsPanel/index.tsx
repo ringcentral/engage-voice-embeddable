@@ -25,6 +25,22 @@ interface LeadsPanelProps {
   isDialing: boolean;
   pendingDisposition: boolean;
   agentBusy: boolean;
+  fetchDispositionList: (campaignId: string) => Promise<{ value: string; label: string }[]>;
+  allowManualPass: boolean;
+  defaultTimezone: string;
+  onPass: ({
+    lead,
+    dispositionId,
+    notes,
+    callback,
+    callbackDTS,
+  }: {
+    lead: Lead;
+    dispositionId: string;
+    notes: string;
+    callback: boolean;
+    callbackDTS: string;
+  }) => Promise<void>;
 }
 
 const StyledRoot = styled.div`
@@ -95,6 +111,10 @@ export const LeadsPanel: FunctionComponent<LeadsPanelProps> = ({
   isDialing,
   pendingDisposition,
   agentBusy,
+  fetchDispositionList,
+  allowManualPass,
+  onPass,
+  defaultTimezone = 'America/New_York',
 }) => {
   return (
     <StyledRoot>
@@ -110,6 +130,10 @@ export const LeadsPanel: FunctionComponent<LeadsPanelProps> = ({
                 isDialing={isDialing}
                 pendingDisposition={pendingDisposition}
                 agentBusy={agentBusy}
+                fetchDispositionList={fetchDispositionList}
+                allowManualPass={allowManualPass}
+                defaultTimezone={defaultTimezone}
+                onPass={onPass}
               />
             ))}
           </RcList>

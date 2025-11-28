@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   styled,
   palette2,
@@ -15,7 +15,13 @@ import {
 } from '@ringcentral/juno-icon';
 import { formatPhoneNumber } from '@ringcentral-integration/engage-voice-widgets/lib/FormatPhoneNumber';
 import type { Lead } from '../../modules/EvLeads/EvLeads.interface';
-import { PHONE_DELIMETER, ALLOW_DIAL_STATES } from '../../modules/EvLeads/EvLeads';
+import {
+  PHONE_DELIMETER,
+  ALLOW_DIAL_STATES,
+  SEARCH_DISABLE_DIAL_STATES,
+  DISABLE_MANUAL_PASS_STATES,
+} from '../../modules/EvLeads/EvLeads';
+import { ManualPassModal } from './ManualPassModal';
 
 const StyledListItem = styled(RcListItem)`
   .lead-actions {
@@ -49,6 +55,11 @@ export function LeadItem({
   isDialing,
   pendingDisposition,
   agentBusy,
+  fromSearch = false,
+  fetchDispositionList,
+  allowManualPass,
+  onPass,
+  defaultTimezone,
 }: {
   lead: Lead;
   currentLocale: string;
@@ -56,7 +67,25 @@ export function LeadItem({
   isDialing: boolean;
   pendingDisposition: boolean;
   agentBusy: boolean;
+  fromSearch?: boolean;
+  allowManualPass: boolean;
+  defaultTimezone: string;
+  fetchDispositionList: (campaignId: string) => Promise<{ value: string; label: string }[]>;
+  onPass: ({
+    lead,
+    dispositionId,
+    notes,
+    callback,
+    callbackDTS,
+  }: {
+    lead: Lead;
+    dispositionId: string;
+    notes: string;
+    callback: boolean;
+    callbackDTS: string;
+  }) => Promise<void>;
 }) {
+  const [manualPassOpen, setManualPassOpen] = useState(false);
   const { firstName, midName, lastName } = lead;
   const name = [firstName, midName, lastName].filter(Boolean).join(' ');
   const destination = lead.destinationE164 || lead.destination;
@@ -71,6 +100,8 @@ export function LeadItem({
     };
   });
   const allowDial = ALLOW_DIAL_STATES.includes(lead.leadState);
+  const isDisabledFromSearch = fromSearch && SEARCH_DISABLE_DIAL_STATES.includes(lead.leadState);
+  const isDisabledManualPass = DISABLE_MANUAL_PASS_STATES.includes(lead.leadState);
   return (
     <StyledListItem>
       <RcListItemText
@@ -84,7 +115,7 @@ export function LeadItem({
                 size="medium"
                 title="Click to dial"
                 useRcTooltip
-                disabled={isDialing || !allowDial || pendingDisposition || agentBusy}
+                disabled={isDialing || !allowDial || pendingDisposition || agentBusy || isDisabledFromSearch}
               >
                 {phoneNumber.formatted}
               </PhoneNumberButton>
@@ -115,14 +146,32 @@ export function LeadItem({
           color="neutral.b01"
           title="View call log"
         />
-        <RcIconButton
-          symbol={MissedcallBorder}
-          size="small"
-          variant="inverse"
-          color="danger.b04"
-          title="Manual pass"
-        />
+        {
+          allowManualPass && (
+            <RcIconButton
+              symbol={MissedcallBorder}
+              size="small"
+              variant="inverse"
+              color="danger.b04"
+              title="Manual pass"
+              disabled={isDialing || pendingDisposition || agentBusy || isDisabledManualPass}
+              onClick={() => setManualPassOpen(true)}
+            />
+          )
+        }
       </RcListItemSecondaryAction>
+      <ManualPassModal
+        fetchDispositionList={fetchDispositionList}
+        open={manualPassOpen}
+        onClose={() => setManualPassOpen(false)}
+        disabled={isDialing || pendingDisposition || agentBusy || isDisabledManualPass || !allowManualPass}
+        campaignId={lead.campaignId}
+        defaultTimezone={defaultTimezone}
+        onPass={async ({ dispositionId, notes, callback, callbackDTS }) => {
+          await onPass({ lead, dispositionId, notes, callback, callbackDTS });
+          setManualPassOpen(false);
+        }}
+      />
     </StyledListItem>
   );
 }

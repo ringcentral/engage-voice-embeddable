@@ -19,6 +19,8 @@ const AGENT_BUSY_STATES = ['TRANSITION', 'ENGAGED', 'RNA-STATE'];
     'Locale',
     'EvAgentSession',
     'EvWorkingState',
+    'EvAuth',
+    'EvClient',
   ],
 })
 export class EvLeadsUI extends RcUIModuleV2<Deps> {
@@ -29,7 +31,7 @@ export class EvLeadsUI extends RcUIModuleV2<Deps> {
   }
 
   getUIProps() {
-    const { evLeads, locale, evCall, evAgentSession, evWorkingState } = this._deps;
+    const { evLeads, locale, evCall, evAgentSession, evWorkingState, evAuth } = this._deps;
     return {
       leads: evLeads.filteredLeads,
       currentLocale: locale.currentLocale,
@@ -38,16 +40,37 @@ export class EvLeadsUI extends RcUIModuleV2<Deps> {
       isDialing: evCall.dialoutStatus === dialoutStatuses.dialing,
       pendingDisposition: evWorkingState.isPendingDisposition,
       agentBusy: AGENT_BUSY_STATES.includes(evAgentSession.agentState),
+      allowManualPass: evAuth.agent?.agentConfig?.agentPermissions?.allowManualPass,
+      defaultTimezone: evAuth.agent?.authenticateResponse?.regionalSettings?.timezoneName,
     };
   }
 
   getUIFunctions() {
-    const { evLeads, evCall } = this._deps;
+    const { evLeads, evCall, evClient } = this._deps;
     return {
       getLeads: () => evLeads.fetchLeads(),
       dialLead: async (lead, destination) => {
         let destinationE164 = isE164(destination) ? destination : undefined;
         await evCall.previewDial(lead.requestId, destination, destinationE164);
+      },
+      fetchDispositionList: async (campaignId: string) => {
+        const list = await evClient.getCampaignDispositions(campaignId);
+        console.log('list', list);
+        return list.map((item) => ({
+          value: item.dispositionId,
+          label: item.disposition,
+        }));
+      },
+      onPass: async ({ lead, dispositionId, notes, callback, callbackDTS }) => {
+        await evClient.manualPass({
+          dispId: dispositionId,
+          notes,
+          callback,
+          callbackDTS: callback ? callbackDTS : '',
+          leadId: lead.leadId,
+          requestId: lead.requestId,
+          externId: lead.externId,
+        });
       },
     };
   }

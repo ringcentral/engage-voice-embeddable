@@ -10,6 +10,7 @@ import {
 import { EvCallbackTypes } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums/callbackTypes';
 import { Deps, EvLeadsOptions, Lead } from './EvLeads.interface';
 
+// Available to show in the leads panel
 export const AVAILABLE_LEAD_STATES = [
   'PENDING',
   'DIALING',
@@ -26,6 +27,7 @@ export const AVAILABLE_LEAD_STATES = [
   'OTHER',
 ];
 
+// Available to dial
 export const ALLOW_DIAL_STATES = [
   'PENDING',
   'READY',
@@ -35,10 +37,21 @@ export const ALLOW_DIAL_STATES = [
   'COMPLETE',
 ];
 
-export const DISABLE_DIAL_STATES = [
+// Disable dial from search results
+export const SEARCH_DISABLE_DIAL_STATES = [
   'PENDING',
   'ACTIVE',
-  'PENDING-HCI'
+  'PENDING-HCI',
+  'DO-NOT-CALL',
+  'EXPIRED',
+];
+
+// Disable manual pass
+export const DISABLE_MANUAL_PASS_STATES = [
+  'DO-NOT-CALL',
+  'DIALING',
+  'RINGING',
+  'ANSWER',
 ];
 
 export const PHONE_DELIMETER = '|';
@@ -142,6 +155,7 @@ export class EvLeads extends RcModuleV2<Deps, EvLeadsOptions> {
       this.setLoading(true);
       const { evClient } = this._deps;
       const result = await evClient.getPreviewDial();
+      console.log(result);
       this.setLeads(result.leads as Lead[]);
     } catch (error) {
       console.error('error', error);

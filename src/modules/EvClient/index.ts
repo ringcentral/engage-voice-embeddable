@@ -111,4 +111,40 @@ export class EvClient extends EvClientBase {
   previewDial(requestId, leadPhone, leadPhoneE164) {
     this._sdk.previewDial(requestId, leadPhone, leadPhoneE164);
   }
+
+  manualPass({
+    dispId,
+    notes,
+    callback,
+    callbackDTS,
+    leadId,
+    requestId,
+    externId,
+  }: {
+    dispId: string;
+    notes: string;
+    callback: boolean;
+    callbackDTS: string;
+    leadId: string;
+    requestId: string;
+    externId: string;
+  }) {
+    this._sdk.dispositionManualPass(
+      dispId,
+      notes,
+      callback,
+      callbackDTS,
+      leadId,
+      requestId,
+      externId,
+    );
+  }
+
+  getCampaignDispositions(campaignId: string) {
+    return new Promise((resolve) => {
+      this._sdk.getCampaignDispositions(campaignId, (res) => {
+        resolve(res);
+      });
+    });
+  }
 }
