@@ -36,6 +36,18 @@ Visit [website](https://ringcentral.github.io/engage-voice-embeddable/) in GitHu
 * [Call Events](docs/call-events.md)
 * [Popup a standalone widget](docs/popup-window.md)
 
+## Supported features
+
+* Agent states
+* Voice queues
+* Outbound Campaigns
+   - Predictive dial mode
+   - Preview dial mode
+   - Preview dial mode with search (TODO)
+   - Progressive dial mode (TODO)
+* Agent scripts (TODO)
+
+
 ## Awesome Embeddable projects
 
 * RingCentral RingCX Embeddable phone for Hubspot CRM - [repo](https://github.com/ringcentral/hubspot-embeddable-engage-phone)
