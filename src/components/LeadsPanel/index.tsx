@@ -34,12 +34,14 @@ interface LeadsPanelProps {
     notes,
     callback,
     callbackDTS,
+    callbackTime,
   }: {
     lead: Lead;
     dispositionId: string;
     notes: string;
     callback: boolean;
     callbackDTS: string;
+    callbackTime: string;
   }) => Promise<void>;
 }
 

@@ -25,4 +25,7 @@ export default ObjectMap.prefixKeys([
   'loginPopup',
   'checkPopupWindow',
   'logout',
+  'manualPassLead',
+  'callLead',
+  'loadLeads',
 ], 'rc-ev');

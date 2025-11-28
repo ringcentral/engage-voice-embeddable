@@ -63,12 +63,18 @@ function allNumbersDialed(lead: Lead) {
   return dialedList.length === destination.length;
 }
 
+function isE164(phoneNumber: string) {
+  const isOnlyNumber = /^[0-9]+$/.test(phoneNumber);
+  return isOnlyNumber && phoneNumber.startsWith('+');
+}
+
 @Module({
   name: 'EvLeads',
   deps: [
     { dep: 'EvClient' },
     { dep: 'EvAuth' },
     { dep: 'EvSubscription' },
+    { dep: 'EvCall' },
     { dep: 'Alert' },
   ],
 })
@@ -200,17 +206,27 @@ export class EvLeads extends RcModuleV2<Deps, EvLeadsOptions> {
     }
     if (this._requiredToCall()) {
       this._deps.alert.warning({ message: 'requiredLeadCall' });
-      return;
+      return false;
     }
     try {
       this.setLoading(true);
       const { evClient } = this._deps;
       const result = await evClient.getPreviewDial();
       this.setLeads(result.leads as Lead[]);
+      return true;
     } catch (error) {
       console.error('error', error);
     } finally {
       this.setLoading(false);
+      return false;
     }
+  }
+
+  async dialLead(lead, destination) {
+    let destinationE164 = isE164(destination) ? destination : undefined;
+    const dialedList = lead.dialedList || [];
+    const newDialedList = [...dialedList, destination];
+    this.updateLead(lead.leadId, { dialedList: newDialedList });
+    await this._deps.evCall.previewDial(lead.requestId, destination, destinationE164);
   }
 }

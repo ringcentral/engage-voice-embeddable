@@ -16,7 +16,7 @@ import {
   updateFullTime,
   updateFullYear,
 } from '@ringcentral-integration/commons/helpers/meetingHelper';
-import { TimezoneSelect, formatDateTimeToServerTime } from '../TimezoneSelect';
+import { TimezoneSelect, formatDateTimeToServerTime, formatDateTimeWithTimezone } from '../TimezoneSelect';
 
 export function ManualPassModal({
   onClose,
@@ -34,12 +34,14 @@ export function ManualPassModal({
     dispositionId,
     notes,
     callback,
-    callbackDTS,
+    callbackDTS, // callback time in timezone America/New_York for server time
+    callbackTime, // callback time with timezone
   }: {
     dispositionId: string;
     notes: string;
     callback: boolean;
     callbackDTS: string;
+    callbackTime: string;
   }) => Promise<void>;
   disabled: boolean;
   campaignId: string;
@@ -171,6 +173,7 @@ export function ManualPassModal({
             dispositionId: disposition,
             notes,
             callback,
+            callbackTime: callback ? formatDateTimeWithTimezone(callbackDTS, timezone) : '',
             callbackDTS: callback ? formatDateTimeToServerTime(callbackDTS, timezone) : '',
           })}
           disabled={disabled || loading || !disposition}

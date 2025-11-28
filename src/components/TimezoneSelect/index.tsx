@@ -32,9 +32,14 @@ export interface TimezoneSelectProps {
   dataSign?: string;
 }
 
-export function formatDateTimeToServerTime(date: Date, timezone: string) {
+export function formatDateTimeWithTimezone(date: Date, timezone: string) {
   const dateTimeString = dayjs(date).format('YYYY-MM-DD HH:mm:ss');
   const timeWithOffset = dayjs.tz(dateTimeString, timezone).format();
+  return timeWithOffset;
+}
+
+export function formatDateTimeToServerTime(date: Date, timezone: string) {
+  const timeWithOffset = formatDateTimeWithTimezone(date, timezone);
   // convert to server time
   const serverTime = dayjs(new Date(timeWithOffset)).tz('America/New_York').format('YYYY-MM-DD HH:mm:ss');
   return serverTime;

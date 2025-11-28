@@ -22,6 +22,7 @@ const AGENT_BUSY_STATES = ['TRANSITION', 'ENGAGED', 'RNA-STATE'];
     'EvAuth',
     'EvClient',
     'Alert',
+    'Adapter',
   ],
 })
 export class EvLeadsUI extends RcUIModuleV2<Deps> {
@@ -47,15 +48,15 @@ export class EvLeadsUI extends RcUIModuleV2<Deps> {
   }
 
   getUIFunctions() {
-    const { evLeads, evCall, evClient } = this._deps;
+    const { evLeads, evCall, evClient, adapter } = this._deps;
     return {
-      getLeads: () => evLeads.fetchLeads(),
+      getLeads: async () => {
+        await evLeads.fetchLeads();
+        adapter.onLoadLeads(evLeads.filteredLeads);
+      },
       dialLead: async (lead, destination) => {
-        let destinationE164 = isE164(destination) ? destination : undefined;
-        const dialedList = lead.dialedList || [];
-        const newDialedList = [...dialedList, destination];
-        evLeads.updateLead(lead.leadId, { dialedList: newDialedList });
-        await evCall.previewDial(lead.requestId, destination, destinationE164);
+        await evLeads.dialLead(lead, destination);
+        adapter.onCallLead(lead, destination);
       },
       fetchDispositionList: async (campaignId: string) => {
         const list = await evClient.getCampaignDispositions(campaignId);
@@ -66,6 +67,7 @@ export class EvLeadsUI extends RcUIModuleV2<Deps> {
       },
       onPass: async (params) => {
         await evLeads.manualPassLead(params);
+        adapter.onManualPassLead(params);
       },
     };
   }

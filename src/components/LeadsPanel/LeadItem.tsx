@@ -77,12 +77,14 @@ export function LeadItem({
     notes,
     callback,
     callbackDTS,
+    callbackTime,
   }: {
     lead: Lead;
     dispositionId: string;
     notes: string;
     callback: boolean;
     callbackDTS: string;
+    callbackTime: string;
   }) => Promise<void>;
 }) {
   const [manualPassOpen, setManualPassOpen] = useState(false);
