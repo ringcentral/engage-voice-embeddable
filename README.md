@@ -1,4 +1,4 @@
-# RingCX Embeddable (Beta)
+# RingCX Embeddable (BETA)
 
 [![Build Status](https://github.com/ringcentral/engage-voice-embeddable/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/ringcentral/engage-voice-embeddable/actions)
 
@@ -40,13 +40,18 @@ Visit [website](https://ringcentral.github.io/engage-voice-embeddable/) in GitHu
 
 * Agent states
 * Voice queues
-* Outbound Campaigns
+* Dial modes
+   - Manual
    - Predictive dial mode
    - Preview dial mode
-   - Preview dial mode with search (TODO)
-   - Preview dial mode with HCI (TODO)
-   - Progressive dial mode (TODO)
-* Agent scripts (TODO)
+
+## Unsupported features:
+
+* Dial modes:
+  - Preview dial mode with search
+  - HCI dialing
+  - Progressive dial mode
+* Agent scripts
 
 ## Contribution and Development
 
