@@ -43,6 +43,8 @@ interface LeadsPanelProps {
     callbackDTS: string;
     callbackTime: string;
   }) => Promise<void>;
+  onViewLead: (lead: Lead) => Promise<void>;
+  showViewLead: boolean;
 }
 
 const StyledRoot = styled.div`
@@ -117,6 +119,8 @@ export const LeadsPanel: FunctionComponent<LeadsPanelProps> = ({
   allowManualPass,
   onPass,
   defaultTimezone = 'America/New_York',
+  onViewLead,
+  showViewLead,
 }) => {
   return (
     <StyledRoot>
@@ -136,6 +140,8 @@ export const LeadsPanel: FunctionComponent<LeadsPanelProps> = ({
                 allowManualPass={allowManualPass}
                 defaultTimezone={defaultTimezone}
                 onPass={onPass}
+                onViewLead={onViewLead}
+                showViewLead={showViewLead}
               />
             ))}
           </RcList>

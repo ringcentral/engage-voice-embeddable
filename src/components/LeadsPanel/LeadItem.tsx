@@ -60,6 +60,8 @@ export function LeadItem({
   allowManualPass,
   onPass,
   defaultTimezone,
+  onViewLead,
+  showViewLead,
 }: {
   lead: Lead;
   currentLocale: string;
@@ -86,6 +88,8 @@ export function LeadItem({
     callbackDTS: string;
     callbackTime: string;
   }) => Promise<void>;
+  onViewLead: (lead: Lead) => Promise<void>;
+  showViewLead: boolean;
 }) {
   const [manualPassOpen, setManualPassOpen] = useState(false);
   const { firstName, midName, lastName } = lead;
@@ -141,13 +145,18 @@ export function LeadItem({
             />
           ) : null
         }
-        <RcIconButton
-          symbol={ViewLogBorder}
-          size="small"
-          variant="contained"
-          color="neutral.b01"
-          title="View call log"
-        />
+        {
+          showViewLead && (
+            <RcIconButton
+              symbol={ViewLogBorder}
+              size="small"
+              variant="contained"
+              color="neutral.b01"
+              title="View lead"
+              onClick={() => onViewLead(lead)}
+            />
+          )
+        }
         {
           allowManualPass && (
             <RcIconButton

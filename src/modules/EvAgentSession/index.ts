@@ -942,7 +942,6 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
         const config = this._checkFieldsResult(this.formGroup);
 
         this._clearCalls();
-
         this.isAgentUpdating = true;
 
         this._sendTabManager(

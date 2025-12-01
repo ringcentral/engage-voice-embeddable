@@ -42,6 +42,7 @@ class ThirdPartyService extends RcModuleV2<Deps>
     callLoggerEnabled: false,
     contactMatcherEnabled: false,
     callLogMatcherEnabled: false,
+    leadViewerEnabled: false,
   };
 
   @action
@@ -51,7 +52,12 @@ class ThirdPartyService extends RcModuleV2<Deps>
       callLoggerEnabled: service.callLoggerEnabled,
       contactMatcherEnabled: service.contactMatcherEnabled,
       callLogMatcherEnabled: service.callLogMatcherEnabled,
+      leadViewerEnabled: service.leadViewerEnabled,
     };
+  }
+
+  get leadViewerEnabled() {
+    return this.service.leadViewerEnabled;
   }
 
   addListeners() {
@@ -190,6 +196,18 @@ class ThirdPartyService extends RcModuleV2<Deps>
         ignoreCache: true
       });
     }
+  }
+
+  async viewLead(data) {
+    if (!this.service.leadViewerEnabled) {
+      return;
+    }
+    await this.transport.request({
+      payload: {
+        requestType: this.messageTypes.viewLead,
+        data,
+      },
+    });
   }
 }
 

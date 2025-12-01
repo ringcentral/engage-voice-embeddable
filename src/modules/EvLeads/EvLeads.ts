@@ -4,6 +4,7 @@ import {
   computed,
   RcModuleV2,
   state,
+  storage,
 } from '@ringcentral-integration/core';
 import { EvCallbackTypes } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums/callbackTypes';
 import { Deps, EvLeadsOptions, Lead } from './EvLeads.interface';
@@ -76,19 +77,26 @@ function isE164(phoneNumber: string) {
     { dep: 'EvSubscription' },
     { dep: 'EvCall' },
     { dep: 'Alert' },
+    'Storage',
   ],
 })
 export class EvLeads extends RcModuleV2<Deps, EvLeadsOptions> {
   constructor(deps: Deps) {
     super({
       deps,
+      enableCache: true,
+      storageKey: 'EvLeads',
     });
   }
 
   override onInitOnce() {
     this._bindSubscription();
+    this._deps.evAuth.beforeAgentLogout(() => {
+      this.clearLeads();
+    });
   }
 
+  @storage
   @state
   leads: Lead[] = [];
 
@@ -96,9 +104,11 @@ export class EvLeads extends RcModuleV2<Deps, EvLeadsOptions> {
   loading = false;
 
   // to check if no leads are returned
+  @storage
   @state
   noLeadsReturned = false;
 
+  @storage
   @state
   leadStatesMapping: Record<string, boolean> = {};
 
@@ -127,6 +137,13 @@ export class EvLeads extends RcModuleV2<Deps, EvLeadsOptions> {
         lead[key] = newProps[key];
       });
     }
+  }
+
+  @action
+  clearLeads() {
+    this.leads = [];
+    this.noLeadsReturned = false;
+    this.leadStatesMapping = {};
   }
 
   @computed((that) => [that.leads, that.leadStatesMapping])

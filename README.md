@@ -44,13 +44,9 @@ Visit [website](https://ringcentral.github.io/engage-voice-embeddable/) in GitHu
    - Predictive dial mode
    - Preview dial mode
    - Preview dial mode with search (TODO)
+   - Preview dial mode with HCI (TODO)
    - Progressive dial mode (TODO)
 * Agent scripts (TODO)
-
-
-## Awesome Embeddable projects
-
-* RingCentral RingCX Embeddable phone for Hubspot CRM - [repo](https://github.com/ringcentral/hubspot-embeddable-engage-phone)
 
 ## Contribution and Development
 

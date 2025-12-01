@@ -28,4 +28,5 @@ export default ObjectMap.prefixKeys([
   'manualPassLead',
   'callLead',
   'loadLeads',
+  'viewLead',
 ], 'rc-ev');

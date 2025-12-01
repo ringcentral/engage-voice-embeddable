@@ -4,11 +4,6 @@ import { dialoutStatuses } from '@ringcentral-integration/engage-voice-widgets/e
 
 import { Deps } from './EvLeadsUI.interface';
 
-function isE164(phoneNumber: string) {
-  const isOnlyNumber = /^[0-9]+$/.test(phoneNumber);
-  return isOnlyNumber && phoneNumber.startsWith('+');
-}
-
 const AGENT_BUSY_STATES = ['TRANSITION', 'ENGAGED', 'RNA-STATE'];
 
 @Module({
@@ -23,6 +18,7 @@ const AGENT_BUSY_STATES = ['TRANSITION', 'ENGAGED', 'RNA-STATE'];
     'EvClient',
     'Alert',
     'Adapter',
+    'ThirdPartyService',
   ],
 })
 export class EvLeadsUI extends RcUIModuleV2<Deps> {
@@ -33,7 +29,7 @@ export class EvLeadsUI extends RcUIModuleV2<Deps> {
   }
 
   getUIProps() {
-    const { evLeads, locale, evCall, evAgentSession, evWorkingState, evAuth } = this._deps;
+    const { evLeads, locale, evCall, evAgentSession, evWorkingState, evAuth, thirdPartyService } = this._deps;
     return {
       leads: evLeads.filteredLeads,
       currentLocale: locale.currentLocale,
@@ -44,11 +40,12 @@ export class EvLeadsUI extends RcUIModuleV2<Deps> {
       agentBusy: AGENT_BUSY_STATES.includes(evAgentSession.agentState),
       allowManualPass: evAuth.agent?.agentConfig?.agentPermissions?.allowManualPass,
       defaultTimezone: evAuth.agent?.authenticateResponse?.regionalSettings?.timezoneName,
+      showViewLead: thirdPartyService.leadViewerEnabled,
     };
   }
 
   getUIFunctions() {
-    const { evLeads, evCall, evClient, adapter } = this._deps;
+    const { evLeads, evCall, evClient, adapter, thirdPartyService } = this._deps;
     return {
       getLeads: async () => {
         await evLeads.fetchLeads();
@@ -68,6 +65,9 @@ export class EvLeadsUI extends RcUIModuleV2<Deps> {
       onPass: async (params) => {
         await evLeads.manualPassLead(params);
         adapter.onManualPassLead(params);
+      },
+      onViewLead: async (lead) => {
+        await thirdPartyService.viewLead(lead);
       },
     };
   }
