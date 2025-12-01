@@ -421,19 +421,13 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
     this.loginType = type;
   }
 
-  @track((_: EvAgentSession, skillProfileId: string) => [
-    trackEvents.agentSessionSetSkillProfileId,
-    { value: skillProfileId },
-  ])
+  @track(trackEvents.agentSessionSetSkillProfileId)
   @action
   setSkillProfileId(skillProfileId: string) {
     this.selectedSkillProfileId = skillProfileId;
   }
 
-  @track((_: EvAgentSession, ids: string[]) => [
-    trackEvents.agentSessionSetInboundQueueIds,
-    { value: ids },
-  ])
+  @track(trackEvents.agentSessionSetInboundQueueIds)
   @action
   setInboundQueueIds(ids: string[]) {
     this.selectedInboundQueueIds = ids;
@@ -894,11 +888,13 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
   @track((that: EvAgentSession) => [
     trackEvents.agentSessionConfigureAgent,
     {
-      'Voice Connection': that.loginType,
-      'Persistent Voice Connection': that.takingCall,
-      'Skill Profile': that.selectedSkillProfile,
-      'Inbound Queues': that.selectedInboundQueues,
-      'Auto Answer': that.autoAnswer,
+      'Voice connection': that.loginType,
+      'Persistent voice connection': that.takingCall,
+      'Skill profile set': !!that.selectedSkillProfile,
+      'Inbound queues length': that.selectedInboundQueues.length,
+      'Auto answer': that.autoAnswer,
+      'Dial group set': !!that.dialGroupId,
+      'Dial mode': that.currentDialMode
     },
   ])
   async configureAgent({

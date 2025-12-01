@@ -5,9 +5,12 @@ import {
   RcModuleV2,
   state,
   storage,
+  track,
 } from '@ringcentral-integration/core';
 import { EvCallbackTypes } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums/callbackTypes';
 import { Deps, EvLeadsOptions, Lead } from './EvLeads.interface';
+
+import { trackEvents } from '../Analytics/trackEvents';
 
 // Available to show in the leads panel
 export const AVAILABLE_LEAD_STATES = [
@@ -188,6 +191,7 @@ export class EvLeads extends RcModuleV2<Deps, EvLeadsOptions> {
     });
   }
 
+  @track(trackEvents.manualPassLead)
   async manualPassLead({
     lead,
     dispositionId,
@@ -217,6 +221,7 @@ export class EvLeads extends RcModuleV2<Deps, EvLeadsOptions> {
     }
   }
 
+  @track(trackEvents.fetchLeads)
   async fetchLeads() {
     if (this.loading) {
       return;
@@ -239,6 +244,7 @@ export class EvLeads extends RcModuleV2<Deps, EvLeadsOptions> {
     }
   }
 
+  @track(trackEvents.callLead)
   async dialLead(lead, destination) {
     let destinationE164 = isE164(destination) ? destination : undefined;
     const dialedList = lead.dialedList || [];

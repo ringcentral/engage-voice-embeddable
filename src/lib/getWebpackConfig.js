@@ -16,6 +16,7 @@ function getWebpackConfig({
   sdkConfig,
   agentConfig,
   authConfig,
+  analyticsConfig,
 }) {
   const brandConfig = getBrandConfig({ brand });
   const brandFolder = path.resolve(__dirname, `../brands/${brand}`);
@@ -68,6 +69,8 @@ function getWebpackConfig({
           BUILD_HASH: JSON.stringify(buildHash),
           HOSTING_URL: JSON.stringify(hostingUrl),
           AUTH_CONFIG: JSON.stringify(authConfig),
+          ANALYTICS_KEY: analyticsConfig.analyticsKey ? JSON.stringify(analyticsConfig.analyticsKey) : undefined,
+          ANALYTICS_SECRET_KEY: analyticsConfig.analyticsSecretKey ? JSON.stringify(analyticsConfig.analyticsSecretKey) : undefined,
         },
       }),
       new CopyWebpackPlugin({
