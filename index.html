@@ -54,6 +54,8 @@
       <label for="viewLead">View lead:</label>
       <pre id="viewLead"></pre>
     </p>
+    <div id="dialFirstLead">
+    </div>
   </div>
   <script>
     (function () {
@@ -75,6 +77,27 @@
       callBtnTitle: 'Call with RingCX'
     });
     var registered = false;
+    var leads = [];
+    function renderDialButton() {
+      var container = document.getElementById('dialFirstLead');
+      if (leads && leads.length > 0) {
+        container.style.display = 'block';
+        container.innerHTML = '<button id="dial-btn">Dial First Lead</button>';
+        var btn = document.getElementById('dial-btn');
+        btn.onclick = function() {
+          var firstLead = leads[0];
+          if (firstLead) {
+            console.log('Dialing lead:', firstLead);
+            RCAdapter.dialLead(firstLead, firstLead.destinationE164 || firstLead.destination);
+            leads.shift();
+            renderDialButton();
+          }
+        };
+      } else {
+        container.style.display = 'none';
+        container.innerHTML = '';
+      }
+    }
     window.addEventListener('message', function(event) {
       var message = event.data;
       if (!registered && message && message.type === 'rc-ev-init') {
@@ -108,14 +131,20 @@
             if (data.type === 'rc-ev-loadLeads') {
               // agent fetch leads event
               console.log('leads fetched: ', data.leads);
+              leads = data.leads;
+              renderDialButton();
             }
             if (data.type === 'rc-ev-callLead') {
               // agent call lead event
               console.log('lead called: ', data.lead, 'destination: ', data.destination);
+              leads = leads.filter((lead) => lead.leadId !== data.lead.leadId);
+              renderDialButton();
             }
             if (data.type === 'rc-ev-manualPassLead') {
               // agent pass lead event
               console.log('lead passed: ', data.lead, 'dispositionId: ', data.dispositionId, 'notes: ', data.notes, 'callback: ', data.callback, 'callbackTime: ', data.callbackTime);
+              leads = leads.filter((lead) => lead.leadId !== data.lead.leadId);
+              renderDialButton();
             }
           },
           request: function (req) {
