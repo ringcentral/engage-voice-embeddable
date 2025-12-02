@@ -1,10 +1,12 @@
 import { Module } from '@ringcentral-integration/commons/lib/di';
-import {
-  action,
-} from '@ringcentral-integration/core';
+import { action } from '@ringcentral-integration/core';
 import { EvCall as BaseEvCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvCall';
 import { callErrors } from '@ringcentral-integration/commons/modules/Call';
 import { messageTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
+import { dialoutStatuses } from '@ringcentral-integration/engage-voice-widgets/enums';
+import type {
+  EvOffhookInitResponse,
+} from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/interfaces';
 import { parseNumber } from '../../lib/parseNumber';
 import { checkCountryCode } from '../../lib/checkCountryCode';
 
@@ -74,6 +76,60 @@ class EvCall extends BaseEvCall {
       }
 
       throw error;
+    }
+  }
+
+  async previewDial(requestId, leadPhone, leadPhoneE164) {
+    this._deps.presence.setCurrentCallUii('');
+    if (this._deps.evAgentSession.isIntegratedSoftphone) {
+      const integratedSoftphone = this._deps.evIntegratedSoftphone;
+      try {
+        if (integratedSoftphone.sipRegisterSuccess) {
+          await integratedSoftphone.askAudioPermission(false);
+        } else {
+          await this._deps.evAgentSession.configureAgent();
+          await integratedSoftphone.onceRegistered();
+        }
+      } catch (error) {
+        return;
+      }
+    }
+    try {
+      await this._previewDial(requestId, leadPhone, leadPhoneE164);
+    } catch (error) {
+      console.error('error', error);
+      this.setPhonedIdle();
+    }
+  }
+
+  async _previewDial(requestId, leadPhone, leadPhoneE164) {
+    if (this.dialoutStatus === dialoutStatuses.dialing) {
+      return;
+    }
+    this.setPhonedDialing();
+    let offhookInitResult: EvOffhookInitResponse;
+    try {
+      if (!this._deps.evSettings.isOffhook) {
+        // bind init hook first, and then call offhookInit
+        const getOffhookInitResult = this._getOffhookInitResult();
+        this._deps.evClient.offhookInit();
+
+        offhookInitResult = await getOffhookInitResult;
+      }
+
+      if (
+        this._deps.evSettings.isOffhook ||
+        (offhookInitResult && offhookInitResult.status === 'OK')
+      ) {
+        this._deps.evClient.previewDial(requestId, leadPhone, leadPhoneE164);
+      } else {
+        throw new Error(`'offhookInit' exception error`);
+      }
+    } catch (e) {
+      if (!this._deps.evSettings.isManualOffhook) {
+        this._deps.evClient.offhookTerm();
+      }
+      throw e;
     }
   }
 }

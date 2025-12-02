@@ -204,21 +204,7 @@ class EvAuth extends RcModuleV2<Deps> implements Auth {
         ];
   }
 
-  @track((_: EvAuth, { connected, agent }: State) => {
-    return [
-      trackEvents.loginAgent,
-      connected
-        ? {
-            'agentId(s)': agent.authenticateResponse?.agents?.map(
-              (agent) => agent.agentId,
-            ),
-            'userId(s)': agent.authenticateResponse?.agents?.map(
-              (agent) => agent.rcUserId,
-            ),
-          }
-        : undefined,
-    ];
-  })
+  @track(trackEvents.loginAgent)
   @action
   setConnectionData({ connected, agent }: State) {
     // ! agent must be set before connected

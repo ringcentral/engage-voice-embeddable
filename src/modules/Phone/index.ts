@@ -19,7 +19,6 @@ import { EvSubscription } from '@ringcentral-integration/engage-voice-widgets/mo
 import { EvTransferCallUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvTransferCallUI';
 import { EvWorkingState } from '@ringcentral-integration/engage-voice-widgets/modules/EvWorkingState';
 import { EvChooseAccountUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvChooseAccountUI';
-import { MainViewUI } from '@ringcentral-integration/engage-voice-widgets/modules/MainViewUI';
 
 import { SDK } from '@ringcentral/sdk';
 import { RingCentralClient } from '@ringcentral-integration/commons/lib/RingCentralClient';
@@ -71,8 +70,12 @@ import { EvActivityCallUI } from '../EvActivityCallUI';
 import { EvCallHistoryUI } from '../EvCallHistoryUI';
 import { EvCallHistory } from '../EvCallHistory';
 import { Environment } from '../Environment';
+import { EvLeads } from '../EvLeads';
+import { EvLeadsUI } from '../EvLeadsUI';
+import { MainViewUI } from '../MainViewUI';
 import { formatEvCall } from '../../lib/formatEvCall';
 import { GenericPhone } from './interface';
+import { Analytics } from '../Analytics';
 
 @ModuleFactory({
   providers: [
@@ -170,8 +173,11 @@ import { GenericPhone } from './interface';
     { provide: 'EvClient', useClass: EvClient },
     { provide: 'EvCallDataSource', useClass: EvCallDataSource },
     { provide: 'EvIntegratedSoftphone', useClass: EvIntegratedSoftphone },
+    { provide: 'EvLeads', useClass: EvLeads },
+    { provide: 'EvLeadsUI', useClass: EvLeadsUI },
     { provide: 'TabManager', useClass: EvTabManager },
     { provide: 'Beforeunload', useClass: Beforeunload },
+    { provide: 'Analytics', useClass: Analytics },
   ],
 })
 export default class BasePhone extends RcModule {
@@ -221,6 +227,7 @@ export default class BasePhone extends RcModule {
     presence,
     evIntegratedSoftphone,
     evSubscription,
+    analytics,
   }: GenericPhone) {
     evIntegratedSoftphone.autoAnswerCheckFn = () =>
       evAuth.autoAnswerCalls ||
@@ -243,6 +250,24 @@ export default class BasePhone extends RcModule {
         routerInteraction.currentPath !== '/chooseAccount'
       ) {
         routerInteraction.push('/chooseAccount');
+      }
+    });
+
+    evAuth.onceLoginSuccess(() => {
+      try {
+        const userDetails = localStorage.getItem('engage-auth:fullUserDetails');
+        if (!userDetails) {
+          return;
+        }
+        const userDetailsJson = JSON.parse(userDetails);
+        const userId = `${userDetailsJson.rcUserId}`;
+        const accountId = userDetailsJson.rcAccountId;
+        analytics.identify({
+          userId,
+          accountId,
+        });
+      } catch (e) {
+        console.error('Error identifying user', e);
       }
     });
 
@@ -478,6 +503,15 @@ export function createPhone({
           return appVersion;
         },
       },
+      {
+        provide: 'AnalyticsOptions',
+        useValue: {
+          appVersion,
+          analyticsKey: process.env.ANALYTICS_KEY,
+          analyticsSecretKey: process.env.ANALYTICS_SECRET_KEY,
+          externalClientId: sdkConfig.clientId,
+        },
+      }
     ],
   })
   class Phone extends BasePhone {}

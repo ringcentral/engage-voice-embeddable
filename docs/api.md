@@ -18,6 +18,12 @@ RCAdapter.logout();
 
 ### Register a logger and contact matcher service
 
+Supported feature:
+
+1. Call logger: used to log calls to your CRM/platform
+2. Contact matcher: used to show your CRM/platform contact name in the widget
+3. Lead viewer (for preview mode): Add a "View lead" button in lead item. Used to open lead page in your CRM/platform
+
 ```js
 var registered = false;
 window.addEventListener('message', function(event) {
@@ -29,6 +35,7 @@ window.addEventListener('message', function(event) {
       callLoggerEnabled: true,
       contactMatcherEnabled: true, // match contact with phone number
       callLogMatcherEnabled: true, // match call log entity with call id
+      leadViewerEnabled: true, // add "view lead" button
     });
     RCAdapter.transport.addListeners({
       push: function (data) { // listen push event from rc widget
@@ -38,6 +45,24 @@ window.addEventListener('message', function(event) {
         }
         if (data.type === 'rc-ev-ringCall') {
           console.log('ringing call:', data.call);
+        }
+        // lead events
+        if (data.type === 'rc-ev-loadLeads') {
+          // agent fetch leads event
+          console.log(data.leads);
+        }
+        if (data.type === 'rc-ev-callLead') {
+          // agent call lead event
+          console.log(data.lead);
+          console.log(data.destination); // phone number
+        }
+        if (data.type === 'rc-ev-manualPassLead') {
+          // agent pass lead event
+          console.log(data.lead);
+          console.log(data.dispositionId);
+          console.log(data.notes);
+          console.log(data.callback); // if need to call back
+          console.log(data.callbackTime); // call back time
         }
       },
       request: function (req) { // listen request event from rc widget
@@ -84,6 +109,15 @@ window.addEventListener('message', function(event) {
           RCAdapter.transport.response({
             requestId: req.requestId,
             result: callLogMapping,
+          });
+          return;
+        }
+        if (payload.requestType === 'rc-ev-viewLead') {
+          var lead = payload.data;
+          console.log('agent want to view lead: ', lead);
+          RCAdapter.transport.response({
+            requestId: req.requestId,
+            result: 'ok',
           });
           return;
         }

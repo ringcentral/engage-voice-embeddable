@@ -31,6 +31,11 @@ const authConfig = {
   redirectUri: process.env.AUTH_REDIRECT_URI,
 };
 
+const analyticsConfig = {
+  analyticsKey: process.env.MIXPANEL_KEY,
+  analyticsSecretKey: process.env.ANALYTICS_SECRET_KEY,
+};
+
 const localeSettings = {
   supportedLocales: [
     'en-US',
@@ -90,6 +95,7 @@ function compile({ brandName = 'rc', buildPath }) {
     sdkConfig: rcSDKConfig,
     agentConfig: evAgentConfig,
     authConfig,
+    analyticsConfig,
   });
   return new Promise((resolve, reject) => {
     webpack(config, (err, stats) => {
@@ -125,6 +131,7 @@ export async function devServer() {
     sdkConfig: rcSDKConfig,
     agentConfig: evAgentConfig,
     authConfig,
+    analyticsConfig,
   });
   const compiler = webpack(config);
   const server = new WebpackDevServer({

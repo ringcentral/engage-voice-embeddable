@@ -1,4 +1,4 @@
-# RingCX Embeddable (Beta)
+# RingCX Embeddable (BETA)
 
 [![Build Status](https://github.com/ringcentral/engage-voice-embeddable/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/ringcentral/engage-voice-embeddable/actions)
 
@@ -36,9 +36,22 @@ Visit [website](https://ringcentral.github.io/engage-voice-embeddable/) in GitHu
 * [Call Events](docs/call-events.md)
 * [Popup a standalone widget](docs/popup-window.md)
 
-## Awesome Embeddable projects
+## Supported features
 
-* RingCentral RingCX Embeddable phone for Hubspot CRM - [repo](https://github.com/ringcentral/hubspot-embeddable-engage-phone)
+* Agent states
+* Voice queues
+* Dial modes
+   - Manual
+   - Predictive dial mode
+   - Preview dial mode
+
+## Unsupported features:
+
+* Dial modes:
+  - Preview dial mode with search
+  - HCI dialing
+  - Progressive dial mode
+* Agent scripts
 
 ## Contribution and Development
 

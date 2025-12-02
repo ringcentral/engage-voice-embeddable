@@ -1,6 +1,6 @@
 {
   "name": "engage-voice-embeddable",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "RingCentral RingCX Embeddable widget",
   "browserslist": "> 0.25%, ie > 10",
   "scripts": {
@@ -95,6 +95,7 @@
     "format-message": "^5.1.2",
     "isomorphic-fetch": "^2.2.1",
     "isomorphic-ws": "^4.0.1",
+    "mixpanel-browser": "^2.48.1",
     "moment": "^2.29.4",
     "moment-timezone": "^0.5.35",
     "normalize-css": "^2.3.1",

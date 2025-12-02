@@ -5,7 +5,6 @@ import { ActivityCallLogPage } from '@ringcentral-integration/engage-voice-widge
 import { CallHistoryCallLogPage } from '@ringcentral-integration/engage-voice-widgets/containers/CallHistoryCallLogPage';
 import { DialerPage } from '@ringcentral-integration/engage-voice-widgets/containers/DialerPage';
 import { LoginPage } from '@ringcentral-integration/engage-voice-widgets/containers/LoginPage';
-import { MainViewPage } from '@ringcentral-integration/engage-voice-widgets/containers/MainViewPage';
 import { ManualDialSettingsPage } from '@ringcentral-integration/engage-voice-widgets/containers/ManualDialSettingsPage';
 import { RequeueCallGroupItemPage } from '@ringcentral-integration/engage-voice-widgets/containers/RequeueCallGroupItemPage';
 import { RequeueCallGroupPage } from '@ringcentral-integration/engage-voice-widgets/containers/RequeueCallGroupPage';
@@ -33,6 +32,8 @@ import { AppView } from '../AppView';
 import { EvLoginHeader } from '../../components/EvLoginHeader';
 import { SessionConfigPage } from '../SessionConfigPage';
 import { SessionUpdatePage } from '../SessionUpdatePage';
+import { LeadsPage } from '../LeadsPage';
+import { MainViewPage } from '../MainViewPage';
 
 type AppProps = PhoneProviderProps;
 
@@ -76,6 +77,7 @@ const App: FunctionComponent<AppProps> = ({ phone }) => {
             >
               <Route path="/dialer" component={() => <DialerPage />} />
               <Route path="/history" component={CallHistoryPage} />
+              <Route path="/leads" component={LeadsPage} />
               <Route
                 path="/history/callLog/:id/:method"
                 component={({

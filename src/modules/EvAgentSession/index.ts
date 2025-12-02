@@ -279,6 +279,7 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
     const noneItem = {
       groupId: '',
       groupName: 'None',
+      dialMode: '',
     };
     if (
       !agentConfig ||
@@ -292,12 +293,25 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
     } = agentConfig;
 
     return [noneItem].concat(availableOutdialGroups.filter((g) => {
-      return g.dialMode === 'PREDICTIVE';
+      return (g.dialMode === 'PREDICTIVE' || g.dialMode === 'PREVIEW');
     }).map((group) => ({
       groupId: group.dialGroupId,
       groupName: group.dialGroupName,
       groupDesc: group.dialGroupDesc,
+      dialMode: group.dialMode,
     })));
+  }
+
+  @computed((that: EvAgentSession) => [that.dialGroupId, that.dialGroups])
+  get currentDialMode() {
+    if (!this.dialGroupId) {
+      return '';
+    }
+    const group = this.dialGroups.find((group) => group.groupId === this.dialGroupId);
+    if (!group) {
+      return '';
+    }
+    return group.dialMode;
   }
 
   @computed((that: EvAgentSession) => [
@@ -407,19 +421,13 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
     this.loginType = type;
   }
 
-  @track((_: EvAgentSession, skillProfileId: string) => [
-    trackEvents.agentSessionSetSkillProfileId,
-    { value: skillProfileId },
-  ])
+  @track(trackEvents.agentSessionSetSkillProfileId)
   @action
   setSkillProfileId(skillProfileId: string) {
     this.selectedSkillProfileId = skillProfileId;
   }
 
-  @track((_: EvAgentSession, ids: string[]) => [
-    trackEvents.agentSessionSetInboundQueueIds,
-    { value: ids },
-  ])
+  @track(trackEvents.agentSessionSetInboundQueueIds)
   @action
   setInboundQueueIds(ids: string[]) {
     this.selectedInboundQueueIds = ids;
@@ -880,11 +888,13 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
   @track((that: EvAgentSession) => [
     trackEvents.agentSessionConfigureAgent,
     {
-      'Voice Connection': that.loginType,
-      'Persistent Voice Connection': that.takingCall,
-      'Skill Profile': that.selectedSkillProfile,
-      'Inbound Queues': that.selectedInboundQueues,
-      'Auto Answer': that.autoAnswer,
+      'Voice connection': that.loginType,
+      'Persistent voice connection': that.takingCall,
+      'Skill profile set': !!that.selectedSkillProfile,
+      'Inbound queues length': that.selectedInboundQueues.length,
+      'Auto answer': that.autoAnswer,
+      'Dial group set': !!that.dialGroupId,
+      'Dial mode': that.currentDialMode
     },
   ])
   async configureAgent({
@@ -928,7 +938,6 @@ class EvAgentSession extends RcModuleV2<Deps> implements AgentSession {
         const config = this._checkFieldsResult(this.formGroup);
 
         this._clearCalls();
-
         this.isAgentUpdating = true;
 
         this._sendTabManager(

@@ -8,7 +8,8 @@
 * Voice queues
 * Outbound Campaigns
    - Predictive dial mode
-   - Preview dial mode (TODO)
+   - Preview dial mode
+   - Preview dial mode with search (TODO)
    - Progressive dial mode (TODO)
 * Agent scripts (TODO)
 * A online device limitation

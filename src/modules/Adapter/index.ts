@@ -194,6 +194,28 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
     }
   }
 
+  onManualPassLead({ callbackDTS, ...params }) {
+    this._postMessage({
+      type: this.messageTypes.manualPassLead,
+      ...params,
+    });
+  }
+
+  onCallLead(lead, destination) {
+    this._postMessage({
+      type: this.messageTypes.callLead,
+      lead,
+      destination,
+    });
+  }
+
+  onLoadLeads(leads) {
+    this._postMessage({
+      type: this.messageTypes.loadLeads,
+      leads,
+    });
+  }
+
   _pushAdapterState() {
     if (
       this._lastClosed !== this.closed ||

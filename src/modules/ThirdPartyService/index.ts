@@ -6,11 +6,13 @@ import {
   RcModuleV2,
   state,
   action,
-} from '@ringcentral-integration/core/lib/RcModule';
+  track,
+} from '@ringcentral-integration/core';
 
 import { Interface, Deps } from './interface';
 
 import messageTypes from '../../enums/messageTypes';
+import { trackEvents } from '../Analytics/trackEvents';
 
 @Module({
   deps: [
@@ -42,6 +44,7 @@ class ThirdPartyService extends RcModuleV2<Deps>
     callLoggerEnabled: false,
     contactMatcherEnabled: false,
     callLogMatcherEnabled: false,
+    leadViewerEnabled: false,
   };
 
   @action
@@ -51,7 +54,12 @@ class ThirdPartyService extends RcModuleV2<Deps>
       callLoggerEnabled: service.callLoggerEnabled,
       contactMatcherEnabled: service.contactMatcherEnabled,
       callLogMatcherEnabled: service.callLogMatcherEnabled,
+      leadViewerEnabled: service.leadViewerEnabled,
     };
+  }
+
+  get leadViewerEnabled() {
+    return this.service.leadViewerEnabled;
   }
 
   addListeners() {
@@ -174,6 +182,7 @@ class ThirdPartyService extends RcModuleV2<Deps>
     }
   }
 
+  @track(trackEvents.logCall)
   async logCall(data) {
     if (!this.service.callLoggerEnabled) {
       return;
@@ -190,6 +199,19 @@ class ThirdPartyService extends RcModuleV2<Deps>
         ignoreCache: true
       });
     }
+  }
+
+  @track(trackEvents.viewLead)
+  async viewLead(data) {
+    if (!this.service.leadViewerEnabled) {
+      return;
+    }
+    await this.transport.request({
+      payload: {
+        requestType: this.messageTypes.viewLead,
+        data,
+      },
+    });
   }
 }
 
