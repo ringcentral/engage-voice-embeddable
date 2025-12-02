@@ -46,6 +46,14 @@
     <p>Hover to Call: <a href="tel:+12345678901">+12345678901</a></p>
     <p>Hover to Call1: +12345678901 </p>
     <p><a id="environment" href="#environment">Click here to change environment</a></p>
+    <p>
+      <label for="log">Log call:</label>
+      <pre id="log"></pre>
+    </p>
+    <p>
+      <label for="viewLead">View lead:</label>
+      <pre id="viewLead"></pre>
+    </p>
   </div>
   <script>
     (function () {
@@ -77,6 +85,7 @@
           callLoggerEnabled: true,
           contactMatcherEnabled: true,
           callLogMatcherEnabled: true,
+          leadViewerEnabled: true,
         });
         RCAdapter.transport.addListeners({
           push: function (data) {
@@ -94,6 +103,19 @@
             }
             if (data.type === 'rc-ev-sipEndCall') {
               console.log('SIP call ended.');
+            }
+            // lead events
+            if (data.type === 'rc-ev-loadLeads') {
+              // agent fetch leads event
+              console.log('leads fetched: ', data.leads);
+            }
+            if (data.type === 'rc-ev-callLead') {
+              // agent call lead event
+              console.log('lead called: ', data.lead, 'destination: ', data.destination);
+            }
+            if (data.type === 'rc-ev-manualPassLead') {
+              // agent pass lead event
+              console.log('lead passed: ', data.lead, 'dispositionId: ', data.dispositionId, 'notes: ', data.notes, 'callback: ', data.callback, 'callbackTime: ', data.callbackTime);
             }
           },
           request: function (req) {
@@ -136,10 +158,21 @@
             }
             if (payload.requestType === 'rc-ev-logCall') {
               console.log('logCall:', payload.data);
+              document.getElementById('log').innerText = JSON.stringify(payload.data, null, 2);
               RCAdapter.transport.response({
                 requestId: req.requestId,
                 result: 'ok',
               });
+            }
+            if (payload.requestType === 'rc-ev-viewLead') {
+              var lead = payload.data;
+              console.log('agent want to view lead: ', lead);
+              document.getElementById('viewLead').innerText = JSON.stringify(lead, null, 2);
+              RCAdapter.transport.response({
+                requestId: req.requestId,
+                result: 'ok',
+              });
+              return;
             }
           },
         });
