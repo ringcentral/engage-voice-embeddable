@@ -126,3 +126,12 @@ window.addEventListener('message', function(event) {
   }
 });
 ```
+
+## Dial lead
+
+```js
+// lead should be from lead fetched event
+var lead = { leadId: 'xxx', externId: '111' }; // pass leadId or externId
+var destinationE164 = '+1xxxxxxxxxx'; // E164 phone number from lead destinationE164 data
+RCAdapter.dialLead({ leadId: '', externId: ''}, destinationE164);
+```
