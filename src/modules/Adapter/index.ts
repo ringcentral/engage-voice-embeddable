@@ -20,6 +20,7 @@ import { Interface, Deps } from './interface';
     'GlobalStorage',
     'Presence',
     'TabManager',
+    'EvLeads',
     { dep: 'AdapterOptions', optional: true },
   ],
 })
@@ -113,6 +114,9 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
             break;
           case this.messageTypes.logout:
             this._deps.evAuth.logout();
+          case this.messageTypes.dialLead:
+            this.dialLead(payload.lead, payload.destination);
+            break;
           default:
             break;
         }
@@ -145,6 +149,39 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
     this._deps.evDialerUI.setToNumber(phoneNumber);
     this._deps.evDialerUI.setLatestDialoutNumber();
     await this._deps.evCall.dialout(this._deps.evDialerUI.toNumber);
+  }
+
+  async dialLead(leadProps, destination) {
+    const leads = this._deps.evLeads.filteredLeads;
+    const lead = leads.find((lead) => {
+      if (leadProps.leadId) {
+        return lead.leadId === leadProps.leadId;
+      }
+      if (leadProps.requestId) {
+        return lead.requestId === leadProps.requestId;
+      }
+      if (leadProps.externId) {
+        return lead.externId === leadProps.externId;
+      }
+      if (destination) {
+        if (lead.destinationE164) {
+          return lead.destinationE164.includes(destination);
+        }
+        if (lead.destination) {
+          return lead.destination.includes(destination);
+        }
+      }
+      return false;
+    });
+    if (!lead) {
+      return;
+    }
+    try {
+      await this._deps.evLeads.dialLead(lead, destination);
+      this.onCallLead(lead, destination);
+    } catch (error) {
+      console.error('Error calling lead', error);
+    }
   }
 
   onAppStart() {

@@ -416,6 +416,14 @@ class Adapter extends AdapterCore {
     });
   }
 
+  dialLead(lead, destination) {
+    this._postMessage({
+      type: messageTypes.dialLead,
+      lead,
+      destination,
+    });
+  }
+
   get transport() {
     return this._messageTransport;
   }

@@ -29,4 +29,5 @@ export default ObjectMap.prefixKeys([
   'callLead',
   'loadLeads',
   'viewLead',
+  'dialLead',
 ], 'rc-ev');
