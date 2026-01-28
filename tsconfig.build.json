@@ -1,0 +1,21 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "noEmit": true
+  },
+  "include": [
+    "./next/**/*.ts",
+    "./next/**/*.tsx",
+    "./webpack.config.ts",
+    "./gulpfile.ts"
+  ],
+  "exclude": [
+    "./next/**/*.test.ts",
+    "./next/**/*.test.tsx",
+    "node_modules",
+    "build",
+    "dist"
+  ]
+}

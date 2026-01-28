@@ -1,0 +1,56 @@
+/* eslint-disable no-console */
+require('dotenv').config();
+import { getProjectConfig } from '@ringcentral-integration/next-builder';
+import webpack from 'webpack';
+import WebpackDevServer from 'webpack-dev-server';
+
+import type { AppConfig } from './next/config';
+import { getWebpackConfig } from './webpack.config';
+
+export async function devServer() {
+  const projectConfig = getProjectConfig<AppConfig>();
+  const webpackConfig = getWebpackConfig({ projectConfig, devServer: true });
+  const compiler = webpack({
+    ...webpackConfig,
+    stats: {
+      warnings: true,
+      chunks: false,
+      colors: true,
+    },
+  });
+  const server = new WebpackDevServer(
+    {
+      hot: false,
+      client: {
+        overlay: {
+          errors: true,
+          warnings: true,
+          runtimeErrors: false,
+        },
+      },
+      devMiddleware: {
+        publicPath: '/',
+      },
+      port: projectConfig.devServerPort,
+    },
+    compiler,
+  );
+  await server.start();
+  console.log(`server listening to ${projectConfig.devServerPort}...`);
+}
+
+export async function build() {
+  const projectConfig = getProjectConfig<AppConfig>();
+  const webpackConfig = getWebpackConfig({ projectConfig });
+  await new Promise((resolve, reject) => {
+    webpack(webpackConfig, (err, stats) => {
+      if (err || stats!.hasErrors()) {
+        reject(
+          err || new Error(JSON.stringify(stats!.toJson().errors, null, 2)),
+        );
+        return;
+      }
+      resolve(true);
+    });
+  });
+}

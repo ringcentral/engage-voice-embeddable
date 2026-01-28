@@ -1,0 +1,21 @@
+/**
+ * EvWorkingState options for configuration
+ */
+export interface EvWorkingStateOptions {
+  // Optional configuration options
+}
+
+/**
+ * Agent state interface
+ */
+export interface AgentState {
+  agentState: string;
+  agentAuxState: string;
+}
+
+/**
+ * Working state with additional properties
+ */
+export interface WorkingState extends AgentState {
+  baseState?: string;
+}

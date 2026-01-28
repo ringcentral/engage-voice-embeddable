@@ -1,0 +1,35 @@
+{
+  "distPath": "dist",
+  "buildPath": "build",
+  "themePath": "next",
+  "pages": [
+    {
+      "index": "next/index.html",
+      "main": "next/main.ts"
+    }
+  ],
+  "assets": ["next/icon.svg"],
+  "environment": {
+    "local": {
+      "brand": ["rc"],
+      "mode": "development"
+    },
+    "dev": {
+      "brand": ["rc"],
+      "mode": "production",
+      "useStyleTransform": true,
+      "preferredDevtool": "source-map",
+      "useDevtool": true
+    },
+    "prod": {
+      "brand": ["rc"],
+      "mode": "production",
+      "useStyleTransform": true,
+      "preferredDevtool": "source-map",
+      "useDevtool": true
+    }
+  },
+  "appConfigPath": "config/index.ts",
+  "devServerPort": 8080,
+  "themeSystem": "spring-ui"
+}
