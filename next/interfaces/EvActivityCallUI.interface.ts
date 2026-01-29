@@ -1,11 +1,3 @@
-import { ObjectMap } from '@ringcentral-integration/core/lib/ObjectMap';
-import type { BasicCallInfoProps } from '@ringcentral-integration/widgets/components/BasicCallInfo';
-import type { CallLogFieldsProps } from '@ringcentral-integration/widgets/components/CallLogFields';
-import type {
-  CallLogPanelProps,
-  CallStatus,
-} from '@ringcentral-integration/widgets/components/CallLogPanel';
-
 import type { EvSmallCallControlProps } from '../components/EvSmallCallControl';
 import type { EvTransferType } from '../enums';
 
@@ -15,14 +7,48 @@ import type {
   EvIvrData,
 } from './EvData.interface';
 
-type CallLogPanelCurrentLog = CallLogPanelProps['currentLog'];
+/**
+ * Call status type - local definition
+ */
+export type CallStatus = 'ringing' | 'active' | 'hold' | 'ended';
 
-export type EvCallLogTask = CallLogPanelCurrentLog['task'] & {
+/**
+ * Basic call info props - local definition
+ */
+export interface BasicCallInfoProps {
+  callInfos?: Array<{ label: string; value: string }>;
+  followInfos?: Array<{ label: string; value: string }>;
+}
+
+/**
+ * Call log fields props - local definition
+ */
+export interface CallLogFieldsProps {
+  referenceFieldOptions?: Record<string, any>;
+}
+
+/**
+ * Call log panel props - local definition
+ */
+export interface CallLogPanelProps {
+  currentLocale?: string;
+  showSmallCallControl?: boolean;
+  isWide?: boolean;
+  currentLog?: {
+    task?: Record<string, any>;
+  };
+  goBack?: () => void;
+  onUpdateCallLog?: (data: any) => void;
+  onSaveCallLog?: () => Promise<void>;
+}
+
+export type EvCallLogTask = {
   dispositionId?: string;
   notes?: string;
+  [key: string]: any;
 };
 
-export type EvCurrentLog = CallLogPanelCurrentLog & {
+export type EvCurrentLog = {
   currentEvRawCall: EvCallData;
   task: { [key: string]: any };
   showInfoMeta?: {
@@ -31,9 +57,16 @@ export type EvCurrentLog = CallLogPanelCurrentLog & {
   };
 };
 
-export const callLogMethods = ObjectMap.fromKeys(['create']);
+export const callLogMethods = {
+  create: 'create',
+} as const;
 export type CallLogMethods = keyof typeof callLogMethods;
-export const saveStatus = ObjectMap.fromKeys(['saved', 'saving', 'submit']);
+
+export const saveStatus = {
+  saved: 'saved',
+  saving: 'saving',
+  submit: 'submit',
+} as const;
 export type SaveStatus = keyof typeof saveStatus;
 
 export type EvActivityCallUIProps = {
@@ -46,7 +79,9 @@ export type EvActivityCallUIProps = {
   /** The subject for call log info */
   basicInfo?: {
     subject?: string;
-  } & Pick<BasicCallInfoProps, 'callInfos' | 'followInfos'>;
+    callInfos?: Array<{ label: string; value: string }>;
+    followInfos?: Array<{ label: string; value: string }>;
+  };
   isInbound: boolean;
   currentEvCall: EvCallData;
   status: CallStatus;
@@ -67,25 +102,24 @@ export type EvActivityCallUIProps = {
   showMuteButton: boolean;
   ivrAlertData: EvIvrData[];
   agentScriptData?: EvAgentScriptData;
-  referenceFieldOptions?: CallLogFieldsProps['referenceFieldOptions'];
+  referenceFieldOptions?: Record<string, any>;
   recordPauseCount: number;
   timeStamp: number;
+  currentLocale?: string;
+  showSmallCallControl?: boolean;
+  isWide?: boolean;
 } & Pick<
-  CallLogPanelProps,
-  'currentLocale' | 'showSmallCallControl' | 'isWide'
-> &
-  Pick<
-    EvSmallCallControlProps,
-    | 'isOnMute'
-    | 'isOnHold'
-    | 'isInComingCall'
-    | 'isOnActive'
-    | 'disableTransfer'
-    | 'disableHangup'
-    | 'disableActive'
-    | 'disableHold'
-    | 'disableMute'
-  >;
+  EvSmallCallControlProps,
+  | 'isOnMute'
+  | 'isOnHold'
+  | 'isInComingCall'
+  | 'isOnActive'
+  | 'disableTransfer'
+  | 'disableHangup'
+  | 'disableActive'
+  | 'disableHold'
+  | 'disableMute'
+>;
 
 export type EvActivityCallUIFunctions = {
   disposeCall: () => Promise<void>;
@@ -94,19 +128,21 @@ export type EvActivityCallUIFunctions = {
   onCopySuccess: (name: string) => void;
   setKeypadIsOpen: (status: boolean) => void;
   setKeypadValue: (value: string) => void;
-} & Pick<CallLogPanelProps, 'goBack' | 'onUpdateCallLog' | 'onSaveCallLog'> &
-  Pick<
-    EvSmallCallControlProps,
-    | 'onMute'
-    | 'onUnmute'
-    | 'onHangup'
-    | 'onReject'
-    | 'onHold'
-    | 'onUnHold'
-    | 'onActive'
-    | 'onRecord'
-    | 'onStopRecord'
-    | 'onResumeRecord'
-    | 'onPauseRecord'
-    | 'onRestartTimer'
-  >;
+  goBack?: () => void;
+  onUpdateCallLog?: (data: any) => void;
+  onSaveCallLog?: () => Promise<void>;
+} & Pick<
+  EvSmallCallControlProps,
+  | 'onMute'
+  | 'onUnmute'
+  | 'onHangup'
+  | 'onReject'
+  | 'onHold'
+  | 'onUnHold'
+  | 'onActive'
+  | 'onRecord'
+  | 'onStopRecord'
+  | 'onResumeRecord'
+  | 'onPauseRecord'
+  | 'onRestartTimer'
+>;

@@ -5,9 +5,9 @@ import {
   RcModule,
 } from '@ringcentral-integration/next-core';
 
-import type { EvClient } from '../EvClient';
-import type { EvAuth } from '../EvAuth';
-import type { EvAgentSession } from '../EvAgentSession';
+import { EvClient } from '../EvClient';
+import { EvAuth } from '../EvAuth';
+import { EvAgentSession } from '../EvAgentSession';
 import type { EvSettingsOptions, OffhookState } from './EvSettings.interface';
 
 /**

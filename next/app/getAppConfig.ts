@@ -1,9 +1,3 @@
-import type { BrandConfig as BaseBrandConfig } from '@ringcentral-integration/commons/modules/Brand';
-import type { SDKConfig } from '@ringcentral-integration/commons/lib/createSdkConfig';
-import type {
-  IRouterOptions,
-  ISharedAppOptions,
-} from '@ringcentral-integration/next-core';
 import {
   createMemoryHistory,
   render,
@@ -23,9 +17,48 @@ import type {
 import {
   Brand,
   Locale,
+  Toast,
 } from '@ringcentral-integration/micro-core/src/app/services';
+import {
+  HeaderNavViewSpring,
+  SpringAppRootView,
+} from '@ringcentral-integration/micro-core/src/app/views';
+import { Auth, RateLimiter } from '@ringcentral-integration/micro-auth/src/app/services';
+import { LoginView } from '@ringcentral-integration/micro-auth/src/app/views';
 
 import { AppView } from '../AppView';
+
+import type {
+  IRouterOptions,
+  ISharedAppOptions,
+} from '@ringcentral-integration/next-core';
+
+/**
+ * Brand configuration interface
+ */
+export interface BaseBrandConfig {
+  id: string;
+  code: string;
+  name: string;
+  appName: string;
+  fullName?: string;
+  defaultLocale?: string;
+  supportedLocales?: string[];
+}
+
+/**
+ * SDK configuration interface
+ */
+export interface SDKConfig {
+  server?: string;
+  clientId?: string;
+  clientSecret?: string;
+  appVersion?: string;
+  appName?: string;
+  cachePrefix?: string;
+  brandId?: string;
+  redirectUri?: string;
+}
 
 // Services
 import {
@@ -59,6 +92,17 @@ import {
   CallHistoryView,
   LeadsView,
   ManualDialSettingsView,
+  ChooseAccountView,
+  SessionUpdateView,
+  SettingsView,
+  TransferCallView,
+  TransferInternalView,
+  TransferPhoneBookView,
+  TransferManualEntryView,
+  RequeueCallGroupView,
+  RequeueCallGroupItemView,
+  ActiveCallListView,
+  CallHistoryDetailView,
 } from './view';
 
 /**
@@ -76,6 +120,10 @@ interface EvAgentConfig {
 }
 
 interface CreateAppEntryOptions {
+  disableLoginPopup?: boolean;
+  redirectUri?: string;
+  jwt?: string;
+  jwtOwnerId?: string;
   appVersion: string;
   prefix?: string;
   brandConfig: BaseBrandConfig;
@@ -96,6 +144,10 @@ export const getAppConfig = ({
   evAgentConfig,
   modules = [],
   share,
+  disableLoginPopup = false,
+  redirectUri = './redirect.html',
+  jwt = '',
+  jwtOwnerId = '',
 }: CreateAppEntryOptions) => {
   const { defaultLocale } = brandConfig;
 
@@ -112,6 +164,7 @@ export const getAppConfig = ({
   const coreServices = [
     Brand,
     Locale,
+    Toast,
     {
       provide: RouterOptions,
       useValue: {
@@ -139,8 +192,20 @@ export const getAppConfig = ({
         appVersion,
         appName: brandConfig.appName as string,
         cachePrefix: `sdk-${prefix}`,
-      } satisfies SDKConfig,
+      } as SDKConfig,
     },
+    {
+      provide: 'OAuthOptions',
+      useValue: {
+        extralUIOptions: ['hide_remember_me', 'hide_tos', '-old_ui'],
+        disableLoginPopup,
+        redirectUri,
+        jwt,
+        jwtOwnerId,
+      },
+    },
+    Auth,
+    RateLimiter,
   ];
 
   // Engage Voice services
@@ -187,6 +252,17 @@ export const getAppConfig = ({
         },
       },
     },
+    {
+      provide: 'EvSubscriptionOptions',
+      useValue: {},
+    }
+  ];
+
+  // Core views
+  const coreViews = [
+    SpringAppRootView,
+    HeaderNavViewSpring,
+    LoginView,
   ];
 
   // Engage Voice views
@@ -198,6 +274,18 @@ export const getAppConfig = ({
     CallHistoryView,
     LeadsView,
     ManualDialSettingsView,
+    // New views
+    ChooseAccountView,
+    SessionUpdateView,
+    SettingsView,
+    TransferCallView,
+    TransferInternalView,
+    TransferPhoneBookView,
+    TransferManualEntryView,
+    RequeueCallGroupView,
+    RequeueCallGroupItemView,
+    ActiveCallListView,
+    CallHistoryDetailView,
   ];
 
   return {
@@ -205,6 +293,7 @@ export const getAppConfig = ({
       ...plugins,
       ...coreServices,
       ...evServices,
+      ...coreViews,
       ...evViews,
       ...modules,
     ],

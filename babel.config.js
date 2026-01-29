@@ -1,3 +1,3 @@
-const baseConfig = require('@ringcentral-integration/babel-settings');
+const baseConfig = require('@ringcentral-integration/babel-settings/reactant-babel.config');
 
 module.exports = baseConfig;

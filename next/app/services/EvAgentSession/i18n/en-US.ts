@@ -1,4 +1,4 @@
-import { dropDownOptions, loginTypes } from '../../../enums';
+import { dropDownOptions, loginTypes } from '../../../../enums';
 
 export default {
   [loginTypes.RC_PHONE]: 'RingCentral Office phone',

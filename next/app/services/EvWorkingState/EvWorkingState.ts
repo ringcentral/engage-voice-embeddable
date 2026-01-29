@@ -1,4 +1,4 @@
-import type { Alert } from '@ringcentral-integration/commons/modules/Alert';
+import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
 import {
   action,
   computed,
@@ -11,10 +11,10 @@ import {
 } from '@ringcentral-integration/next-core';
 
 import { agentStateTypes, messageTypes } from '../../../enums';
-import { EvCallbackTypes } from '../../../lib/EvClient/enums/callbackTypes';
-import type { EvClient } from '../EvClient';
-import type { EvAuth } from '../EvAuth';
-import type { EvSubscription } from '../EvSubscription';
+import { EvCallbackTypes } from '../EvClient/enums';
+import { EvClient } from '../EvClient';
+import { EvAuth } from '../EvAuth';
+import { EvSubscription } from '../EvSubscription';
 import type {
   EvWorkingStateOptions,
   AgentState,
@@ -38,7 +38,7 @@ class EvWorkingState extends RcModule {
     private evClient: EvClient,
     private evAuth: EvAuth,
     private evSubscription: EvSubscription,
-    private alert: Alert,
+    private toast: Toast,
     private storagePlugin: StoragePlugin,
     @optional('EvWorkingStateOptions')
     private evWorkingStateOptions?: EvWorkingStateOptions,
@@ -152,7 +152,7 @@ class EvWorkingState extends RcModule {
    */
   async changeWorkingState(state: AgentState): Promise<void> {
     if (this.isPendingDisposition) {
-      this.alert.warning({
+      this.toast.warning({
         message: messageTypes.PENDING_DISPOSITION,
       });
       return;
@@ -178,7 +178,7 @@ class EvWorkingState extends RcModule {
    * Alert when break time is exceeded
    */
   alertOverBreakTime() {
-    this.alert.warning({
+    this.toast.warning({
       message: messageTypes.BREAK_TIME_EXCEEDED,
     });
   }

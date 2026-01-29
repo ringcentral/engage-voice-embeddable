@@ -1,5 +1,4 @@
-import type { Alert } from '@ringcentral-integration/commons/modules/Alert';
-import type { Beforeunload } from '@ringcentral-integration/widgets/modules/Beforeunload';
+import { Toast, Beforeunload } from '@ringcentral-integration/micro-core/src/app/services';
 import {
   action,
   computed,
@@ -14,7 +13,7 @@ import { EventEmitter } from 'events';
 
 import type { DialoutStatusesType } from '../../../enums';
 import { dialoutStatuses, messageTypes } from '../../../enums';
-import { EvCallbackTypes } from '../../../lib/EvClient/enums/callbackTypes';
+import { EvCallbackTypes } from '../EvClient/enums';
 import type {
   EvAddSessionNotification,
   EvBaseCall,
@@ -24,9 +23,9 @@ import type {
   EvOffhookInitResponse,
   EvOffhookTermResponse,
   EvEarlyUiiResponse,
-} from '../../../lib/EvClient/interfaces';
-import type { EvClient } from '../EvClient';
-import type { EvSubscription } from '../EvSubscription';
+} from '../EvClient/interfaces';
+import { EvClient } from '../EvClient';
+import { EvSubscription } from '../EvSubscription';
 import type { EvPresenceOptions, EvAgentRecording } from './EvPresence.interface';
 
 /**
@@ -49,7 +48,7 @@ class EvPresence extends RcModule {
   constructor(
     private evClient: EvClient,
     private evSubscription: EvSubscription,
-    private alert: Alert,
+    private toast: Toast,
     private beforeunload: Beforeunload,
     private storagePlugin: StoragePlugin,
     @optional('EvPresenceOptions') private evPresenceOptions?: EvPresenceOptions,
@@ -248,7 +247,7 @@ class EvPresence extends RcModule {
             this.setOffhookInit();
           } else {
             if (this.showOffHookInitError) {
-              this.alert.danger({
+              this.toast.danger({
                 message: messageTypes.OFFHOOK_INIT_ERROR,
               });
             }
@@ -268,7 +267,7 @@ class EvPresence extends RcModule {
           if (data.status === 'OK' || data.message === 'Offhook terminated') {
             this.setOffhookTerm();
           } else {
-            this.alert.danger({
+            this.toast.danger({
               message: messageTypes.OFFHOOK_TERM_ERROR,
             });
             console.error(data);
@@ -279,7 +278,7 @@ class EvPresence extends RcModule {
         if (data.status === 'OK') {
           this.addNewSession(data);
         } else {
-          this.alert.danger({
+          this.toast.danger({
             message: messageTypes.ADD_SESSION_ERROR,
           });
         }
@@ -288,7 +287,7 @@ class EvPresence extends RcModule {
         if (data.status === 'OK') {
           this.dropSession(data);
         } else {
-          this.alert.danger({
+          this.toast.danger({
             message: messageTypes.DROP_SESSION_ERROR,
           });
         }
@@ -297,7 +296,7 @@ class EvPresence extends RcModule {
         if (data.status === 'OK') {
           this.setCallHoldStatus(data);
         } else {
-          this.alert.danger({
+          this.toast.danger({
             message: messageTypes.HOLD_ERROR,
           });
         }

@@ -1,4 +1,3 @@
-import type { Alert } from '@ringcentral-integration/commons/modules/Alert';
 import {
   action,
   computed,
@@ -9,11 +8,12 @@ import {
   storage,
   StoragePlugin,
 } from '@ringcentral-integration/next-core';
+import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
 
 import { dialoutStatuses, messageTypes } from '../../../enums';
-import type { EvClient } from '../EvClient';
-import type { EvAuth } from '../EvAuth';
-import type { EvSettings } from '../EvSettings';
+import { EvClient } from '../EvClient';
+import { EvAuth } from '../EvAuth';
+import { EvSettings } from '../EvSettings';
 import type { EvCallOptions, DialoutFormGroup } from './EvCall.interface';
 
 const DEFAULT_RING_TIME = '60';
@@ -30,12 +30,12 @@ class EvCall extends RcModule {
   private _isDialing = false;
 
   constructor(
-    private evClient: EvClient,
-    private evAuth: EvAuth,
-    private evSettings: EvSettings,
-    private alert: Alert,
-    private storagePlugin: StoragePlugin,
-    @optional('EvCallOptions') private evCallOptions?: EvCallOptions,
+    protected evClient: EvClient,
+    protected evAuth: EvAuth,
+    protected evSettings: EvSettings,
+    protected toast: Toast,
+    protected storagePlugin: StoragePlugin,
+    @optional('EvCallOptions') protected evCallOptions?: EvCallOptions,
   ) {
     super();
     this.storagePlugin.enable(this);
@@ -149,7 +149,7 @@ class EvCall extends RcModule {
     const ringTime = parseInt(this.formGroup.dialoutRingTime, 10);
     const maxRingTime = this.evAuth.outboundManualDefaultRingtime || 60;
     if (ringTime < 10 || ringTime > maxRingTime) {
-      this.alert.warning({
+      this.toast.warning({
         message: messageTypes.INVALID_RING_TIME,
       });
       return false;
@@ -165,7 +165,7 @@ class EvCall extends RcModule {
       return;
     }
     if (!phoneNumber || phoneNumber.trim() === '') {
-      this.alert.warning({
+      this.toast.warning({
         message: messageTypes.EMPTY_PHONE_NUMBER,
       });
       return;
@@ -187,7 +187,7 @@ class EvCall extends RcModule {
       });
     } catch (error) {
       this.setPhoneIdle();
-      this.alert.danger({
+      this.toast.danger({
         message: messageTypes.DIALOUT_ERROR,
       });
       throw error;

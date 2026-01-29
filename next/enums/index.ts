@@ -26,3 +26,5 @@ export * from './agentTypes';
 export * from './adapterMessageTypes';
 export * from './thirdPartyMessageTypes';
 export * from './oAuthMessageTypes';
+export * from './callDirection';
+export * from './callErrors';

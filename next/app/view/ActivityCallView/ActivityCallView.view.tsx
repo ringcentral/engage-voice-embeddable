@@ -7,11 +7,11 @@ import {
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 
-import type { EvPresence } from '../../services/EvPresence';
-import type { EvCall } from '../../services/EvCall';
-import type { EvCallDisposition } from '../../services/EvCallDisposition';
-import type { EvWorkingState } from '../../services/EvWorkingState';
-import type { EvIntegratedSoftphone } from '../../services/EvIntegratedSoftphone';
+import { EvPresence } from '../../services/EvPresence';
+import { EvCall } from '../../services/EvCall';
+import { EvCallDisposition } from '../../services/EvCallDisposition';
+import { EvWorkingState } from '../../services/EvWorkingState';
+import { EvIntegratedSoftphone } from '../../services/EvIntegratedSoftphone';
 import i18n from './i18n';
 
 /**

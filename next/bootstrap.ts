@@ -5,4 +5,4 @@ import './main.global.scss';
 
 logger.log('🚀 Starting Engage Voice Embeddable...');
 
-runIndependentApp();
+window.app = runIndependentApp();

@@ -1,7 +1,7 @@
 {
   "distPath": "dist",
   "buildPath": "build",
-  "themePath": "next",
+  "themePath": "./next",
   "pages": [
     {
       "index": "next/index.html",
@@ -16,17 +16,11 @@
     },
     "dev": {
       "brand": ["rc"],
-      "mode": "production",
-      "useStyleTransform": true,
-      "preferredDevtool": "source-map",
-      "useDevtool": true
+      "mode": "production"
     },
     "prod": {
       "brand": ["rc"],
-      "mode": "production",
-      "useStyleTransform": true,
-      "preferredDevtool": "source-map",
-      "useDevtool": true
+      "mode": "production"
     }
   },
   "appConfigPath": "config/index.ts",

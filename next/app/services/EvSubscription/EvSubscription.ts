@@ -8,8 +8,8 @@ import { EventEmitter } from 'events';
 import type {
   EvClientCallBackValueType,
   EvClientCallMapping,
-} from '../../../lib/EvClient/interfaces';
-import type { EvClient } from '../EvClient';
+} from '../EvClient/interfaces';
+import { EvClient } from '../EvClient';
 import type { EvSubscriptionOptions } from './EvSubscription.interface';
 
 /**
@@ -23,9 +23,8 @@ class EvSubscription extends RcModule {
   protected eventEmitters = new EventEmitter();
 
   constructor(
-    private evClient: EvClient,
-    @optional('EvSubscriptionOptions')
-    private evSubscriptionOptions?: EvSubscriptionOptions,
+    protected evClient: EvClient,
+    @optional('EvSubscriptionOptions') protected evSubscriptionOptions?: EvSubscriptionOptions,
   ) {
     super();
   }

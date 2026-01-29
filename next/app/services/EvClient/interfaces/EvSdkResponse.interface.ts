@@ -4,7 +4,7 @@ import type {
   DirectTransferStatues,
   DirectTransferTypes,
   OriginAgentTypesType,
-} from '../../../enums';
+} from '../../../../enums';
 
 export type EvTokenType = 'Bearer';
 export type EvOkFail = 'OK' | 'FAILURE';

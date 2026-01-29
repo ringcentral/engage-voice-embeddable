@@ -5,7 +5,7 @@ import type {
   EvDirectAgentListItem,
   EvGate,
   EvTransferPhoneBookItem,
-} from '../lib/EvClient';
+} from '../app/services/EvClient';
 
 export type TextFieldModel = {
   label?: string;

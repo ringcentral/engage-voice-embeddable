@@ -8,8 +8,8 @@ import {
   StoragePlugin,
 } from '@ringcentral-integration/next-core';
 
-import type { EvClient } from '../EvClient';
-import type { EvPresence } from '../EvPresence';
+import { EvClient } from '../EvClient';
+import { EvPresence } from '../EvPresence';
 import type {
   EvCallDispositionOptions,
   EvCallDispositionData,

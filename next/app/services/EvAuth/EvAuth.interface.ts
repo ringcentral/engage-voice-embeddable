@@ -1,4 +1,4 @@
-import type { EvAgentData, EvTokenType } from '../../lib/EvClient/interfaces';
+import type { EvAgentData, EvTokenType } from '../EvClient/interfaces';
 
 /**
  * EvAuth options for configuration

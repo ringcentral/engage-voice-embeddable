@@ -1,7 +1,6 @@
 import { processI18n } from '@ringcentral-integration/i18n/lib/processI18n';
 import type { BaseAppConfig } from '@ringcentral-integration/next-integration/interfaces';
 import { getArgs } from '@ringcentral-integration/next-integration/lib/getArgs';
-import { getBaseWebpackConfig as getWebpackConfig } from '@ringcentral-integration/widgets/lib/getBaseWebpackConfig';
 import CopyWebpackPlugin from 'copy-webpack-plugin';
 import fs from 'fs-extra';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
@@ -17,8 +16,8 @@ import type { ProjectConfig } from '@ringcentral-integration/next-builder/src/ge
 import { getLoadWorkerTemplate } from '@ringcentral-integration/next-builder/src/scriptsLoadFail/getLoadWorkerTemplate';
 import { getScriptsLoadFailTemplate } from '@ringcentral-integration/next-builder/src/scriptsLoadFail/getScriptsLoadFailTemplate';
 import { getThemeInjectTemplate } from '@ringcentral-integration/next-builder/src/themeInject/getThemeInjectTemplate';
-
 export { merge } from 'webpack-merge';
+import { getBaseWebpackConfig as getWebpackConfig } from './widgets.webpack';
 
 const DEFAULT_FILENAME = '[name].js';
 // * only contenthash is supported in worker build
@@ -156,10 +155,15 @@ export const getBaseWebpackConfig = <T extends BaseAppConfig>({
         };
   })();
 
+  // Ensure themePath is absolute
+  const themeFolder = path.isAbsolute(projectConfig.themePath)
+    ? projectConfig.themePath
+    : path.resolve(process.cwd(), projectConfig.themePath);
+
   const baseConfig = getWebpackConfig({
     mode,
     useThreadLoader: true,
-    themeFolder: projectConfig.themePath,
+    themeFolder,
     supportedLocales: projectConfig.appConfig.brandConfig
       .supportedLocales as string[],
     useDevtool: projectConfig.useDevtool,

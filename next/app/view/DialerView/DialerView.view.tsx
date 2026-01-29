@@ -7,7 +7,7 @@ import {
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import React, { useCallback, useState } from 'react';
 
-import type { EvCall } from '../../services/EvCall';
+import { EvCall } from '../../services/EvCall';
 import type { DialerViewOptions, DialerViewProps } from './DialerView.interface';
 import i18n from './i18n';
 

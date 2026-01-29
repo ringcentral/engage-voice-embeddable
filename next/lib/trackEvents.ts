@@ -1,8 +1,7 @@
-import { trackEvents as defaultTrackEvents } from '@ringcentral-integration/commons/modules/Analytics';
-import { ObjectMap } from '@ringcentral-integration/core/lib/ObjectMap';
-
-export const trackEvents = ObjectMap.fromObject({
-  ...defaultTrackEvents,
+/**
+ * Engage Voice track events for analytics
+ */
+export const trackEvents = {
   // EvAgentSession, Voice Connection & Persistent Voice Connection
   agentSessionSetLoginType: 'User Setting: Set Voice Connection',
   agentSessionSetTakingCall: 'User Setting: Set Persistent Voice Connection',
@@ -13,4 +12,6 @@ export const trackEvents = ObjectMap.fromObject({
 
   // EvAuth, Authentication & Login & Agent UserId
   loginAgent: 'User Setting: Login Agent',
-} as const);
+} as const;
+
+export type TrackEvents = (typeof trackEvents)[keyof typeof trackEvents];

@@ -308,9 +308,15 @@ export const getBaseWebpackConfig = ({
       {
         loader: 'sass-loader',
         options: {
+          // Use legacy API for compatibility with includePaths
+          api: 'legacy',
           sassOptions: {
             includePaths: [
               themeFolder,
+              // Include brand config folders for theme variables
+              path.resolve(process.cwd(), 'config/rc'),
+              path.resolve(process.cwd(), 'src/brands/rc'),
+              path.resolve(process.cwd(), 'next'),
               path.resolve(process.cwd(), 'node_modules'),
               path.resolve(process.cwd(), '../../node_modules'),
             ],
@@ -345,9 +351,15 @@ export const getBaseWebpackConfig = ({
       {
         loader: 'sass-loader',
         options: {
+          // Use legacy API for compatibility with includePaths
+          api: 'legacy',
           sassOptions: {
             includePaths: [
               themeFolder,
+              // Include brand config folders for theme variables
+              path.resolve(process.cwd(), 'config/rc'),
+              path.resolve(process.cwd(), 'src/brands/rc'),
+              path.resolve(process.cwd(), 'next'),
               path.resolve(process.cwd(), 'node_modules'),
               path.resolve(process.cwd(), '../../node_modules'),
             ],
@@ -373,9 +385,15 @@ export const getBaseWebpackConfig = ({
       {
         loader: 'sass-loader',
         options: {
+          // Use legacy API for compatibility with includePaths
+          api: 'legacy',
           sassOptions: {
             includePaths: [
               themeFolder,
+              // Include brand config folders for theme variables
+              path.resolve(process.cwd(), 'config/rc'),
+              path.resolve(process.cwd(), 'src/brands/rc'),
+              path.resolve(process.cwd(), 'next'),
               path.resolve(process.cwd(), 'node_modules'),
               path.resolve(process.cwd(), '../../node_modules'),
             ],
@@ -484,7 +502,7 @@ export const getBaseWebpackConfig = ({
       // more doc: https://webpack.js.org/configuration/resolve/#resolvefallback
       //
       fallback: {
-        // * ringcentral cdk need
+        // * ringcentral sdk need
         vm: require.resolve('vm-browserify'),
         crypto: require.resolve('crypto-browserify'),
         stream: require.resolve('stream-browserify'),
@@ -492,7 +510,8 @@ export const getBaseWebpackConfig = ({
         // * react-markdown need that polyfill, can be remove after we not need
         path: require.resolve('path-browserify'),
       },
-      extensions: ['.ts', '.tsx', '.js', '.jsx'],
+      // Prefer .js over .ts so webpack loads pre-compiled files from node_modules
+      extensions: ['.js', '.jsx', '.ts', '.tsx'],
     },
     module: {
       rules,

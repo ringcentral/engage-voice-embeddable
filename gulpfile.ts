@@ -3,12 +3,13 @@ require('dotenv').config();
 import { getProjectConfig } from '@ringcentral-integration/next-builder';
 import webpack from 'webpack';
 import WebpackDevServer from 'webpack-dev-server';
-
-import type { AppConfig } from './next/config';
+import path from 'path';
+import type { AppConfig } from './config';
 import { getWebpackConfig } from './webpack.config';
 
 export async function devServer() {
   const projectConfig = getProjectConfig<AppConfig>();
+  projectConfig.themePath = path.resolve(__dirname, 'next');
   const webpackConfig = getWebpackConfig({ projectConfig, devServer: true });
   const compiler = webpack({
     ...webpackConfig,
@@ -41,6 +42,7 @@ export async function devServer() {
 
 export async function build() {
   const projectConfig = getProjectConfig<AppConfig>();
+  projectConfig.themePath = path.resolve(__dirname, 'next');
   const webpackConfig = getWebpackConfig({ projectConfig });
   await new Promise((resolve, reject) => {
     webpack(webpackConfig, (err, stats) => {

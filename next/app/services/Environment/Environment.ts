@@ -1,4 +1,4 @@
-import { isBlank } from '@ringcentral-integration/commons/lib/isBlank';
+import { isBlank } from '../../../lib/utils';
 import {
   action,
   injectable,

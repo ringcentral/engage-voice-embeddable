@@ -1,10 +1,8 @@
-import type { SalesforceEntityType } from '@ringcentral-integration/widgets/components/CallLogPanel';
-
 import type {
   EvAddSessionNotification,
   EvBaseCall,
   EvEndedCall,
-} from '../lib/EvClient/interfaces';
+} from '../app/services/EvClient/interfaces';
 
 export type EvCallData = EvBaseCall & {
   contactMatches?: EvContactMatchItem[];
@@ -21,6 +19,17 @@ export type EvCallData = EvBaseCall & {
   recordingUrl?: string;
   CALL_UNIQUE_ID__c?: string;
 };
+
+/**
+ * Salesforce entity types - local definition
+ */
+export type SalesforceEntityType =
+  | 'Contact'
+  | 'Account'
+  | 'Lead'
+  | 'Opportunity'
+  | 'Task'
+  | 'Case';
 
 export interface EvContactMatchItem {
   id: string;

@@ -1,4 +1,4 @@
-import type { Alert } from '@ringcentral-integration/commons/modules/Alert';
+import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
 import {
   action,
   injectable,
@@ -10,10 +10,10 @@ import {
 } from '@ringcentral-integration/next-core';
 
 import { adapterMessageTypes } from '../../../enums';
-import type { EvAuth } from '../EvAuth';
-import type { EvCall } from '../EvCall';
-import type { EvLeads } from '../EvLeads';
-import type { EvPresence } from '../EvPresence';
+import { EvAuth } from '../EvAuth';
+import { EvCall } from '../EvCall';
+import { EvLeads } from '../EvLeads';
+import { EvPresence } from '../EvPresence';
 
 /**
  * Adapter options for configuration
@@ -62,7 +62,7 @@ class Adapter extends RcModule {
     private evCall: EvCall,
     private evLeads: EvLeads,
     private evPresence: EvPresence,
-    private alert: Alert,
+    private toast: Toast,
     private storagePlugin: StoragePlugin,
     @optional('AdapterOptions') private adapterOptions?: AdapterOptions,
   ) {

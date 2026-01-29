@@ -10,11 +10,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 
 import { agentStatesColors } from '../../../enums';
 import { getClockByTimestamp } from '../../../lib/getClockByTimestamp';
-import type { EvWorkingState } from '../../services/EvWorkingState';
-import type { EvSettings } from '../../services/EvSettings';
-import type { EvAuth } from '../../services/EvAuth';
-import type { EvCall } from '../../services/EvCall';
-import type { EvAgentSession } from '../../services/EvAgentSession';
+import { EvWorkingState } from '../../services/EvWorkingState';
+import { EvSettings } from '../../services/EvSettings';
+import { EvAuth } from '../../services/EvAuth';
+import { EvCall } from '../../services/EvCall';
+import { EvAgentSession } from '../../services/EvAgentSession';
 import type { MainViewOptions, MainViewProps } from './MainView.interface';
 import i18n from './i18n';
 

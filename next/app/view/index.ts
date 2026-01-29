@@ -1,3 +1,4 @@
+// Core views
 export * from './MainView';
 export * from './SessionConfigView';
 export * from './DialerView';
@@ -5,3 +6,16 @@ export * from './ActivityCallView';
 export * from './CallHistoryView';
 export * from './LeadsView';
 export * from './ManualDialSettingsView';
+
+// New views
+export * from './ChooseAccountView';
+export * from './SessionUpdateView';
+export * from './SettingsView';
+export * from './TransferCallView';
+export * from './TransferInternalView';
+export * from './TransferPhoneBookView';
+export * from './TransferManualEntryView';
+export * from './RequeueCallGroupView';
+export * from './RequeueCallGroupItemView';
+export * from './ActiveCallListView';
+export * from './CallHistoryDetailView';

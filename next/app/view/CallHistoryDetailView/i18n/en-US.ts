@@ -1,0 +1,16 @@
+export default {
+  callDetails: 'Call Details',
+  callLog: 'Call Log',
+  direction: 'Direction',
+  inbound: 'Inbound',
+  outbound: 'Outbound',
+  duration: 'Duration',
+  time: 'Time',
+  phoneNumber: 'Phone Number',
+  notes: 'Notes',
+  notesPlaceholder: 'Add notes about this call...',
+  save: 'Save',
+  back: 'Back',
+  disposition: 'Disposition',
+  selectDisposition: 'Select a disposition',
+};

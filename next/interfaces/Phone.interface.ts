@@ -1,8 +1,20 @@
-import type { BasePhone } from '@ringcentral-integration/commons/interfaces/BasePhone.interface';
 import type { RcModulePhoneType } from '@ringcentral-integration/core';
-import type { LoginUI } from '@ringcentral-integration/widgets/modules/LoginUI';
 
-import type { EvClient } from '../lib/EvClient';
+/**
+ * Base phone interface - local definition
+ */
+export interface BasePhone {
+  [key: string]: any;
+}
+
+/**
+ * Login UI interface - local definition
+ */
+export interface LoginUI {
+  [key: string]: any;
+}
+
+import type { EvClient } from '../app/services/EvClient';
 import type { EvActiveCallControl } from '../modules/EvActiveCallControl';
 import type { EvActiveCallListUI } from '../modules/EvActiveCallListUI';
 import type { EvActivityCallUI } from '../modules/EvActivityCallUI';

@@ -7,7 +7,8 @@ import {
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 
-import type { EvLeads, Lead } from '../../services/EvLeads';
+import { EvLeads } from '../../services/EvLeads';
+import type { Lead } from '../../services/EvLeads';
 import i18n from './i18n';
 
 /**

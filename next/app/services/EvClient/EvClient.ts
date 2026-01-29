@@ -1,6 +1,6 @@
 // eslint-disable-next-line import/no-unresolved
-import AgentLibrary from '@SDK';
-import { waitUntilTo } from '@ringcentral-integration/commons/utils';
+import '@SDK';
+import { waitUntilTo } from '../../../lib/utils';
 import {
   action,
   inject,
@@ -13,8 +13,7 @@ import { EventEmitter } from 'events';
 import { AGENT_TYPES, messageTypes } from '../../../enums';
 import { EvTypeError } from '../../../lib/EvTypeError';
 import { _encodeSymbol } from '../../../lib/constant';
-import { evStatus } from '../../../lib/EvClient/enums';
-import { EvCallbackTypes } from '../../../lib/EvClient/enums/callbackTypes';
+import { evStatus, EvCallbackTypes } from './enums';
 import type {
   EvACKResponse,
   EvAddSessionNotification,
@@ -45,9 +44,9 @@ import type {
   PauseRecordResponse,
   RawEvAuthenticateAgentWithRcAccessTokenRes,
   RecordResponse,
-} from '../../../lib/EvClient/interfaces';
+} from './interfaces';
 import type {
-  EvClientOptions,
+  EvClientServiceOptions,
   EvClientTransferParams,
   EvClientHangUpParams,
   EvClientHoldSessionParams,
@@ -76,7 +75,8 @@ class EvClient extends RcModule {
 
   private _onClose: () => void;
 
-  private _Sdk = AgentLibrary;
+  // eslint-disable-next-line
+  private _Sdk = window.AgentSDK;
 
   private _options: EvAgentOptions;
 
@@ -88,7 +88,7 @@ class EvClient extends RcModule {
   appStatus: string = evStatus.START;
 
   constructor(
-    @inject('EvClientOptions') private evClientOptions: EvClientOptions,
+    @inject('EvClientOptions') protected evClientOptions: EvClientServiceOptions,
   ) {
     super();
     this._options = this.evClientOptions.options;

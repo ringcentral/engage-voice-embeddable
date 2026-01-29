@@ -11,11 +11,11 @@ import {
 import { EventEmitter } from 'events';
 
 import { EvSoftphoneEvents } from '../../../enums';
-import { EvCallbackTypes } from '../../../lib/EvClient/enums/callbackTypes';
-import type { EvClient } from '../EvClient';
-import type { EvAuth } from '../EvAuth';
-import type { EvSubscription } from '../EvSubscription';
-import type { EvAgentSession } from '../EvAgentSession';
+import { EvCallbackTypes } from '../EvClient/enums';
+import { EvClient } from '../EvClient';
+import { EvAuth } from '../EvAuth';
+import { EvSubscription } from '../EvSubscription';
+import { EvAgentSession } from '../EvAgentSession';
 import type {
   EvIntegratedSoftphoneOptions,
   SipState,

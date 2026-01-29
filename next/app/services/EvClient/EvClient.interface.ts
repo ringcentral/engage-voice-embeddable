@@ -1,13 +1,15 @@
-import type {
-  EvClientCallMapping,
-  EvAgentOptions,
-} from '../../../lib/EvClient/interfaces';
+import type { EvClientCallMapping } from './interfaces';
 
 /**
- * EvClient options for configuration
+ * EvClient options for configuration (extends the base options with required callbacks)
  */
-export interface EvClientOptions {
-  options: EvAgentOptions;
+export interface EvClientServiceOptions {
+  options: {
+    authHost: string;
+    localTesting: boolean;
+    allowMultiSocket: boolean;
+    isSecureSocket: boolean;
+  };
   callbacks: {
     closeResponse: () => void;
     openResponse: (response: EvClientCallMapping['openResponse']) => void;

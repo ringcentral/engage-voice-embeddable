@@ -1,4 +1,4 @@
-import type { EvAgentState, EvAvailableAgentState } from '../lib/EvClient';
+import type { EvAgentState, EvAvailableAgentState } from '../app/services/EvClient';
 
 import type { EvOffhookState } from './EvSettingsUI.interface';
 

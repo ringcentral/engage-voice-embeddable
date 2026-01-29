@@ -1,5 +1,6 @@
-import { callDirection } from '@ringcentral-integration/commons/enums/callDirections';
-import type { Locale } from '@ringcentral-integration/commons/modules/Locale';
+import { Locale } from '@ringcentral-integration/micro-core/src/app/services';
+
+import { callDirection } from '../../../enums';
 import {
   computed,
   injectable,
@@ -11,9 +12,9 @@ import {
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber';
 import { contactMatchIdentifyEncode } from '../../../lib/contactMatchIdentify';
 import { makeCallsUniqueIdentifies } from '../../../lib/callUniqueIdentifies';
-import type { EvPresence } from '../EvPresence';
-import type { EvSubscription } from '../EvSubscription';
-import type { EvAgentSession } from '../EvAgentSession';
+import { EvPresence } from '../EvPresence';
+import { EvSubscription } from '../EvSubscription';
+import { EvAgentSession } from '../EvAgentSession';
 import type {
   EvCallHistoryOptions,
   FormattedCall,

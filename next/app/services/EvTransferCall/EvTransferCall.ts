@@ -1,5 +1,4 @@
-import type { Alert } from '@ringcentral-integration/commons/modules/Alert';
-import type { Locale } from '@ringcentral-integration/commons/modules/Locale';
+import { Locale, Toast } from '@ringcentral-integration/micro-core/src/app/services';
 import { format, formatTypes, isE164, parse } from '@ringcentral-integration/phone-number';
 import { alpha2ToAlpha3, alpha3ToAlpha2 } from 'i18n-iso-countries';
 import {
@@ -25,12 +24,12 @@ import {
 import { parseNumber } from '../../../lib/parseNumber';
 import { checkCountryCode } from '../../../lib/checkCountryCode';
 import { EvTypeError } from '../../../lib/EvTypeError';
-import type { EvClient } from '../EvClient';
-import type { EvAuth } from '../EvAuth';
-import type { EvCall } from '../EvCall';
-import type { EvWorkingState } from '../EvWorkingState';
-import type { EvSubscription } from '../EvSubscription';
-import type { EvAgentSession } from '../EvAgentSession';
+import { EvClient } from '../EvClient';
+import { EvAuth } from '../EvAuth';
+import { EvCall } from '../EvCall';
+import { EvWorkingState } from '../EvWorkingState';
+import { EvSubscription } from '../EvSubscription';
+import { EvAgentSession } from '../EvAgentSession';
 import type {
   EvTransferCallOptions,
   EvTransferPhoneBookItem,
@@ -57,7 +56,7 @@ class EvTransferCall extends RcModule {
     private evWorkingState: EvWorkingState,
     private evSubscription: EvSubscription,
     private evAgentSession: EvAgentSession,
-    private alert: Alert,
+    private toast: Toast,
     private locale: Locale,
     private storagePlugin: StoragePlugin,
     @optional('EvTransferCallOptions')

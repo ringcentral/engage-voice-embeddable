@@ -32,7 +32,7 @@ export interface TabManagerEvent {
  * Handles tab synchronization, heartbeat, and popup windows
  */
 @injectable({
-  name: 'EvTabManager',
+  name: 'TabManager',
 })
 class EvTabManager extends RcModule {
   private _eventEmitter = new EventEmitter();

@@ -1,4 +1,4 @@
-import { callErrors } from '@ringcentral-integration/commons/modules/Call';
+import { callErrors } from '../enums';
 import { parse } from '@ringcentral-integration/phone-number';
 
 import { messageTypes } from '../enums';

@@ -1,7 +1,6 @@
-import type { Auth } from '@ringcentral-integration/commons/modules/Auth';
-import type { Alert } from '@ringcentral-integration/commons/modules/Alert';
-import type { Locale } from '@ringcentral-integration/commons/modules/Locale';
-import type { Block } from '@ringcentral-integration/widgets/modules/Block';
+import { Auth } from '@ringcentral-integration/micro-auth/src/app/services';
+import { Locale, Toast } from '@ringcentral-integration/micro-core/src/app/services';
+import { BlockPlugin } from '@ringcentral-integration/micro-core/src/app/plugins';
 import {
   action,
   computed,
@@ -21,9 +20,9 @@ import {
   dropDownOptions,
   loginTypes,
 } from '../../../enums';
-import type { EvConfigureAgentOptions } from '../../../lib/EvClient/interfaces';
-import type { EvClient } from '../EvClient';
-import type { EvAuth } from '../EvAuth';
+import type { EvConfigureAgentOptions } from '../EvClient/interfaces';
+import { EvClient } from '../EvClient';
+import { EvAuth } from '../EvAuth';
 import type {
   EvAgentSessionOptions,
   FormGroup,
@@ -69,9 +68,9 @@ class EvAgentSession extends RcModule {
     private evClient: EvClient,
     private evAuth: EvAuth,
     private auth: Auth,
-    private alert: Alert,
+    private toast: Toast,
     private locale: Locale,
-    private block: Block,
+    private block: BlockPlugin,
     private storagePlugin: StoragePlugin,
     @optional('EvAgentSessionOptions')
     private evAgentSessionOptions?: EvAgentSessionOptions,

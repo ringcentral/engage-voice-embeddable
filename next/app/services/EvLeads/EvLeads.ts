@@ -1,4 +1,4 @@
-import type { Alert } from '@ringcentral-integration/commons/modules/Alert';
+import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
 import {
   action,
   computed,
@@ -10,11 +10,11 @@ import {
   StoragePlugin,
 } from '@ringcentral-integration/next-core';
 
-import { EvCallbackTypes } from '../../../lib/EvClient/enums/callbackTypes';
-import type { EvClient } from '../EvClient';
-import type { EvAuth } from '../EvAuth';
-import type { EvSubscription } from '../EvSubscription';
-import type { EvCall } from '../EvCall';
+import { EvCallbackTypes } from '../EvClient/enums';
+import { EvClient } from '../EvClient';
+import { EvAuth } from '../EvAuth';
+import { EvSubscription } from '../EvSubscription';
+import { EvCall } from '../EvCall';
 import type { EvLeadsOptions, Lead, ManualPassParams } from './EvLeads.interface';
 
 // Available to show in the leads panel
@@ -90,7 +90,7 @@ class EvLeads extends RcModule {
     private evAuth: EvAuth,
     private evSubscription: EvSubscription,
     private evCall: EvCall,
-    private alert: Alert,
+    private toast: Toast,
     private storagePlugin: StoragePlugin,
     @optional('EvLeadsOptions') private evLeadsOptions?: EvLeadsOptions,
   ) {
@@ -217,7 +217,7 @@ class EvLeads extends RcModule {
       });
       this.updateLead(lead.leadId, { completed: true });
     } catch (error) {
-      this.alert.danger({ message: 'leadPassFailed' });
+      this.toast.danger({ message: 'leadPassFailed' });
     }
   }
 
@@ -229,7 +229,7 @@ class EvLeads extends RcModule {
       return false;
     }
     if (this._requiredToCall()) {
-      this.alert.warning({ message: 'requiredLeadCall' });
+      this.toast.warning({ message: 'requiredLeadCall' });
       return false;
     }
     try {

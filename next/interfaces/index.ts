@@ -1,3 +1,4 @@
+export * from './AppViewOptions.interface';
 export * from './Common.interface';
 export * from './EvActiveCallListUI.interface';
 export * from './EvActivityCallUI.interface';

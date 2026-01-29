@@ -8,8 +8,8 @@ import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import React, { useCallback } from 'react';
 
 import type { LoginTypes } from '../../../enums';
-import type { EvAgentSession } from '../../services/EvAgentSession';
-import type { EvAuth } from '../../services/EvAuth';
+import { EvAgentSession } from '../../services/EvAgentSession';
+import { EvAuth } from '../../services/EvAuth';
 import type {
   SessionConfigViewOptions,
   SessionConfigViewProps,

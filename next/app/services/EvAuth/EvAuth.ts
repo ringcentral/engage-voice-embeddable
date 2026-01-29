@@ -1,8 +1,8 @@
-import { sleep } from '@ringcentral-integration/commons/utils';
-import type { Auth as RcAuth } from '@ringcentral-integration/commons/modules/Auth';
-import type { Alert } from '@ringcentral-integration/commons/modules/Alert';
-import type { Locale } from '@ringcentral-integration/commons/modules/Locale';
-import type { Block } from '@ringcentral-integration/widgets/modules/Block';
+import { Auth } from '@ringcentral-integration/micro-auth/src/app/services';
+import { Locale, Toast } from '@ringcentral-integration/micro-core/src/app/services';
+import { BlockPlugin } from '@ringcentral-integration/micro-core/src/app/plugins';
+
+import { sleep } from '../../../lib/utils';
 import format from '@ringcentral-integration/phone-number/lib/format';
 import {
   action,
@@ -17,12 +17,12 @@ import {
 import { EventEmitter } from 'events';
 
 import { loginStatus, messageTypes, tabManagerEvents } from '../../../enums';
-import type { EvAgentConfig, EvAgentData } from '../../../lib/EvClient/interfaces';
-import { EvCallbackTypes } from '../../../lib/EvClient/enums';
+import type { EvAgentConfig, EvAgentData } from '../EvClient/interfaces';
+import { EvCallbackTypes } from '../EvClient/enums';
 import { EvTypeError } from '../../../lib/EvTypeError';
 import { sortByName } from '../../../lib/sortByName';
-import type { EvClient } from '../EvClient';
-import type { EvSubscription } from '../EvSubscription';
+import { EvClient } from '../EvClient';
+import { EvSubscription } from '../EvSubscription';
 import type {
   EvAuthOptions,
   EvAuthState,
@@ -51,11 +51,11 @@ class EvAuth extends RcModule {
 
   constructor(
     private evClient: EvClient,
-    private auth: RcAuth,
+    private auth: Auth,
     private evSubscription: EvSubscription,
     private locale: Locale,
-    private alert: Alert,
-    private block: Block,
+    private toast: Toast,
+    private block: BlockPlugin,
     private storagePlugin: StoragePlugin,
     @optional('EvAuthOptions') private evAuthOptions?: EvAuthOptions,
   ) {
@@ -241,7 +241,7 @@ class EvAuth extends RcModule {
     this.evSubscription.subscribe(EvCallbackTypes.LOGOUT, async () => {
       this._emitLogoutBefore();
       if (!this._logoutByOtherTab) {
-        this.alert.info({
+        this.toast.info({
           message: messageTypes.FORCE_LOGOUT,
         });
         this._logoutByOtherTab = false;
@@ -251,7 +251,7 @@ class EvAuth extends RcModule {
   }
 
   private _logout = async () => {
-    await this.auth.logout({ dismissAllAlert: false });
+    await this.auth.logout({ dismissAllAlert: false, reason: 'Manually sign out' });
     this.setNotAuth();
   };
 
@@ -315,18 +315,18 @@ class EvAuth extends RcModule {
     } catch (error: any) {
       switch (error.type) {
         case messageTypes.NO_AGENT:
-          this.alert.warning({
+          this.toast.warning({
             message: error.type,
           });
           break;
         case messageTypes.CONNECT_TIMEOUT:
         case messageTypes.UNEXPECTED_AGENT:
-          this.alert.danger({
+          this.toast.danger({
             message: error.type,
           });
           break;
         default:
-          this.alert.danger({
+          this.toast.danger({
             message: messageTypes.CONNECT_ERROR,
           });
       }
@@ -383,18 +383,18 @@ class EvAuth extends RcModule {
     } catch (error: any) {
       switch (error.type) {
         case messageTypes.NO_AGENT:
-          this.alert.warning({
+          this.toast.warning({
             message: error.type,
           });
           break;
         case messageTypes.INVALID_BROWSER:
         case messageTypes.OPEN_SOCKET_ERROR:
-          this.alert.danger({
+          this.toast.danger({
             message: error.type,
           });
           break;
         default:
-          this.alert.danger({
+          this.toast.danger({
             message: messageTypes.CONNECT_ERROR,
           });
       }
