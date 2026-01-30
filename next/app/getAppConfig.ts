@@ -30,7 +30,7 @@ import {
   OAuthOptions,
   OAuth,
 } from '@ringcentral-integration/micro-auth/src/app/services';
-import { LoginView } from './view/LoginView';
+import { LoginView, LoginViewOptions } from './view/LoginView';
 
 import { AppView } from '../AppView';
 
@@ -268,6 +268,12 @@ export const getAppConfig = ({
     SpringAppRootView,
     HeaderNavViewSpring,
     LoginView,
+    {
+      provide: 'LoginViewOptions',
+      useValue: {
+        routeAfterLogin: '/sessionConfig',
+      } satisfies LoginViewOptions,
+    }
   ];
 
   // Engage Voice views
