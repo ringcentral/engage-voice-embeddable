@@ -6,6 +6,7 @@ import {
   globalStorage,
   action,
 } from '@ringcentral-integration/core/lib/RcModule';
+import { EvCallbackTypes } from '@ringcentral-integration/engage-voice-widgets/lib/EvClient/enums';
 import messageTypes from '../../enums/messageTypes';
 
 import { Interface, Deps } from './interface';
@@ -21,6 +22,7 @@ import { Interface, Deps } from './interface';
     'Presence',
     'TabManager',
     'EvLeads',
+    'EvSubscription',
     { dep: 'AdapterOptions', optional: true },
   ],
 })
@@ -145,6 +147,21 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
     this._pushAdapterState();
   }
 
+  override onInitOnce() {
+    this._deps.evSubscription.subscribe(EvCallbackTypes.SIP_REGISTERED, () => {
+      this.onSIPRegistered();
+    });
+    this._deps.evSubscription.subscribe(EvCallbackTypes.SIP_UNREGISTERED, () => {
+      this.onSIPUnregistered();
+    });
+    this._deps.evSubscription.subscribe('sipUnstableConnectionNotification', () => {
+      this.onSIPUnstable();
+    });
+    this._deps.evSubscription.subscribe(EvCallbackTypes.SIP_REGISTRATION_FAILED, () => {
+      this.onSIPFailed();
+    });
+  }
+
   async clickToDial(phoneNumber) {
     this._deps.evDialerUI.setToNumber(phoneNumber);
     this._deps.evDialerUI.setLatestDialoutNumber();
@@ -215,6 +232,30 @@ class Adapter extends RcModuleV2<Deps> implements Interface {
     this._postMessage({
       type: this.messageTypes.sipEndCall,
       message,
+    });
+  }
+
+  onSIPRegistered() {
+    this._postMessage({
+      type: this.messageTypes.sipRegistered,
+    });
+  }
+
+  onSIPUnregistered() {
+    this._postMessage({
+      type: this.messageTypes.sipUnregistered,
+    });
+  }
+
+  onSIPUnstable() {
+    this._postMessage({
+      type: this.messageTypes.sipUnstable,
+    });
+  }
+
+  onSIPFailed() {
+    this._postMessage({
+      type: this.messageTypes.sipFailed,
     });
   }
 
