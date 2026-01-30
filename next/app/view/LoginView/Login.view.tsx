@@ -89,7 +89,7 @@ export class LoginView extends RcViewModule {
 
   protected async initialize() {
     merge(
-      fromWatchValue(this._auth, () => this._auth.ownerId),
+      this._auth.ownerId$,
       fromWatchValue(this, () => this._router.currentPath),
     )
       .pipe(
@@ -106,13 +106,10 @@ export class LoginView extends RcViewModule {
                 filter((path) => typeof path === 'string'),
               );
             }
-            console.log('routeAfterLogin',this.routeAfterLogin);
+
             if (typeof this.routeAfterLogin === 'string') {
               return of(this.routeAfterLogin);
             }
-
-            // routeAfterLogin is not ready yet (e.g., appFeatures not loaded), wait for next emit
-            return EMPTY;
           }
 
           if (!this._auth.ownerId && this._router.currentPath !== '/') {
