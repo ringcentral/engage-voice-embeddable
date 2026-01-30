@@ -113,6 +113,8 @@ class Adapter extends RcModule {
   }
 
   private _initTransport() {
+    // TODO: Handle worker mode
+    if (typeof window === 'undefined') return;
     const targetWindow = this.adapterOptions?.targetWindow ?? window.parent;
     window.addEventListener('message', (event) => {
       if (event.source !== targetWindow) return;

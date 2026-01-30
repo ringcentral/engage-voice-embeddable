@@ -1,16 +1,26 @@
 import {
   action,
   injectable,
+  inject,
+  optional,
   state,
   watch,
 } from '@ringcentral-integration/next-core';
 import {
+  Auth,
+  Client,
   OAuth as OAuthBase,
 } from '@ringcentral-integration/micro-auth/src/app/services';
 import { loginStatus } from '@ringcentral-integration/micro-auth/src/app/services/Auth/loginStatus';
 import type { OAuthBaseOptions } from '@ringcentral-integration/micro-auth/src/app/services/OAuthBase/OAuthBase.interface';
+import {
+  Brand,
+  Locale,
+  Toast,
+} from '@ringcentral-integration/micro-core/src/app/services';
 import { popWindow } from '@ringcentral-integration/widgets/lib/popWindow';
 import { oAuthMessageTypes } from '../../../enums';
+import { TabManager } from '../EvTabManager';
 
 /**
  * OAuth options for configuration
@@ -19,7 +29,7 @@ export interface OAuthOptions extends OAuthBaseOptions {
   disableLoginPopup?: boolean;
   jwt?: string;
   jwtOwnerId?: string;
-  redirectUri?: string;
+  redirectUrl?: string;
 }
 
 /**
@@ -33,14 +43,6 @@ class OAuth extends OAuthBase {
   private _userLogout = false;
   private _jwtLogged = false;
   private _loginWindow: Window | null = null;
-
-  @state
-  oAuthUri = '';
-
-  @action
-  setOAuthUri(uri: string) {
-    this.oAuthUri = uri;
-  }
 
   get disableLoginPopup(): boolean {
     return (this._oAuthOptions as OAuthOptions)?.disableLoginPopup || false;
@@ -59,40 +61,6 @@ class OAuth extends OAuthBase {
   setJwtOwnerId(jwtOwnerId: string): void {
     if (!window.localStorage) return;
     localStorage.setItem(`${this._prefix}-jwt-owner-id`, jwtOwnerId);
-  }
-
-  /**
-   * Destroy OAuth - cleanup resources
-   */
-  async destroyOAuth(): Promise<void> {
-    if (this._loginWindow) {
-      try {
-        this._loginWindow.close();
-      } catch (error) {
-        /* ignore error */
-      }
-      this._loginWindow = null;
-    }
-    this.setOAuthReady(false);
-  }
-
-  /**
-   * Open OAuth login page
-   * Posts message to parent if disableLoginPopup is true, otherwise opens popup
-   */
-  async openOAuthPage(): Promise<void> {
-    const oAuthUri = await this.getOAuthUri();
-    if (this.disableLoginPopup) {
-      window.parent.postMessage(
-        {
-          type: oAuthMessageTypes.loginPopup,
-          oAuthUri,
-        },
-        '*',
-      );
-      return;
-    }
-    this._loginWindow = popWindow(oAuthUri, 'rc-oauth', 700, 700);
   }
 
   /**

@@ -34,7 +34,7 @@ export interface TabManagerEvent {
 @injectable({
   name: 'TabManager',
 })
-class EvTabManager extends RcModule {
+class TabManager extends RcModule {
   private _eventEmitter = new EventEmitter();
   private _heartBeatInterval = 50000;
   private _heartBeatExpire = 70000;
@@ -145,6 +145,9 @@ class EvTabManager extends RcModule {
   }
 
   private _listenForTabEvents(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
     window.addEventListener('storage', (event) => {
       if (event.key === `${this.prefix}-tab-event` && event.newValue) {
         try {
@@ -163,4 +166,4 @@ class EvTabManager extends RcModule {
   }
 }
 
-export { EvTabManager };
+export { TabManager };

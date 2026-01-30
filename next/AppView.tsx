@@ -7,7 +7,6 @@ import {
   SpringAppRootView,
   VIEW_TRANSITION_DETAIL_IDENTIFY,
 } from '@ringcentral-integration/micro-core/src/app/views';
-import { LoginView } from '@ringcentral-integration/micro-auth/src/app/views';
 import {
   autobind,
   injectable,
@@ -20,6 +19,7 @@ import React, { ReactNode } from 'react';
 
 // Core Views
 import { MainView } from './app/view/MainView';
+import { LoginView } from './app/view/LoginView';
 import { SessionConfigView } from './app/view/SessionConfigView';
 import { DialerView } from './app/view/DialerView';
 import { ActivityCallView } from './app/view/ActivityCallView';

@@ -2,6 +2,7 @@ import {
   injectable,
   optional,
   RcModule,
+  isSharedWorker
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
 
@@ -46,6 +47,10 @@ class EvSubscription extends RcModule {
     T extends EvClientCallBackValueType,
     K extends EvClientCallMapping[T],
   >(event: T, listener: (data?: K) => any): this {
+    // TODO: Handle shared worker mode
+    if (isSharedWorker) {
+      return this;
+    }
     if (!this.evClient.getEventCallback(event)) {
       this.evClient.on(event, (...args: any[]) => {
         this.eventEmitters.emit(event, ...args);

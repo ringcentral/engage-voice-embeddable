@@ -180,6 +180,7 @@ export const getBaseWebpackConfig = <T extends BaseAppConfig>({
   // In MFE mode, exported files are typically split separately.
   const outputUsePropsMode = isProd || outputAlwaysUseProdFileName;
 
+  console.log('appConfig:', appConfig);
   const developmentConfig = merge(baseConfig, {
     entry: { ...projectConfig.mainEntries },
     output: {

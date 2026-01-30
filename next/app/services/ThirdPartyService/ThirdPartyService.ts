@@ -79,6 +79,8 @@ class ThirdPartyService extends RcModule {
   }
 
   private _initTransport(): void {
+    // TODO: Handle worker mode
+    if (typeof window === 'undefined') return;
     const targetWindow = this.thirdPartyServiceOptions?.targetWindow ?? window.parent;
     window.addEventListener('message', (event) => {
       if (event.source !== targetWindow) return;

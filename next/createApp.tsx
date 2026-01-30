@@ -1,5 +1,4 @@
 import { createSharedApp } from '@ringcentral-integration/next-core';
-
 import { getAppConfig } from './app/getAppConfig';
 
 /**
@@ -38,48 +37,33 @@ export interface AppConfig {
  * Create the Engage Voice Embeddable application
  */
 export const createApp = async (
-  config: AppConfig,
   options?: Parameters<typeof createSharedApp>[0]['share'],
   additionalModules: Parameters<typeof createSharedApp>[0]['modules'] = [],
 ) => {
+  console.log('process.env.APP_CONFIG', process.env.APP_CONFIG);
+  const config = process.env.APP_CONFIG;
   const {
-    appVersion,
     prefix,
     brandConfig,
     sdkConfig,
     evAgentConfig,
-  } = config;
+  } = config as AppConfig;
 
   const appConfig = getAppConfig({
-    appVersion,
+    appVersion: '0.0.1',
     prefix,
     brandConfig,
     sdkConfig,
     evAgentConfig,
     modules: additionalModules,
     share: options ?? {
-      name: 'ev-embeddable',
+      name: 'cx-embeddable',
       type: 'Base',
     },
   });
 
+  console.log('createApp', appConfig);
   const app = await createSharedApp(appConfig);
-
-  return app;
-};
-
-/**
- * Run the application in standalone mode
- */
-export const runApp = async (config: AppConfig) => {
-  const app = await createApp(config);
-
-  if (typeof document !== 'undefined') {
-    const container = document.getElementById('app');
-    if (container) {
-      app.bootstrap(container);
-    }
-  }
 
   return app;
 };

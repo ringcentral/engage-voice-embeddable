@@ -1,5 +1,3 @@
-// eslint-disable-next-line import/no-unresolved
-import '@SDK';
 import { waitUntilTo } from '../../../lib/utils';
 import {
   action,
@@ -7,6 +5,9 @@ import {
   injectable,
   RcModule,
   state,
+  isSharedWorker,
+  isWebWorker,
+  PortManager,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
 
@@ -76,7 +77,7 @@ class EvClient extends RcModule {
   private _onClose: () => void;
 
   // eslint-disable-next-line
-  private _Sdk = window.AgentSDK;
+  private _Sdk = null;
 
   private _options: EvAgentOptions;
 
@@ -88,6 +89,7 @@ class EvClient extends RcModule {
   appStatus: string = evStatus.START;
 
   constructor(
+    protected _portManager?: PortManager,
     @inject('EvClientOptions') protected evClientOptions: EvClientServiceOptions,
   ) {
     super();
@@ -111,6 +113,17 @@ class EvClient extends RcModule {
       const authHost = window.localStorage.getItem('__authHost__');
       if (authHost) {
         this._options.authHost = authHost;
+      }
+    }
+
+    if (!isSharedWorker && !isWebWorker) {
+      if (this._portManager.shared && this._portManager.isWorkerMode) {
+        this._portManager.onClient(() => {
+          // execute this code when client is opened
+          this.initialize();
+        });
+      } else {
+        this.initialize();
       }
     }
   }
@@ -159,14 +172,16 @@ class EvClient extends RcModule {
     }
   }
 
-  override onInitOnce() {
+  initialize() {
     this.initSDK();
   }
 
   initSDK() {
+    if (typeof window === 'undefined' || !window.AgentSDK) {
+      return;
+    }
     console.log('initSDK');
-    const { _Sdk: Sdk } = this;
-    this._sdk = new Sdk({
+    this._sdk = new window.AgentSDK({
       callbacks: {
         ...this._callbacks,
         [EvCallbackTypes.CLOSE_SOCKET]: this._onClose,

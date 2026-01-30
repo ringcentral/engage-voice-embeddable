@@ -4119,9 +4119,9 @@
     through2 "^2.0.5"
     xml-js "^1.6.2"
 
-"@ringcentral-integration/micro-auth@*", "@ringcentral-integration/micro-auth@git+https://github.com/embbnux/ringcentral-js-widget.git#micro-auth-release":
+"@ringcentral-integration/micro-auth@*", "@ringcentral-integration/micro-auth@git+https://github.com/ringcentral/ringcentral-js-widgets.git#micro-auth-release":
   version "0.0.1"
-  resolved "git+https://github.com/embbnux/ringcentral-js-widget.git#14c3b15fdd0727497f491afca76fa31b4f47f9ed"
+  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#ef65bf9b6b587bd5a077068d6c7b1c409533f98b"
   dependencies:
     "@ringcentral-integration/commons" "*"
     "@ringcentral-integration/i18n" "*"

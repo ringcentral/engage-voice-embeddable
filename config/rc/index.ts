@@ -6,7 +6,7 @@ export default {
   sdkConfig: {
     clientId: process.env.RINGCENTRAL_CLIENT_ID,
     clientSecret: process.env.RINGCENTRAL_CLIENT_SECRET,
-    server: process.env.RINGCENTRAL_SERVER_URL,
+    server: process.env.RINGCENTRAL_SERVER,
   },
   evAgentConfig: {
     localTesting: false,
@@ -27,5 +27,5 @@ export default {
       ? `${process.env.APP_VERSION} (${process.env.BUILD_HASH})`
       : process.env.RELEASE_VERSION,
   },
-  prefix: 'ringcx-embeddable',
+  prefix: 'cx-embeddable',
 } as AppConfig;

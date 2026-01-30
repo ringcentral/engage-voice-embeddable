@@ -1,4 +1,4 @@
-import { Toast, Beforeunload } from '@ringcentral-integration/micro-core/src/app/services';
+import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
 import {
   action,
   computed,
@@ -49,7 +49,7 @@ class EvPresence extends RcModule {
     private evClient: EvClient,
     private evSubscription: EvSubscription,
     private toast: Toast,
-    private beforeunload: Beforeunload,
+    // private beforeunload: Beforeunload,
     private storagePlugin: StoragePlugin,
     @optional('EvPresenceOptions') private evPresenceOptions?: EvPresenceOptions,
   ) {
@@ -316,9 +316,9 @@ class EvPresence extends RcModule {
 
   private _checkBeforeunload() {
     if (this.isOffhook) {
-      this.beforeunload.add(this.beforeunloadHandler);
+      // TODO: this.beforeunload.add(this.beforeunloadHandler);
     } else {
-      this.beforeunload.remove(this.beforeunloadHandler);
+      // TODO: this.beforeunload.remove(this.beforeunloadHandler);
     }
   }
 }

@@ -33,6 +33,7 @@ export async function devServer() {
         publicPath: '/',
       },
       port: projectConfig.devServerPort,
+      static: path.resolve(__dirname, 'next'),
     },
     compiler,
   );

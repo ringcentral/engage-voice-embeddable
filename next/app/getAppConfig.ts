@@ -4,17 +4,17 @@ import {
   RouterOptions,
   RouterPlugin,
   StoragePlugin,
+  IRouterOptions,
+  ISharedAppOptions,
 } from '@ringcentral-integration/next-core';
 import {
   BlockPlugin,
   SpringThemePlugin,
   ThemePlugin,
 } from '@ringcentral-integration/micro-core/src/app/plugins';
-import type {
+import {
   BrandConfig,
   LocaleOptions,
-} from '@ringcentral-integration/micro-core/src/app/services';
-import {
   Brand,
   Locale,
   Toast,
@@ -23,15 +23,16 @@ import {
   HeaderNavViewSpring,
   SpringAppRootView,
 } from '@ringcentral-integration/micro-core/src/app/views';
-import { Auth, RateLimiter } from '@ringcentral-integration/micro-auth/src/app/services';
-import { LoginView } from '@ringcentral-integration/micro-auth/src/app/views';
+import {
+  Auth,
+  RateLimiter,
+  AuthOptions,
+  OAuthOptions,
+  OAuth,
+} from '@ringcentral-integration/micro-auth/src/app/services';
+import { LoginView } from './view/LoginView';
 
 import { AppView } from '../AppView';
-
-import type {
-  IRouterOptions,
-  ISharedAppOptions,
-} from '@ringcentral-integration/next-core';
 
 /**
  * Brand configuration interface
@@ -79,8 +80,8 @@ import {
   Adapter,
   Analytics,
   ThirdPartyService,
-  EvTabManager,
-  OAuth,
+  TabManager,
+  // OAuth,
 } from './services';
 
 // Views
@@ -202,7 +203,11 @@ export const getAppConfig = ({
         redirectUri,
         jwt,
         jwtOwnerId,
-      },
+      } satisfies OAuthOptions,
+    },
+    {
+      provide: 'AuthOptions',
+      useValue: { usePKCE: true } satisfies AuthOptions,
     },
     Auth,
     RateLimiter,
@@ -227,7 +232,7 @@ export const getAppConfig = ({
     Adapter,
     Analytics,
     ThirdPartyService,
-    EvTabManager,
+    TabManager,
     OAuth,
     {
       provide: 'EvClientOptions',

@@ -89,7 +89,7 @@ export const brandConfig: BrandConfig = {
   },
   assets: {
     guides: [],
-    logo: '/assets/logo.svg',
+    logo: '/assets/ringCXLogo.svg',
     icon: '/assets/icon.svg',
   },
 };
