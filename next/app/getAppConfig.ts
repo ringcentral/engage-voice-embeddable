@@ -30,7 +30,6 @@ import {
   OAuthOptions,
   OAuth,
 } from '@ringcentral-integration/micro-auth/src/app/services';
-import { LoginView, LoginViewOptions } from './view/LoginView';
 
 import { AppView } from '../AppView';
 
@@ -81,6 +80,7 @@ import {
   Analytics,
   ThirdPartyService,
   TabManager,
+  Redirect,
   // OAuth,
 } from './services';
 
@@ -104,7 +104,9 @@ import {
   RequeueCallGroupItemView,
   ActiveCallListView,
   CallHistoryDetailView,
-} from './view';
+  LoginView,
+  LoginViewOptions,
+} from './views';
 
 /**
  * Engage Voice Agent SDK configuration
@@ -234,6 +236,7 @@ export const getAppConfig = ({
     ThirdPartyService,
     TabManager,
     OAuth,
+    Redirect,
     {
       provide: 'EvClientOptions',
       useValue: {

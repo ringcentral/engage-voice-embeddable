@@ -89,7 +89,7 @@ class EvClient extends RcModule {
   appStatus: string = evStatus.START;
 
   constructor(
-    protected _portManager?: PortManager,
+    protected _portManager: PortManager,
     @inject('EvClientOptions') protected evClientOptions: EvClientServiceOptions,
   ) {
     super();
@@ -116,15 +116,13 @@ class EvClient extends RcModule {
       }
     }
 
-    if (!isSharedWorker && !isWebWorker) {
-      if (this._portManager.shared && this._portManager.isWorkerMode) {
-        this._portManager.onClient(() => {
-          // execute this code when client is opened
-          this.initialize();
-        });
-      } else {
+    if (this._portManager.shared) {
+      this._portManager.onClient(() => {
+        // execute this code when client is opened
         this.initialize();
-      }
+      });
+    } else {
+      this.initialize();
     }
   }
 

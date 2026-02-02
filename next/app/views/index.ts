@@ -1,5 +1,6 @@
 // Core views
 export * from './MainView';
+export * from './LoginView';
 export * from './SessionConfigView';
 export * from './DialerView';
 export * from './ActivityCallView';

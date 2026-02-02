@@ -8,6 +8,7 @@ import {
   state,
   storage,
   StoragePlugin,
+  PortManager,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
 
@@ -51,10 +52,18 @@ class EvPresence extends RcModule {
     private toast: Toast,
     // private beforeunload: Beforeunload,
     private storagePlugin: StoragePlugin,
+    private portManager: PortManager,
     @optional('EvPresenceOptions') private evPresenceOptions?: EvPresenceOptions,
   ) {
     super();
     this.storagePlugin.enable(this);
+    if (this.portManager.shared) {
+      this.portManager.onClient(() => {
+        this.initialize();
+      });
+    } else {
+      this.initialize();
+    }
   }
 
   @storage
@@ -233,7 +242,7 @@ class EvPresence extends RcModule {
     return recordingSetting;
   }
 
-  override onInitOnce() {
+  initialize() {
     this._bindSubscription();
   }
 

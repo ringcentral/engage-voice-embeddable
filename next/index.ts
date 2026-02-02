@@ -6,7 +6,7 @@ export * from './AppView';
 
 // App modules
 export * from './app/services';
-export * from './app/view';
+export * from './app/views';
 
 // Enums
 export * from './enums';

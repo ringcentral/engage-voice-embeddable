@@ -76,62 +76,15 @@ export class LoginView extends RcViewModule {
     protected _loginViewOptions?: LoginViewOptions,
   ) {
     super();
-    if (!this._loginViewOptions?.disabledRouteGuard) {
-      if (this._portManager?.shared) {
-        this._portManager.onServer(() => {
-          this.initialize();
-        });
-      } else {
-        this.initialize();
-      }
-    }
-  }
-
-  protected async initialize() {
-    merge(
-      this._auth.ownerId$,
-      fromWatchValue(this, () => this._router.currentPath),
-    )
-      .pipe(
-        switchMap(() => {
-          if (this._auth.ownerId && this._router.currentPath === '/') {
-            // in spring-ui, we must wait the appFeatures ready
-            if (process.env.THEME_SYSTEM === 'spring-ui' && this._appFeatures) {
-              if (!this._appFeatures.ready) {
-                logger.log('[LoginView]: wait appFeatures ready to redirect');
-              }
-
-              return this._appFeatures.ready$.pipe(
-                map(() => this.routeAfterLogin),
-                filter((path) => typeof path === 'string'),
-              );
-            }
-
-            if (typeof this.routeAfterLogin === 'string') {
-              return of(this.routeAfterLogin);
-            }
-          }
-
-          if (!this._auth.ownerId && this._router.currentPath !== '/') {
-            return of('/');
-          }
-          return EMPTY;
-        }),
-        filter(Boolean),
-        // when app is not shared, we need to wait for the router sync up from history(this is a issue in react-router v5)
-        this._portManager?.shared || process.env.NODE_ENV === 'test'
-          ? identity
-          : delay(0),
-        // use concatMap to make sure the path replace one by one
-        concatMap(async (path) => {
-          if (this._router.currentPath !== path) {
-            logger.log(`[LoginView]: path replace to ${path}`);
-            await this._router.replace(path);
-          }
-        }),
-        takeUntilAppDestroy,
-      )
-      .subscribe();
+    // if (!this._loginViewOptions?.disabledRouteGuard) {
+    //   if (this._portManager?.shared) {
+    //     this._portManager.onServer(() => {
+    //       this.initialize();
+    //     });
+    //   } else {
+    //     this.initialize();
+    //   }
+    // }
   }
 
   get routeAfterLogin() {

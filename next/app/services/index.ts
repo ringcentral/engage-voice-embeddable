@@ -17,3 +17,4 @@ export * from './Analytics';
 export * from './ThirdPartyService';
 export * from './EvTabManager';
 export * from './OAuth';
+export * from './Redirect';

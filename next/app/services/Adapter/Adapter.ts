@@ -7,6 +7,7 @@ import {
   state,
   storage,
   StoragePlugin,
+  PortManager,
 } from '@ringcentral-integration/next-core';
 
 import { adapterMessageTypes } from '../../../enums';
@@ -64,11 +65,18 @@ class Adapter extends RcModule {
     private evPresence: EvPresence,
     private toast: Toast,
     private storagePlugin: StoragePlugin,
+    private portManager: PortManager,
     @optional('AdapterOptions') private adapterOptions?: AdapterOptions,
   ) {
     super();
     this.storagePlugin.enable(this);
-    this._initTransport();
+    if (this.portManager?.shared) {
+      this.portManager.onClient(() => {
+        this.initialize();
+      });
+    } else {
+      this.initialize();
+    }
   }
 
   @storage
@@ -112,7 +120,7 @@ class Adapter extends RcModule {
     this.position = position;
   }
 
-  private _initTransport() {
+  private initialize() {
     // TODO: Handle worker mode
     if (typeof window === 'undefined') return;
     const targetWindow = this.adapterOptions?.targetWindow ?? window.parent;
@@ -208,6 +216,7 @@ class Adapter extends RcModule {
 
   private _postMessage(msg: any): void {
     const targetWindow = this.adapterOptions?.targetWindow ?? window.parent;
+    if (!targetWindow) return;
     targetWindow.postMessage(msg, '*');
   }
 }

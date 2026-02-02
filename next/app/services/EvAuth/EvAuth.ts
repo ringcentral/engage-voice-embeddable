@@ -13,6 +13,7 @@ import {
   state,
   storage,
   StoragePlugin,
+  PortManager,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
 
@@ -57,6 +58,7 @@ class EvAuth extends RcModule {
     private toast: Toast,
     private block: BlockPlugin,
     private storagePlugin: StoragePlugin,
+    private portManager: PortManager,
     @optional('EvAuthOptions') private evAuthOptions?: EvAuthOptions,
   ) {
     super();
@@ -69,6 +71,13 @@ class EvAuth extends RcModule {
       console.log('addBeforeLogoutHandler~~');
       this.clearAgentId();
     });
+    if (this.portManager?.shared) {
+      this.portManager.onClient(() => {
+        this.initialize();
+      });
+    } else {
+      this.initialize();
+    }
   }
 
   @storage
@@ -237,7 +246,7 @@ class EvAuth extends RcModule {
         ];
   }
 
-  override onInitOnce() {
+  initialize() {
     this.evSubscription.subscribe(EvCallbackTypes.LOGOUT, async () => {
       this._emitLogoutBefore();
       if (!this._logoutByOtherTab) {

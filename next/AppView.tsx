@@ -18,27 +18,27 @@ import {
 import React, { ReactNode } from 'react';
 
 // Core Views
-import { MainView } from './app/view/MainView';
-import { LoginView } from './app/view/LoginView';
-import { SessionConfigView } from './app/view/SessionConfigView';
-import { DialerView } from './app/view/DialerView';
-import { ActivityCallView } from './app/view/ActivityCallView';
-import { CallHistoryView } from './app/view/CallHistoryView';
-import { LeadsView } from './app/view/LeadsView';
-import { ManualDialSettingsView } from './app/view/ManualDialSettingsView';
+import { MainView } from './app/views/MainView';
+import { LoginView } from './app/views/LoginView';
+import { SessionConfigView } from './app/views/SessionConfigView';
+import { DialerView } from './app/views/DialerView';
+import { ActivityCallView } from './app/views/ActivityCallView';
+import { CallHistoryView } from './app/views/CallHistoryView';
+import { LeadsView } from './app/views/LeadsView';
+import { ManualDialSettingsView } from './app/views/ManualDialSettingsView';
 
 // New Views
-import { ChooseAccountView } from './app/view/ChooseAccountView';
-import { SessionUpdateView } from './app/view/SessionUpdateView';
-import { SettingsView } from './app/view/SettingsView';
-import { TransferCallView } from './app/view/TransferCallView';
-import { TransferInternalView } from './app/view/TransferInternalView';
-import { TransferPhoneBookView } from './app/view/TransferPhoneBookView';
-import { TransferManualEntryView } from './app/view/TransferManualEntryView';
-import { RequeueCallGroupView } from './app/view/RequeueCallGroupView';
-import { RequeueCallGroupItemView } from './app/view/RequeueCallGroupItemView';
-import { ActiveCallListView } from './app/view/ActiveCallListView';
-import { CallHistoryDetailView } from './app/view/CallHistoryDetailView';
+import { ChooseAccountView } from './app/views/ChooseAccountView';
+import { SessionUpdateView } from './app/views/SessionUpdateView';
+import { SettingsView } from './app/views/SettingsView';
+import { TransferCallView } from './app/views/TransferCallView';
+import { TransferInternalView } from './app/views/TransferInternalView';
+import { TransferPhoneBookView } from './app/views/TransferPhoneBookView';
+import { TransferManualEntryView } from './app/views/TransferManualEntryView';
+import { RequeueCallGroupView } from './app/views/RequeueCallGroupView';
+import { RequeueCallGroupItemView } from './app/views/RequeueCallGroupItemView';
+import { ActiveCallListView } from './app/views/ActiveCallListView';
+import { CallHistoryDetailView } from './app/views/CallHistoryDetailView';
 
 import type { AppViewOptions } from './interfaces';
 
