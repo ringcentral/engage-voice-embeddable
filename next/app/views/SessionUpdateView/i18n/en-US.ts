@@ -7,4 +7,7 @@ export default {
   autoAnswer: 'Auto Answer',
   update: 'Update',
   cancel: 'Cancel',
+  noneSelected: 'None selected',
+  all: 'All',
+  selected: 'selected',
 };

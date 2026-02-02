@@ -1,4 +1,4 @@
-import { dropDownOptions, loginTypes } from '../../../../enums';
+import { dropDownOptions, loginTypes, messageTypes } from '../../../../enums';
 
 export default {
   [loginTypes.RC_PHONE]: 'RingCentral Office phone',
@@ -10,4 +10,11 @@ export default {
   multipleLoginsTitle: 'Multiple logins',
   multipleLoginsContent:
     'This username is still logged in. Press continue to end the existing session and start a new one.',
+  [messageTypes.NOT_INBOUND_QUEUE_SELECTED]: 'Please select at least one inbound queue.',
+  [messageTypes.EMPTY_PHONE_NUMBER]: 'Phone number is required.',
+  [messageTypes.INVALID_PHONE_NUMBER]: 'Invalid phone number.',
+  [messageTypes.AGENT_CONFIG_ERROR]: 'Agent configuration failed.',
+  [messageTypes.UPDATE_AGENT_ERROR]: 'Failed to update agent settings.',
+  [messageTypes.UPDATE_AGENT_SUCCESS]: 'Agent settings updated successfully.',
+  [messageTypes.EXISTING_LOGIN_ENGAGED]: 'Login is currently in use. Please try again later.',
 } as const;

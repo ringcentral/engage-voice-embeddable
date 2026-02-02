@@ -9,7 +9,19 @@ import { messageTypes } from '../enums';
 
 import { EvTypeError } from './EvTypeError';
 
-export const checkCountryCode = (input: string) => {
+interface AvailableCountry {
+  countryId: string;
+}
+
+/**
+ * Check if country code is supported
+ * @param input - Phone number input
+ * @param availableCountries - Optional list of available countries. If not provided, only USA is supported.
+ */
+export const checkCountryCode = (
+  input: string,
+  availableCountries?: AvailableCountry[],
+) => {
   const cleanedNumber: string = parseIncompletePhoneNumber(input.toString());
   const isE164Number = isE164(cleanedNumber);
   if (isE164Number) {
@@ -18,7 +30,11 @@ export const checkCountryCode = (input: string) => {
     });
     if (isValid && !hasInvalidChars && parsedNumber) {
       const dialoutCountryCode = countries.alpha2ToAlpha3(parsedCountry);
-      if (dialoutCountryCode !== 'USA') {
+      const isCountrySupported =
+        dialoutCountryCode === 'USA' ||
+        (availableCountries &&
+          availableCountries.some((c) => c.countryId === dialoutCountryCode));
+      if (!isCountrySupported) {
         throw new EvTypeError({
           type: messageTypes.NO_SUPPORT_COUNTRY,
         });

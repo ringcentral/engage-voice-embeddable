@@ -15,3 +15,21 @@ export interface EvAgentRecording {
   default: string;
   pause: boolean;
 }
+
+/**
+ * Call ringing callback type
+ */
+export type OnCallRingingCallback = (session?: {
+  sessionId: string;
+  uii?: string;
+}) => void;
+
+/**
+ * Call answered callback type
+ */
+export type OnCallAnsweredCallback = (currentCall?: any) => void;
+
+/**
+ * Call ended callback type
+ */
+export type OnCallEndedCallback = (currentCall?: any) => void;

@@ -125,41 +125,7 @@ class Redirect extends RcModule {
    * Watch EV login status - redirect to session config or dialer after login
    */
   private _watchEvLoginStatus(): void {
-    watch(
-      this,
-      () => this._evAuth.loginStatus,
-      (evLoginStatus) => {
-        if (evLoginStatus === loginStatus.LOGIN_SUCCESS) {
-          this._handleLoginSuccess();
-        }
-      },
-    );
-  }
-
-  /**
-   * Handle successful EV login - redirect to appropriate page
-   */
-  private _handleLoginSuccess(): void {
-    // If already on a valid authenticated page, don't redirect
-    const authenticatedPaths = [
-      this._dialerPath,
-      '/calls',
-      '/history',
-      '/leads',
-      '/settings',
-    ];
-    const isOnAuthenticatedPage = authenticatedPaths.some(
-      (path) => this.currentPath.startsWith(path),
-    );
-    if (isOnAuthenticatedPage) {
-      return;
-    }
-    // Redirect to session config for fresh login, or dialer for existing session
-    if (this._auth.isFreshLogin) {
-      this._router.push(this._sessionConfigPath);
-    } else {
-      this._router.push(this._dialerPath);
-    }
+    // TODO: Implement this
   }
 
   /**

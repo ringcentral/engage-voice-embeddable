@@ -11,8 +11,11 @@ export const adapterMessageTypes = {
   newCall: 'newCall',
   ringCall: 'ringCall',
   endCall: 'endCall',
+  sipRingCall: 'sipRingCall',
+  sipEndCall: 'sipEndCall',
   callLead: 'callLead',
   loadLeads: 'loadLeads',
+  manualPassLead: 'manualPassLead',
   pushAdapterState: 'pushAdapterState',
   checkPopupWindow: 'checkPopupWindow',
 } as const;

@@ -94,6 +94,13 @@ class SessionConfigView extends RcViewModule {
     return true;
   }
 
+  get showDialGroup(): boolean {
+    return (
+      (this._evAuth.agentPermissions?.allowOutbound || false) &&
+      this._evAgentSession.dialGroups.length > 1
+    );
+  }
+
   @computed((that: SessionConfigView) => [
     that._evAgentSession.formGroup.selectedInboundQueueIds,
     that._evAgentSession.inboundQueues,
@@ -131,6 +138,10 @@ class SessionConfigView extends RcViewModule {
     this._evAgentSession.setFormGroup({ extensionNumber: number });
   }
 
+  setDialGroupId(groupId: string) {
+    this._evAgentSession.setFormGroup({ dialGroupId: groupId });
+  }
+
   async onAccountReChoose() {
     if (this._sessionConfigViewOptions?.onAccountReChoose) {
       await this._sessionConfigViewOptions.onAccountReChoose();
@@ -155,6 +166,7 @@ class SessionConfigView extends RcViewModule {
       showInboundQueues: this.showInboundQueues,
       showSkillProfile: this.showSkillProfile,
       showAutoAnswer: this.showAutoAnswer,
+      showDialGroup: this.showDialGroup,
       inboundQueuesFieldText: this.inboundQueuesFieldText,
     };
   }
@@ -178,10 +190,12 @@ class SessionConfigView extends RcViewModule {
       showInboundQueues,
       showSkillProfile,
       showAutoAnswer,
+      showDialGroup,
       inboundQueuesFieldText,
       loginTypeList,
       skillProfileList,
       inboundQueues,
+      dialGroups,
       formGroup,
       logoUrl,
     } = useConnector(() => ({
@@ -189,6 +203,7 @@ class SessionConfigView extends RcViewModule {
       loginTypeList: this._evAgentSession.loginTypeList,
       skillProfileList: this._evAgentSession.skillProfileList,
       inboundQueues: this._evAgentSession.inboundQueues,
+      dialGroups: this._evAgentSession.dialGroups,
       formGroup: this._evAgentSession.formGroup,
       logoUrl: this._brand.assets?.['logo'] as string | undefined,
     }));
@@ -217,6 +232,13 @@ class SessionConfigView extends RcViewModule {
     const handleAutoAnswerChange = useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
         this.setAutoAnswer(e.target.checked);
+      },
+      [],
+    );
+
+    const handleDialGroupChange = useCallback(
+      (value: string) => {
+        this.setDialGroupId(value);
       },
       [],
     );
@@ -328,6 +350,30 @@ class SessionConfigView extends RcViewModule {
                   {skillProfileList.map((profile) => (
                     <option key={profile.profileId} value={profile.profileId}>
                       {profile.profileName}
+                    </option>
+                  ))}
+                </select>
+                <Icon symbol={CaretDownMd} size="medium" className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-b2 pointer-events-none" />
+              </div>
+            </div>
+          )}
+          {/* Dial Group */}
+          {showDialGroup && (
+            <div className="mb-4">
+              <label className="typography-descriptor text-neutral-b2 block mb-1">
+                {t('dialGroup')}
+              </label>
+              <div className="relative">
+                <select
+                  value={formGroup.dialGroupId || ''}
+                  onChange={(e) => handleDialGroupChange(e.target.value)}
+                  className="w-full h-10 px-3 pr-8 border border-neutral-b4 rounded-lg bg-neutral-base typography-mainText text-neutral-b1 appearance-none cursor-pointer hover:border-neutral-b3 focus:border-primary-b focus:outline-none transition-colors"
+                  data-sign="dialGroup"
+                  aria-label={t('dialGroup')}
+                >
+                  {dialGroups.map((group: any) => (
+                    <option key={group.groupId} value={group.groupId}>
+                      {group.groupId ? `ID: ${group.groupId} ${group.groupName}` : group.groupName}
                     </option>
                   ))}
                 </select>

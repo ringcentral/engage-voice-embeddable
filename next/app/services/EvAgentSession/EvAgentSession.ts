@@ -11,26 +11,37 @@ import {
   storage,
   StoragePlugin,
   watch,
+  PortManager,
 } from '@ringcentral-integration/next-core';
+import { format, parse } from '@ringcentral-integration/phone-number';
+import { sleep } from '@ringcentral-integration/commons/utils';
 import { EventEmitter } from 'events';
+import { equals } from 'ramda';
 
 import type { LoginTypes } from '../../../enums';
 import {
   agentSessionEvents,
+  dialoutStatuses,
   dropDownOptions,
   loginTypes,
+  messageTypes,
 } from '../../../enums';
-import type { EvConfigureAgentOptions } from '../EvClient/interfaces';
+import type { EvAgentConfig } from '../EvClient/interfaces';
 import { EvClient } from '../EvClient';
 import { EvAuth } from '../EvAuth';
+import { EvPresence } from '../EvPresence';
+import { Redirect } from '../Redirect';
 import type {
   EvAgentSessionOptions,
   FormGroup,
   LoginTypeItem,
   ConfigureAgentParams,
   DialGroup,
+  EvConfigureAgentOptions,
 } from './EvAgentSession.interface';
 import i18n from './i18n';
+
+const WAIT_EV_SERVER_ROLLBACK_DELAY = 2000;
 
 const ACCEPTABLE_LOGIN_TYPES = [
   loginTypes.integratedSoftphone,
@@ -63,25 +74,55 @@ class EvAgentSession extends RcModule {
   public isAgentUpdating = false;
 
   private _eventEmitter = new EventEmitter();
+  private _isLogin = false;
 
   constructor(
     private evClient: EvClient,
     private evAuth: EvAuth,
+    private evPresence: EvPresence,
+    private redirect: Redirect,
     private auth: Auth,
     private toast: Toast,
     private locale: Locale,
     private block: BlockPlugin,
     private storagePlugin: StoragePlugin,
+    private portManager: PortManager,
     @optional('EvAgentSessionOptions')
     private evAgentSessionOptions?: EvAgentSessionOptions,
   ) {
     super();
     this.storagePlugin.enable(this);
+    // Login success event should be registered in constructor to capture event before onInitOnce
     this.evAuth.onceLoginSuccess(() => {
       console.log('----------onLoginSuccess in EvAgentSession');
+      this._isLogin = true;
     });
+    // Logout event should be in constructor, when logout that will not call init
     this.evAuth.beforeAgentLogout(() => {
       this._resetAllState();
+    });
+    if (this.portManager?.shared) {
+      this.portManager.onClient(() => {
+        this._initialize();
+      });
+    } else {
+      this._initialize();
+    }
+  }
+
+  private _initialize(): void {
+    this._init();
+    this.onConfigSuccess(() => {
+      // Set dialout status to idle if no calls
+      if (this.evPresence.calls.length === 0) {
+        this.evPresence.setDialoutStatus(dialoutStatuses.idle);
+      }
+      if (this.isAgentUpdating) {
+        this.isAgentUpdating = false;
+      } else {
+        console.log('!!!!to Dialer');
+        this.redirect.goToDialer();
+      }
     });
     watch(
       this,
@@ -92,6 +133,37 @@ class EvAgentSession extends RcModule {
         }
       },
     );
+  }
+
+  /**
+   * Initialize agent session on login success
+   */
+  private async _init(): Promise<void> {
+    if (this._isLogin) {
+      await this.initAgentSession();
+    }
+    // Watch login success state - must be after onInitOnce because storage may not be ready
+    watch(
+      this,
+      () => this.isOnLoginSuccess,
+      async (isOnLoginSuccess) => {
+        if (isOnLoginSuccess) {
+          console.log('----------onLoginSuccess2');
+          await this.initAgentSession();
+        }
+      },
+    );
+  }
+
+  /**
+   * Computed property to check if login is successful and module is ready
+   */
+  @computed((that: EvAgentSession) => [
+    that.evAuth.isEvLogged,
+    that.ready,
+  ])
+  get isOnLoginSuccess(): boolean {
+    return this.ready && this.evAuth.isEvLogged;
   }
 
   @storage
@@ -254,8 +326,58 @@ class EvAgentSession extends RcModule {
     return defaultSkill ? defaultSkill.profileId : NONE;
   }
 
+  @computed((that: EvAgentSession) => [
+    that.skillProfileList,
+    that.formGroup,
+  ])
+  get selectedSkillProfile(): string | undefined {
+    const selectedSkillProfile = this.skillProfileList.find(
+      (profile) => profile.profileId === this.formGroup.selectedSkillProfileId,
+    );
+    return selectedSkillProfile?.profileName;
+  }
+
+  @computed((that: EvAgentSession) => [
+    that.inboundQueues,
+    that.formGroup,
+  ])
+  get selectedInboundQueues(): string[] {
+    const results = (this.formGroup.selectedInboundQueueIds || []).map((id) => {
+      return this.inboundQueues.find((queue) => queue.gateId === id);
+    });
+    return results.filter((result) => result).map((result) => result!.gateName);
+  }
+
+  @computed((that: EvAgentSession) => [
+    that.selectedInboundQueueIds,
+    that.selectedSkillProfileId,
+    that.loginType,
+    that.extensionNumber,
+    that.autoAnswer,
+    that.dialGroupId,
+    that.formGroup,
+  ])
+  get isSessionChanged(): boolean {
+    const sessionConfigs = {
+      selectedInboundQueueIds: this.selectedInboundQueueIds,
+      selectedSkillProfileId: this.selectedSkillProfileId,
+      loginType: this.loginType,
+      extensionNumber: this.extensionNumber,
+      autoAnswer: this.autoAnswer,
+      dialGroupId: this.dialGroupId,
+    };
+    return !equals(sessionConfigs, this.formGroup);
+  }
+
   get defaultAutoAnswerOn(): boolean {
     return this.evAuth.agentPermissions?.defaultAutoAnswerOn || false;
+  }
+
+  get notInboundQueueSelected(): boolean {
+    return (
+      !this.evAuth.agentPermissions?.allowInbound ||
+      (this.formGroup.selectedInboundQueueIds || []).length === 0
+    );
   }
 
   @action
@@ -370,7 +492,8 @@ class EvAgentSession extends RcModule {
     }
   }
 
-  setFreshConfig() {
+  setFreshConfig(): void {
+    this._clearCalls();
     this._setFreshConfig();
   }
 
@@ -385,13 +508,23 @@ class EvAgentSession extends RcModule {
     });
   }
 
-  private _resetAllState() {
-    console.log('_resetAllState~~');
+  private _resetAllState(): void {
+    console.log('_resetAllState~~', this.isMainTab);
     if (!this.isAgentUpdating) {
       this.resetAllConfig();
     }
     this.setConfigSuccess(false);
     this.isReconnected = false;
+    this._isLogin = false;
+    // Clear calls when resetting
+    this._clearCalls();
+  }
+
+  /**
+   * Clear calls from presence (safe method that checks if presence exists)
+   */
+  private _clearCalls(): void {
+    this.evPresence?.clearCalls();
   }
 
   private _pickSkillProfile(skillProfileList: any[]) {
@@ -402,45 +535,219 @@ class EvAgentSession extends RcModule {
    * Configure agent session
    */
   async configureAgent({
+    config = this._checkFieldsResult(this.formGroup),
     triggerEvent = true,
     needAssignFormGroupValue = false,
   }: ConfigureAgentParams = {}): Promise<void> {
     console.log('configureAgent~~', triggerEvent);
-    const config = this._checkFieldsResult(this.formGroup);
-    const result = await this.evClient.configureAgent(config);
+    this._clearCalls();
+    const connectResult = await this._connectEvServer(config);
+    let result = connectResult.result;
+    const existingLoginFound = connectResult.existingLoginFound;
+    // Session timeout - this will occur when stay in session config page for long time
     if (result.data.status !== 'SUCCESS') {
-      throw new Error(result.data.message || 'Configuration failed');
+      this._navigateToSessionConfigPage();
+      await this.evAuth.newReconnect(false);
+      if (existingLoginFound) {
+        config.isForce = true;
+      }
+      result = (await this._connectEvServer(config)).result;
     }
-    if (needAssignFormGroupValue) {
-      this.assignFormGroupValue();
-    }
+    this._handleAgentResult({ config: result.data, needAssignFormGroupValue });
     if (triggerEvent) {
       this._emitTriggerConfig();
       this.setConfigSuccess(true);
     }
   }
 
+  /**
+   * Update agent configs from server
+   */
+  async updateAgentConfigs(): Promise<void> {
+    const agentConfig = await this.evClient.getAgentConfig();
+    const agent = {
+      ...this.evAuth.agent,
+      agentConfig,
+    };
+    this.evAuth.setAgent(agent);
+    this.setConfigSuccess(true);
+  }
+
+  /**
+   * Update agent session settings
+   */
+  async updateAgent(voiceConnectionChanged: boolean): Promise<void> {
+    try {
+      await this.block.next(async () => {
+        const config = this._checkFieldsResult(this.formGroup);
+        this._clearCalls();
+        this.isAgentUpdating = true;
+        const extensionNumberChanged =
+          this.extensionNumber !== this.formGroup.extensionNumber;
+        if (voiceConnectionChanged || extensionNumberChanged) {
+          await this.reLoginAgent();
+        }
+        config.isForce = true;
+        const { result } = await this._connectEvServer(config);
+        this._handleAgentResult({
+          config: result.data,
+          isAgentUpdating: true,
+          needAssignFormGroupValue: true,
+        });
+        if (voiceConnectionChanged) {
+          this._emitTriggerConfig();
+        }
+        await this.updateAgentConfigs();
+        this.goToSettingsPage();
+        this._showUpdateSuccessAlert();
+      });
+    } catch (error) {
+      console.error('updateAgent error', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Re-login agent with optional alert message
+   */
+  async reLoginAgent({
+    isBlock,
+    alertMessage,
+  }: {
+    isBlock?: boolean;
+    alertMessage?: string;
+  } = {}): Promise<void> {
+    const fn = async () => {
+      if (alertMessage) {
+        this.toast.danger({ message: alertMessage });
+      }
+      const { access_token } = await this.auth.refreshToken();
+      this.setAccessToken(access_token);
+      await this.evAuth.logoutAgent();
+      // Wait for server to finish logout
+      await sleep(WAIT_EV_SERVER_ROLLBACK_DELAY);
+      await this.evAuth.loginAgent(this.accessToken);
+    };
+    return isBlock ? this.block.next(fn) : fn();
+  }
+
+  /**
+   * Logout then login again after logout event
+   */
+  onceLogoutThenLogin(): Promise<Promise<void>> {
+    return new Promise<Promise<void>>((resolve) => {
+      this.evAuth.onceLogout(async () => {
+        await sleep(WAIT_EV_SERVER_ROLLBACK_DELAY);
+        resolve(this.evAuth.loginAgent(this.accessToken));
+      });
+    });
+  }
+
+  private _showUpdateSuccessAlert(): void {
+    this.toast.success({
+      message: i18n.getString(messageTypes.UPDATE_AGENT_SUCCESS, this.locale.currentLocale),
+    });
+  }
+
   private _checkFieldsResult(formGroup: FormGroup): EvConfigureAgentOptions {
     const { selectedInboundQueueIds = [], selectedSkillProfileId } = formGroup;
+    if (this.notInboundQueueSelected) {
+      this.toast.danger({
+        message: i18n.getString(messageTypes.NOT_INBOUND_QUEUE_SELECTED, this.locale.currentLocale),
+      });
+      throw new Error(`'queueIds' is an empty array.`);
+    }
     return {
       dialDest: this._getDialDest(formGroup),
       queueIds: selectedInboundQueueIds,
       skillProfileId:
         selectedSkillProfileId === NONE ? '' : selectedSkillProfileId || '',
+      dialGroupId: formGroup.dialGroupId || '',
     };
   }
 
   private _getDialDest(formGroup: FormGroup): string {
     const { loginType, extensionNumber } = formGroup;
     switch (loginType) {
-      case loginTypes.externalPhone:
-        return extensionNumber || '';
+      case loginTypes.externalPhone: {
+        if (!extensionNumber) {
+          this.toast.danger({
+            message: i18n.getString(messageTypes.EMPTY_PHONE_NUMBER, this.locale.currentLocale),
+          });
+          throw new Error(`'extensionNumber' is an empty number.`);
+        }
+        const formatPhoneNumber = format({
+          phoneNumber: extensionNumber,
+        });
+        const { parsedNumber, isValid } = parse({
+          input: formatPhoneNumber,
+        });
+        if (!isValid || !parsedNumber || parsedNumber === '') {
+          this.toast.danger({
+            message: i18n.getString(messageTypes.INVALID_PHONE_NUMBER, this.locale.currentLocale),
+          });
+          throw new Error(`'extensionNumber' is not a valid number.`);
+        }
+        this.setFormGroup({ extensionNumber: parsedNumber });
+        return extensionNumber;
+      }
       case loginTypes.integratedSoftphone:
         return 'integrated';
       case loginTypes.RC_PHONE:
       default:
         return 'RC_PHONE';
     }
+  }
+
+  private _handleAgentResult({
+    config: { message, status },
+    isAgentUpdating,
+    needAssignFormGroupValue,
+  }: {
+    config: EvAgentConfig;
+    isAgentUpdating?: boolean;
+    needAssignFormGroupValue?: boolean;
+  }): void {
+    if (status !== 'SUCCESS') {
+      if (typeof message === 'string') {
+        this.toast.danger({ message });
+      } else {
+        this.toast.danger({
+          message: i18n.getString(
+            isAgentUpdating
+              ? messageTypes.UPDATE_AGENT_ERROR
+              : messageTypes.AGENT_CONFIG_ERROR,
+            this.locale.currentLocale,
+          ),
+        });
+      }
+      throw new Error(message);
+    }
+    if (needAssignFormGroupValue) {
+      this.assignFormGroupValue();
+    }
+  }
+
+  private async _connectEvServer(
+    config: EvConfigureAgentOptions,
+  ): Promise<{ result: { data: EvAgentConfig }; existingLoginFound: boolean }> {
+    let result = await this.evClient.configureAgent(config);
+    const { status } = result.data;
+    const existingLoginFound = status === messageTypes.EXISTING_LOGIN_FOUND;
+    if (existingLoginFound) {
+      // For force login scenario, retry with isForce flag
+      result = await this.evClient.configureAgent({
+        ...config,
+        isForce: true,
+      });
+      this.isForceLogin = true;
+    } else if (status === messageTypes.EXISTING_LOGIN_ENGAGED) {
+      this.toast.danger({
+        message: i18n.getString(messageTypes.EXISTING_LOGIN_ENGAGED, this.locale.currentLocale),
+      });
+      throw new Error(messageTypes.EXISTING_LOGIN_ENGAGED);
+    }
+    return { result, existingLoginFound };
   }
 
   private _emitTriggerConfig() {
@@ -451,6 +758,10 @@ class EvAgentSession extends RcModule {
     this._eventEmitter.emit(agentSessionEvents.CONFIG_SUCCESS);
   }
 
+  private _emitReConfigFail() {
+    this._eventEmitter.emit(agentSessionEvents.RECONFIG_FAIL);
+  }
+
   onTriggerConfig(callback: () => void): this {
     this._eventEmitter.on(agentSessionEvents.TRIGGER_CONFIG, callback);
     return this;
@@ -459,6 +770,158 @@ class EvAgentSession extends RcModule {
   onConfigSuccess(callback: () => void): this {
     this._eventEmitter.on(agentSessionEvents.CONFIG_SUCCESS, callback);
     return this;
+  }
+
+  onReConfigFail(callback: () => void): this {
+    this._eventEmitter.on(agentSessionEvents.RECONFIG_FAIL, callback);
+    return this;
+  }
+
+  /**
+   * Initialize agent session (public method for manual initialization)
+   */
+  async initAgentSession(): Promise<void> {
+    await this.block.next(async () => {
+      await this._initAgentSession();
+    });
+  }
+
+  /**
+   * Internal agent session initialization logic
+   */
+  private async _initAgentSession(): Promise<void> {
+    console.log('_initAgentSession~', this.isAgentUpdating);
+    if (this.isAgentUpdating) {
+      return;
+    }
+    // Validate stored selections against current agent config
+    this._afterLogin();
+    console.log('autoconfig~', !this.auth.isFreshLogin, this.configured);
+    // If not fresh login and already configured (and not multi-tab), auto-configure
+    if (
+      this.auth.isFreshLogin === false &&
+      this.configured &&
+      (!this.tabManagerEnabled || !this.hasMultipleTabs)
+    ) {
+      try {
+        await this._autoConfigureAgent();
+        return;
+      } catch (e) {
+        this.logger.error('Auto configure failed', e);
+      }
+    }
+    // Otherwise set fresh config and navigate to session config page
+    this._clearCalls();
+    this.setFreshConfig();
+    this.resetFormGroup();
+    this._navigateToSessionConfigPage();
+  }
+
+  /**
+   * Validate stored selections against current agent config after re-login
+   */
+  private _afterLogin(): void {
+    // If not fresh login, validate stored config against current config
+    if (!this.auth.isFreshLogin) {
+      // Check if selected skill profile is still in the list
+      const checkSelectIsInList = this.skillProfileList.some(
+        (profile) => profile.profileId === this.selectedSkillProfileId,
+      );
+      if (!checkSelectIsInList) {
+        this.setSkillProfileId(this.defaultSkillProfileId);
+      }
+      // Check all selected queues are in inbound queue list
+      const checkedInboundQueues = this.selectedInboundQueueIds.reduce<string[]>(
+        (result, inboundQueueId) => {
+          if (
+            this.inboundQueues.some(
+              (inboundQueue) => inboundQueue.gateId === inboundQueueId,
+            )
+          ) {
+            result.push(inboundQueueId);
+          }
+          return result;
+        },
+        [],
+      );
+      this.setInboundQueueIds(checkedInboundQueues);
+    }
+  }
+
+  /**
+   * Auto configure agent with stored settings
+   */
+  private async _autoConfigureAgent(): Promise<void> {
+    console.log('_autoConfigureAgent~');
+    const config = this._checkFieldsResult({
+      selectedInboundQueueIds: this.selectedInboundQueueIds,
+      selectedSkillProfileId: this.selectedSkillProfileId,
+      loginType: this.loginType,
+      extensionNumber: this.extensionNumber,
+      autoAnswer: this.autoAnswer,
+      dialGroupId: this.dialGroupId,
+    });
+    return this.configureAgent({ config });
+  }
+
+  /**
+   * Navigate to session config page
+   */
+  private _navigateToSessionConfigPage(): void {
+    this.redirect.goToSessionConfig();
+    console.log('to sessionConfig~~');
+  }
+
+  /**
+   * Check if main tab is alive (for multi-tab support)
+   */
+  async checkIsMainTabAlive(): Promise<boolean> {
+    if (this.portManager?.shared) {
+      // In shared mode, defer to port manager
+      return true;
+    }
+    return true;
+  }
+
+  /**
+   * Navigate to settings page
+   */
+  goToSettingsPage(): void {
+    this.redirect.push('/settings');
+  }
+
+  /**
+   * Check if this tab is the main tab
+   */
+  get isMainTab(): boolean {
+    if (this.portManager?.shared) {
+      return this.portManager.isServer;
+    }
+    return true;
+  }
+
+  /**
+   * Check if tab manager is enabled
+   */
+  get tabManagerEnabled(): boolean {
+    return !!this.portManager?.shared;
+  }
+
+  /**
+   * Check if there are multiple tabs
+   */
+  get hasMultipleTabs(): boolean {
+    if (this.portManager?.shared) {
+      return true; // Assume multiple tabs in shared mode
+    }
+    return false;
+  }
+
+  /**
+   * Check if browser should be blocked on unload
+   */
+  get shouldBlockBrowser(): boolean {
+    return !this.isIntegratedSoftphone && !this.hasMultipleTabs;
   }
 }
 

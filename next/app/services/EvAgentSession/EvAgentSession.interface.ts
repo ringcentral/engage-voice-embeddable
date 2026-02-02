@@ -28,9 +28,21 @@ export interface LoginTypeItem {
 }
 
 /**
+ * Configure agent options for EV server
+ */
+export interface EvConfigureAgentOptions {
+  dialDest: string;
+  queueIds: string[];
+  skillProfileId: string;
+  dialGroupId?: string;
+  isForce?: boolean;
+}
+
+/**
  * Configure agent parameters
  */
 export interface ConfigureAgentParams {
+  config?: EvConfigureAgentOptions;
   triggerEvent?: boolean;
   needAssignFormGroupValue?: boolean;
 }

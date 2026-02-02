@@ -15,28 +15,30 @@ export interface LoginUI {
 }
 
 import type { EvClient } from '../app/services/EvClient';
-import type { EvActiveCallControl } from '../modules/EvActiveCallControl';
+import type { EvActiveCallControl } from '../app/services/EvActiveCallControl';
+import type { EvAgentScript } from '../app/services/EvAgentScript';
+import type { EvAgentSession } from '../app/services/EvAgentSession';
+import type { EvAuth } from '../app/services/EvAuth';
+import type { EvCall } from '../app/services/EvCall';
+import type { EvCallMonitor } from '../app/services/EvCallMonitor';
+import type { EvIntegratedSoftphone } from '../app/services/EvIntegratedSoftphone';
+import type { EvPresence } from '../app/services/EvPresence';
+import type { EvRequeueCall } from '../app/services/EvRequeueCall';
+import type { EvSettings } from '../app/services/EvSettings';
+import type { EvSubscription } from '../app/services/EvSubscription';
+import type { EvTabManager } from '../app/services/EvTabManager';
+import type { EvTransferCall } from '../app/services/EvTransferCall';
+import type { EvWorkingState } from '../app/services/EvWorkingState';
+
+// TODO: UI modules need to be migrated to app/views
 import type { EvActiveCallListUI } from '../modules/EvActiveCallListUI';
 import type { EvActivityCallUI } from '../modules/EvActivityCallUI';
-import type { EvAgentScript } from '../modules/EvAgentScript';
-import type { EvAgentSession } from '../modules/EvAgentSession';
 import type { EvAgentSessionUI } from '../modules/EvAgentSessionUI';
-import type { EvAuth } from '../modules/EvAuth';
-import type { EvCall } from '../modules/EvCall';
-import type { EvCallMonitor } from '../modules/EvCallMonitor';
 import type { EvChooseAccountUI } from '../modules/EvChooseAccountUI';
 import type { EvDialerUI } from '../modules/EvDialerUI';
-import type { EvIntegratedSoftphone } from '../modules/EvIntegratedSoftphone';
 import type { EvManualDialSettingsUI } from '../modules/EvManualDialSettingsUI';
-import type { EvPresence } from '../modules/EvPresence';
-import type { EvRequeueCall } from '../modules/EvRequeueCall';
-import type { EvSettings } from '../modules/EvSettings';
 import type { EvSettingsUI } from '../modules/EvSettingsUI';
-import type { EvSubscription } from '../modules/EvSubscription';
-import type { EvTabManager } from '../modules/EvTabManager';
-import type { EvTransferCall } from '../modules/EvTransferCall';
 import type { EvTransferCallUI } from '../modules/EvTransferCallUI';
-import type { EvWorkingState } from '../modules/EvWorkingState';
 import type { MainViewUI } from '../modules/MainViewUI';
 
 // TODO: separated UI and normal module that should just pick getUIProps, getUIFunctions in test environment.

@@ -47,6 +47,7 @@ export const createApp = async (
     brandConfig,
     sdkConfig,
     evAgentConfig,
+    analyticsKey,
   } = config as AppConfig;
 
   const appConfig = getAppConfig({
@@ -60,6 +61,7 @@ export const createApp = async (
       name: 'cx-embeddable',
       type: 'Base',
     },
+    analyticsKey,
   });
 
   console.log('createApp', appConfig);

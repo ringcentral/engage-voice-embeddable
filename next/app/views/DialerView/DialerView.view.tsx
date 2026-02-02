@@ -5,18 +5,13 @@ import {
   useConnector,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
+import { DialPad, DialTextField, CallButton, IconButton } from '@ringcentral/spring-ui';
+import { BackspaceMd } from '@ringcentral/spring-icon';
 import React, { useCallback, useState } from 'react';
 
 import { EvCall } from '../../services/EvCall';
 import type { DialerViewOptions, DialerViewProps } from './DialerView.interface';
 import i18n from './i18n';
-
-const DIALPAD_KEYS = [
-  ['1', '2', '3'],
-  ['4', '5', '6'],
-  ['7', '8', '9'],
-  ['*', '0', '#'],
-];
 
 /**
  * DialerView - Phone dialer view for outbound calls
@@ -81,65 +76,55 @@ class DialerView extends RcViewModule {
 
     return (
       <div className="flex flex-col h-full bg-neutral-base p-4">
-        {/* Phone Number Input */}
+        {/* Phone Number Input with Delete Button */}
         <div className="mb-4">
-          <input
-            type="tel"
+          <DialTextField
             value={phoneNumber}
             onChange={handleInputChange}
             placeholder={t('enterNumber')}
-            className="w-full p-4 text-center typography-display1 border border-neutral-b4 rounded-lg bg-neutral-base"
+            inputProps={{
+              'data-sign': 'dialerInput',
+            }}
+            endAdornment={
+              phoneNumber && (
+                <IconButton
+                  symbol={BackspaceMd}
+                  size="small"
+                  variant="icon"
+                  onClick={handleBackspace}
+                  disabled={isDialing}
+                  data-sign="backspaceButton"
+                />
+              )
+            }
           />
         </div>
 
-        {/* Dialpad */}
-        <div className="flex-1 flex flex-col justify-center">
-          {DIALPAD_KEYS.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex justify-center gap-4 mb-4">
-              {row.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => handleKeyPress(key)}
-                  disabled={isDialing}
-                  className="w-16 h-16 rounded-full bg-neutral-b5 hover:bg-neutral-b4 typography-title flex items-center justify-center transition-colors"
-                >
-                  {key}
-                </button>
-              ))}
-            </div>
-          ))}
+        {/* Dialpad - Using Spring UI DialPad */}
+        <div className="flex-1 flex flex-col justify-center items-center">
+          <DialPad
+            onPress={handleKeyPress}
+            disabled={isDialing}
+            data-sign="dialPad"
+          />
 
           {/* Action Row */}
-          <div className="flex justify-center gap-4">
-            <button
-              type="button"
+          <div className="flex justify-center items-center gap-4 mt-4">
+            <IconButton
+              symbol={BackspaceMd}
+              size="large"
+              variant="outlined"
               onClick={handleClear}
-              disabled={isDialing}
-              className="w-16 h-16 rounded-full bg-neutral-b5 hover:bg-neutral-b4 typography-descriptor flex items-center justify-center transition-colors"
-            >
-              Clear
-            </button>
-            <button
-              type="button"
+              disabled={isDialing || !phoneNumber}
+              data-sign="clearButton"
+            />
+            <CallButton
+              variant="start"
+              size="large"
               onClick={handleDial}
               disabled={isDialing || !phoneNumber.trim()}
-              className={`w-16 h-16 rounded-full typography-title flex items-center justify-center transition-colors ${
-                isDialing || !phoneNumber.trim()
-                  ? 'bg-neutral-b4 text-neutral-b2 cursor-not-allowed'
-                  : 'bg-success text-neutral-w0 hover:bg-success-f'
-              }`}
-            >
-              {isDialing ? '...' : t('dial')}
-            </button>
-            <button
-              type="button"
-              onClick={handleBackspace}
-              disabled={isDialing}
-              className="w-16 h-16 rounded-full bg-neutral-b5 hover:bg-neutral-b4 typography-descriptor flex items-center justify-center transition-colors"
-            >
-              ←
-            </button>
+              data-sign="dialButton"
+            />
           </div>
         </div>
 

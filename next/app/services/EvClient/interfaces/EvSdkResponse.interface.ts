@@ -43,6 +43,14 @@ export type EvBaseCall = {
   lead: EvLead;
   // sessionId: string;
   transferPhoneBook: EvTransferPhoneBookItem[];
+  // Dynamic properties set during call lifecycle
+  hold?: boolean;
+  session?: {
+    sessionId: string;
+    uii?: string;
+    recordingUrl?: string;
+  };
+  endedCall?: boolean;
 };
 
 export interface EvACKResponse {

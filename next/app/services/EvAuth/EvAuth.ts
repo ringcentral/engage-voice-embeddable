@@ -14,6 +14,7 @@ import {
   storage,
   StoragePlugin,
   PortManager,
+  watch,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
 
@@ -24,6 +25,8 @@ import { EvTypeError } from '../../../lib/EvTypeError';
 import { sortByName } from '../../../lib/sortByName';
 import { EvClient } from '../EvClient';
 import { EvSubscription } from '../EvSubscription';
+import { TabManager } from '../EvTabManager';
+import { OAuth } from '../OAuth';
 import type {
   EvAuthOptions,
   EvAuthState,
@@ -31,6 +34,8 @@ import type {
   OpenSocketParams,
 } from './EvAuth.interface';
 import i18n from './i18n';
+import { track } from '../Analytics/track';
+import { trackEvents } from '../../../lib/trackEvents';
 
 const DEFAULT_COUNTRIES = ['USA', 'CAN'];
 
@@ -59,18 +64,12 @@ class EvAuth extends RcModule {
     private block: BlockPlugin,
     private storagePlugin: StoragePlugin,
     private portManager: PortManager,
+    @optional() private tabManager?: TabManager,
+    @optional() private oAuth?: OAuth,
     @optional('EvAuthOptions') private evAuthOptions?: EvAuthOptions,
   ) {
     super();
     this.storagePlugin.enable(this);
-    this.auth.addAfterLoggedInHandler(() => {
-      console.log('addAfterLoggedInHandler~~');
-      this.clearAgentId();
-    });
-    this.auth.addBeforeLogoutHandler(() => {
-      console.log('addBeforeLogoutHandler~~');
-      this.clearAgentId();
-    });
     if (this.portManager?.shared) {
       this.portManager.onClient(() => {
         this.initialize();
@@ -78,6 +77,13 @@ class EvAuth extends RcModule {
     } else {
       this.initialize();
     }
+  }
+
+  /**
+   * Check if tab manager is enabled
+   */
+  get tabManagerEnabled(): boolean {
+    return !!this.tabManager?.enable;
   }
 
   @storage
@@ -100,6 +106,7 @@ class EvAuth extends RcModule {
     this.agentId = agentId;
   }
 
+  @track(trackEvents.loginAgent)
   @action
   setConnectionData({ connected, agent }: Partial<EvAuthState>) {
     if (agent !== undefined) {
@@ -131,8 +138,11 @@ class EvAuth extends RcModule {
   }
 
   @action
-  setNotAuth() {
+  setNotAuth(asyncAllTabs = false) {
     this.loginStatus = loginStatus.NOT_AUTH;
+    if (asyncAllTabs && this.tabManagerEnabled) {
+      this.tabManager!.send(tabManagerEvents.LOGGED_OUT);
+    }
   }
 
   get isFreshLogin(): boolean {
@@ -247,6 +257,14 @@ class EvAuth extends RcModule {
   }
 
   initialize() {
+    this.auth.addAfterLoggedInHandler(() => {
+      console.log('addAfterLoggedInHandler~~');
+      this.clearAgentId();
+    });
+    this.auth.addBeforeLogoutHandler(() => {
+      console.log('addBeforeLogoutHandler~~');
+      this.clearAgentId();
+    });
     this.evSubscription.subscribe(EvCallbackTypes.LOGOUT, async () => {
       this._emitLogoutBefore();
       if (!this._logoutByOtherTab) {
@@ -257,11 +275,54 @@ class EvAuth extends RcModule {
         await this.newReconnect();
       }
     });
+    // Watch for tab manager events
+    if (this.tabManagerEnabled) {
+      watch(
+        this,
+        () => this.tabManager?.event,
+        (event) => {
+          if (event) {
+            this.handleTabManagerEvent(event);
+          }
+        },
+      );
+    }
+    // Auto-login when RC auth is complete but EV auth hasn't happened yet
+    watch(
+      this,
+      () => [
+        this.auth.loggedIn,
+        this.loginStatus,
+        this.connecting,
+        this.oAuth?.jwtOwnerChanged,
+      ] as const,
+      async ([loggedIn, currentLoginStatus, isConnecting, jwtOwnerChanged]) => {
+        if (
+          loggedIn &&
+          currentLoginStatus !== loginStatus.AUTH_SUCCESS &&
+          currentLoginStatus !== loginStatus.LOGIN_SUCCESS &&
+          !isConnecting &&
+          !jwtOwnerChanged
+        ) {
+          this.connecting = true;
+          // When login make sure the logoutByOtherTab is false
+          this._logoutByOtherTab = false;
+          await this.block.next(async () => {
+            if (this.agentId) {
+              await this.loginAgent();
+            } else {
+              await this.authenticateWithToken();
+            }
+          });
+        }
+      },
+      { multiple: true },
+    );
   }
 
   private _logout = async () => {
     await this.auth.logout({ dismissAllAlert: false, reason: 'Manually sign out' });
-    this.setNotAuth();
+    this.setNotAuth(true);
   };
 
   onceLogout(cb: () => any) {
@@ -285,6 +346,9 @@ class EvAuth extends RcModule {
 
   sendLogoutTabEvent() {
     this._emitLogoutBefore();
+    if (this.tabManagerEnabled) {
+      this.tabManager!.send(tabManagerEvents.LOGOUT);
+    }
   }
 
   logoutAgent(agentId: string = this.agentId) {
@@ -364,6 +428,9 @@ class EvAuth extends RcModule {
       }
       const openSocketResult = await this.evClient.openSocket(selectedAgentId);
       await sleep(0);
+      if (!openSocketResult.error && syncOtherTabs && this.tabManagerEnabled) {
+        this.tabManager!.send(tabManagerEvents.OPEN_SOCKET);
+      }
       if (openSocketResult.error) {
         console.log('retryOpenSocket~~', retryOpenSocket);
         if (retryOpenSocket) {
@@ -451,7 +518,7 @@ class EvAuth extends RcModule {
    * Check if i18n is enabled for the agent
    */
   get isI18nEnabled(): boolean {
-    return !!this.agent?.isI18nEnabled;
+    return !!(this.agent as any)?.isI18nEnabled;
   }
 
   /**

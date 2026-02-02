@@ -81,6 +81,7 @@ import {
   ThirdPartyService,
   TabManager,
   Redirect,
+  AnalyticsOptions,
   // OAuth,
 } from './services';
 
@@ -134,6 +135,7 @@ interface CreateAppEntryOptions {
   evAgentConfig: EvAgentConfig;
   modules?: any[];
   share: ISharedAppOptions;
+  analyticsKey: string;
 }
 
 /**
@@ -151,6 +153,7 @@ export const getAppConfig = ({
   redirectUri = './redirect.html',
   jwt = '',
   jwtOwnerId = '',
+  analyticsKey,
 }: CreateAppEntryOptions) => {
   const { defaultLocale } = brandConfig;
 
@@ -300,6 +303,13 @@ export const getAppConfig = ({
     RequeueCallGroupItemView,
     ActiveCallListView,
     CallHistoryDetailView,
+    {
+      provide: 'AnalyticsOptions',
+      useValue: {
+        analyticsKey,
+        enableMixpanel: true,
+      } satisfies AnalyticsOptions,
+    }
   ];
 
   return {

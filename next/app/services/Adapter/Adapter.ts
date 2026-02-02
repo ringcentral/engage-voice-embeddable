@@ -8,13 +8,16 @@ import {
   storage,
   StoragePlugin,
   PortManager,
+  watch,
 } from '@ringcentral-integration/next-core';
-
+import MessageTransport from '@ringcentral-integration/commons/lib/MessageTransport';
 import { adapterMessageTypes } from '../../../enums';
 import { EvAuth } from '../EvAuth';
 import { EvCall } from '../EvCall';
 import { EvLeads } from '../EvLeads';
 import { EvPresence } from '../EvPresence';
+import { EvAgentSession } from '../EvAgentSession';
+import { TabManager } from '../EvTabManager';
 
 /**
  * Adapter options for configuration
@@ -42,6 +45,23 @@ export interface AdapterPosition {
 }
 
 /**
+ * Lead properties for dialLead lookup
+ */
+export interface LeadProps {
+  leadId?: string;
+  requestId?: string;
+  externId?: string;
+}
+
+/**
+ * Manual pass lead parameters
+ */
+export interface ManualPassLeadParams {
+  callbackDTS?: string;
+  [key: string]: any;
+}
+
+/**
  * Adapter module - Parent window communication
  * Handles click-to-dial, environment changes, and adapter state
  */
@@ -49,20 +69,27 @@ export interface AdapterPosition {
   name: 'Adapter',
 })
 class Adapter extends RcModule {
-  private _lastClosed = false;
-  private _lastMinimized = false;
-  private _lastPosition: AdapterPosition = {
-    translateX: null,
-    translateY: null,
-    minTranslateX: null,
-    minTranslateY: null,
-  };
+  /**
+   * Public message types for external use
+   */
+  public messageTypes = adapterMessageTypes;
+
+  /**
+   * Public transport for message communication
+   */
+  public transport!: MessageTransport;
+
+  private _lastClosed: boolean = false;
+  private _lastMinimized: boolean = false;
+  private _lastPosition: any = {};
 
   constructor(
     private evAuth: EvAuth,
     private evCall: EvCall,
     private evLeads: EvLeads,
     private evPresence: EvPresence,
+    private evAgentSession: EvAgentSession,
+    private tabManager: TabManager,
     private toast: Toast,
     private storagePlugin: StoragePlugin,
     private portManager: PortManager,
@@ -77,6 +104,19 @@ class Adapter extends RcModule {
     } else {
       this.initialize();
     }
+  }
+
+  /**
+   * Initialize adapter - setup transport, listeners, and state watcher
+   */
+  initialize(): void {
+    if (typeof window === 'undefined') return;
+    this.transport = new MessageTransport({
+      targetWindow: this.adapterOptions?.targetWindow ?? window.parent,
+    } as any);
+    this.addListeners();
+    this._setupStateWatcher();
+    this.onAppStart();
   }
 
   @storage
@@ -120,59 +160,125 @@ class Adapter extends RcModule {
     this.position = position;
   }
 
-  private initialize() {
-    // TODO: Handle worker mode
-    if (typeof window === 'undefined') return;
-    const targetWindow = this.adapterOptions?.targetWindow ?? window.parent;
-    window.addEventListener('message', (event) => {
-      if (event.source !== targetWindow) return;
-      this._handleMessage(event.data);
-    });
-    this._postMessage({ type: adapterMessageTypes.init });
+  /**
+   * Setup watcher for adapter state changes
+   */
+  private _setupStateWatcher(): void {
+    watch(
+      this,
+      () => [this.closed, this.minimized, this.position] as const,
+      () => {
+        this._pushAdapterState();
+      },
+      { multiple: true },
+    );
   }
 
-  private _handleMessage(payload: any) {
-    if (typeof payload !== 'object') return;
-    switch (payload.type) {
-      case adapterMessageTypes.syncClosed:
-        this.setClosed(payload.closed);
-        break;
-      case adapterMessageTypes.syncMinimized:
-        this.setMinimized(payload.minimized);
-        break;
-      case adapterMessageTypes.syncSize:
-        this.setSize(payload.size);
-        break;
-      case adapterMessageTypes.syncPosition:
-        this.setPosition(payload.position);
-        break;
-      case adapterMessageTypes.clickToDial:
-        this.clickToDial(payload.phoneNumber);
-        break;
-      case adapterMessageTypes.setEnvironment:
-        this.setEnvironment();
-        break;
-      case adapterMessageTypes.logout:
-        this.evAuth.logout();
-        break;
-      case adapterMessageTypes.dialLead:
-        this.dialLead(payload.lead, payload.destination);
-        break;
-      default:
-        break;
-    }
+  /**
+   * Add message listeners for parent window communication
+   */
+  addListeners(): void {
+    if (!this.transport) return;
+    // @ts-ignore
+    this.transport.addListeners({
+      push: async (payload: any): Promise<void> => {
+        if (typeof payload !== 'object') return;
+        switch (payload.type) {
+          case this.messageTypes.syncClosed:
+            this.setClosed(payload.closed);
+            break;
+          case this.messageTypes.syncMinimized:
+            this.setMinimized(payload.minimized);
+            break;
+          case this.messageTypes.syncSize:
+            this.setSize(payload.size);
+            break;
+          case this.messageTypes.syncPosition:
+            this.setPosition(payload.position);
+            break;
+          case this.messageTypes.clickToDial:
+            this.clickToDial(payload.phoneNumber);
+            break;
+          case this.messageTypes.setEnvironment:
+            this.setEnvironment();
+            break;
+          case this.messageTypes.logout:
+            this.evAuth.logout();
+            break;
+          case this.messageTypes.dialLead:
+            this.dialLead(payload.lead, payload.destination);
+            break;
+          default:
+            break;
+        }
+      },
+      request: async ({ requestId, payload }: { requestId: string; payload: any }) => {
+        if (payload.type === this.messageTypes.checkPopupWindow) {
+          let result = this.tabManager.isPopupWindowOpened;
+          if (result) {
+            this.toast.warning({ message: 'popupWindowOpened' });
+          }
+          if (
+            !result &&
+            this.evAgentSession.isIntegratedSoftphone &&
+            this.evPresence.calls.length > 0
+          ) {
+            result = true;
+            this.toast.warning({ message: 'cannotPopupWindowWithCall' });
+          }
+          this.response({ requestId, result });
+        }
+      },
+    });
+  }
+
+  /**
+   * Called when state changes - pushes adapter state to parent
+   */
+  onStateChange(): void {
+    this._pushAdapterState();
+  }
+
+  /**
+   * Called on app start to notify parent window
+   */
+  onAppStart(): void {
+    if (!this.transport) return;
+    this.transport._postMessage({
+      type: this.messageTypes.init,
+    });
+  }
+
+  /**
+   * Send response for request type messages
+   */
+  protected response({ requestId, result }: { requestId: string; result: any }): void {
+    if (!this.transport) return;
+    this.transport.response({
+      requestId,
+      result,
+      error: null,
+    });
   }
 
   async clickToDial(phoneNumber: string): Promise<void> {
     await this.evCall.dialout(phoneNumber);
   }
 
-  async dialLead(leadProps: any, destination: string): Promise<void> {
+  async dialLead(leadProps: LeadProps, destination: string): Promise<void> {
     const leads = this.evLeads.filteredLeads;
-    const lead = leads.find((l) => {
+    const lead = leads.find((l: any) => {
       if (leadProps.leadId) return l.leadId === leadProps.leadId;
       if (leadProps.requestId) return l.requestId === leadProps.requestId;
       if (leadProps.externId) return l.externId === leadProps.externId;
+      if (destination) {
+        if (l.destinationE164) {
+          return l.destinationE164.includes(destination);
+        }
+        if (l.destination) {
+          return l.destination.includes(destination);
+        }
+      }
       return false;
     });
     if (!lead) return;
@@ -180,7 +286,7 @@ class Adapter extends RcModule {
       await this.evLeads.dialLead(lead, destination);
       this.onCallLead(lead, destination);
     } catch (error) {
-      console.error('Error calling lead', error);
+      this.logger.error('Error calling lead', error);
     }
   }
 
@@ -191,33 +297,78 @@ class Adapter extends RcModule {
   }
 
   onNewCall(call: any): void {
-    this._postMessage({ type: adapterMessageTypes.newCall, call });
+    this._postMessage({ type: this.messageTypes.newCall, call });
   }
 
   onRingCall(call: any): void {
-    this._postMessage({ type: adapterMessageTypes.ringCall, call });
+    this._postMessage({ type: this.messageTypes.ringCall, call });
+  }
+
+  onSIPRingCall(message: any): void {
+    this._postMessage({ type: this.messageTypes.sipRingCall, message });
+  }
+
+  onSIPEndCall(message: any): void {
+    this._postMessage({ type: this.messageTypes.sipEndCall, message });
   }
 
   onEndCall(call: any): void {
-    this._postMessage({ type: adapterMessageTypes.endCall, call });
+    this._postMessage({ type: this.messageTypes.endCall, call });
+  }
+
+  onManualPassLead({ callbackDTS, ...params }: ManualPassLeadParams): void {
+    this._postMessage({
+      type: this.messageTypes.manualPassLead,
+      ...params,
+    });
   }
 
   onCallLead(lead: any, destination: string): void {
-    this._postMessage({ type: adapterMessageTypes.callLead, lead, destination });
+    this._postMessage({ type: this.messageTypes.callLead, lead, destination });
   }
 
   onLoadLeads(leads: any[]): void {
-    this._postMessage({ type: adapterMessageTypes.loadLeads, leads });
+    this._postMessage({ type: this.messageTypes.loadLeads, leads });
   }
 
   popUpWindow(): void {
     this.setMinimized(false);
   }
 
-  private _postMessage(msg: any): void {
-    const targetWindow = this.adapterOptions?.targetWindow ?? window.parent;
-    if (!targetWindow) return;
-    targetWindow.postMessage(msg, '*');
+  /**
+   * Push adapter state to parent window when state changes
+   */
+  _pushAdapterState(): void {
+    if (
+      this._lastClosed !== this.closed ||
+      this._lastMinimized !== this.minimized ||
+      this._lastPosition.translateX !== this.position.translateX ||
+      this._lastPosition.translateY !== this.position.translateY ||
+      this._lastPosition.minTranslateX !== this.position.minTranslateX ||
+      this._lastPosition.minTranslateY !== this.position.minTranslateY
+    ) {
+      this._lastClosed = this.closed;
+      this._lastMinimized = this.minimized;
+      this._lastPosition = this.position;
+      this._postMessage({
+        type: this.messageTypes.pushAdapterState,
+        size: this.size,
+        minimized: this.minimized,
+        closed: this.closed,
+        position: this.position,
+      });
+    }
+  }
+
+  /**
+   * Post message to parent window via transport
+   */
+  _postMessage(msg: any): void {
+    if (!this.transport) return;
+    this.transport._postMessage({
+      type: this.transport.events.push,
+      payload: msg,
+    });
   }
 }
 

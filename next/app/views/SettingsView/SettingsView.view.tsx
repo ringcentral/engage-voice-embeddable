@@ -6,6 +6,9 @@ import {
   useConnector,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
+import { LinkLine } from '@ringcentral-integration/next-widgets/components';
+import { Button } from '@ringcentral/spring-ui';
+import { SettingsMd, RefreshMd } from '@ringcentral/spring-icon';
 import React, { useCallback } from 'react';
 
 import { EvAuth } from '../../services/EvAuth';
@@ -72,11 +75,9 @@ class SettingsView extends RcViewModule {
     const version = this._options?.version || '1.0.0';
 
     return (
-      <div className="flex flex-col h-full bg-neutral-base p-4 overflow-y-auto">
-        <h1 className="typography-title mb-6">{t('settings')}</h1>
-
-        {/* Agent Info */}
-        <div className="mb-6 p-4 bg-neutral-b5 rounded-lg">
+      <div className="flex flex-col h-full bg-neutral-base overflow-y-auto">
+        {/* Agent Info Header */}
+        <div className="p-4 bg-neutral-b5">
           <div className="typography-subtitle mb-1">{t('agentInfo')}</div>
           <div className="typography-mainText text-neutral-b1">{agentName}</div>
           {loginType && (
@@ -86,40 +87,44 @@ class SettingsView extends RcViewModule {
           )}
         </div>
 
-        {/* Settings Menu */}
+        {/* Settings Menu using LinkLine */}
         <div className="flex-1">
-          <button
-            type="button"
+          <LinkLine
             onClick={handleManualDialSettings}
-            className="w-full p-4 mb-2 border border-neutral-b4 rounded-lg bg-neutral-base hover:bg-neutral-b5 transition-colors text-left"
+            startIcon={SettingsMd}
+            data-sign="manualDialSettings"
           >
-            <span className="typography-subtitle">{t('manualDialSettings')}</span>
-          </button>
+            {t('manualDialSettings')}
+          </LinkLine>
 
-          <button
-            type="button"
+          <LinkLine
             onClick={handleUpdateSession}
-            className="w-full p-4 mb-2 border border-neutral-b4 rounded-lg bg-neutral-base hover:bg-neutral-b5 transition-colors text-left"
+            startIcon={RefreshMd}
+            data-sign="updateSession"
           >
-            <span className="typography-subtitle">{t('updateSession')}</span>
-          </button>
+            {t('updateSession')}
+          </LinkLine>
         </div>
 
         {/* Version */}
-        <div className="text-center mb-4">
+        <div className="text-center py-4">
           <span className="typography-descriptor text-neutral-b3">
             {t('version')}: {version}
           </span>
         </div>
 
         {/* Logout Button */}
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="w-full py-3 border border-danger text-danger rounded-lg typography-subtitle hover:bg-danger-t10 transition-colors"
-        >
-          {t('logout')}
-        </button>
+        <div className="p-4">
+          <Button
+            variant="outlined"
+            color="danger"
+            fullWidth
+            onClick={handleLogout}
+            data-sign="logoutButton"
+          >
+            {t('logout')}
+          </Button>
+        </div>
       </div>
     );
   }

@@ -28,6 +28,8 @@ export interface SessionConfigViewUIProps {
   showSkillProfile: boolean;
   /** Whether auto answer toggle should be shown */
   showAutoAnswer: boolean;
+  /** Whether dial group section should be shown */
+  showDialGroup: boolean;
   /** Display text for selected inbound queues */
   inboundQueuesFieldText: string;
 }
