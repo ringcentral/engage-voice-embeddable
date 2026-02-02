@@ -59,6 +59,35 @@ window.addEventListener('message', (e) => {
 
 Or Receive event with `RCAdapter` global object: [demo](api.md#register-a-logger-and-contact-matcher-service)
 
+## SIP Connection Events
+
+Events for monitoring SIP/WebRTC connection state (Integrated Softphone mode only):
+
+- `rc-ev-sipRegistered` - SIP successfully registered
+- `rc-ev-sipUnregistered` - SIP disconnected/unregistered
+- `rc-ev-sipUnstable` - SIP connection unstable/attempting reconnection
+- `rc-ev-sipFailed` - SIP registration failed
+
+```js
+window.addEventListener('message', (e) => {
+  const data = e.data;
+  if (data.type === "MessageTransport-push") {
+    if (data.payload.type === 'rc-ev-sipRegistered') {
+      console.log('SIP registered successfully');
+    }
+    if (data.payload.type === 'rc-ev-sipUnregistered') {
+      console.log('SIP unregistered/disconnected');
+    }
+    if (data.payload.type === 'rc-ev-sipUnstable') {
+      console.log('SIP connection unstable');
+    }
+    if (data.payload.type === 'rc-ev-sipFailed') {
+      console.log('SIP registration failed');
+    }
+  }
+});
+```
+
 ## Lead events
 
 For preview dial mode:
