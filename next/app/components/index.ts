@@ -17,3 +17,4 @@ export * from './EvCallControlButtons';
 export * from './LeadItem';
 export * from './TimezoneSelect';
 export * from './EvAlertRenderer';
+export * from './SessionConfig';

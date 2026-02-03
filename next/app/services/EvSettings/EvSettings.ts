@@ -3,6 +3,7 @@ import {
   injectable,
   optional,
   RcModule,
+  PortManager,
 } from '@ringcentral-integration/next-core';
 
 import { EvClient } from '../EvClient';
@@ -25,9 +26,20 @@ class EvSettings extends RcModule {
     private evClient: EvClient,
     private evAuth: EvAuth,
     private evAgentSession: EvAgentSession,
+    private portManager: PortManager,
     @optional('EvSettingsOptions') private evSettingsOptions?: EvSettingsOptions,
   ) {
     super();
+    if (this.portManager?.shared) {
+      this.portManager.onClient(() => {
+        this.initialize();
+      });
+    } else {
+      this.initialize();
+    }
+  }
+
+  initialize() {
     this.evAgentSession.onTriggerConfig(() => {
       this._resetOffhook();
     });

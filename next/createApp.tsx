@@ -31,6 +31,7 @@ export interface AppConfig {
     enableDiscovery?: boolean;
   };
   evAgentConfig: EvAgentConfig;
+  analyticsKey: string;
 }
 
 /**
@@ -49,6 +50,10 @@ export const createApp = async (
     evAgentConfig,
     analyticsKey,
   } = config as AppConfig;
+
+  if (typeof document !== 'undefined') {
+    window.evAuthHost = evAgentConfig.authHost;
+  }
 
   const appConfig = getAppConfig({
     appVersion: '0.0.1',

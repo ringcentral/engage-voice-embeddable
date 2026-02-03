@@ -1,12 +1,4 @@
-import {
-  AppAnnouncementRender,
-  useAppFooter,
-} from '@ringcentral-integration/micro-core/src/app/components';
-import {
-  HeaderNavViewSpring,
-  SpringAppRootView,
-  VIEW_TRANSITION_DETAIL_IDENTIFY,
-} from '@ringcentral-integration/micro-core/src/app/views';
+import React, { ReactNode } from 'react';
 import {
   autobind,
   injectable,
@@ -15,32 +7,40 @@ import {
   Route as RouterRoute,
   Switch,
 } from '@ringcentral-integration/next-core';
-import React, { ReactNode } from 'react';
-
+import {
+  AppAnnouncementRender,
+  useAppFooter,
+} from '@ringcentral-integration/micro-core/src/app/components';
+import {
+  HeaderNavViewSpring,
+  SpringAppRootView,
+  HeaderView,
+  VIEW_TRANSITION_DETAIL_IDENTIFY,
+} from '@ringcentral-integration/micro-core/src/app/views';
+import { ContactAvatar } from '@ringcentral-integration/micro-contacts/src/app/components';
 // Core Views
-import { MainView } from './app/views/MainView';
-import { LoginView } from './app/views/LoginView';
-import { SessionConfigView } from './app/views/SessionConfigView';
-import { DialerView } from './app/views/DialerView';
-import { ActivityCallView } from './app/views/ActivityCallView';
-import { CallHistoryView } from './app/views/CallHistoryView';
-import { LeadsView } from './app/views/LeadsView';
-import { ManualDialSettingsView } from './app/views/ManualDialSettingsView';
+import { MainView } from './views/MainView';
+import { LoginView } from './views/LoginView';
+import { SessionConfigView } from './views/SessionConfigView';
+import { ActivityCallView } from './views/ActivityCallView';
+import { ManualDialSettingsView } from './views/ManualDialSettingsView';
 
 // New Views
-import { ChooseAccountView } from './app/views/ChooseAccountView';
-import { SessionUpdateView } from './app/views/SessionUpdateView';
-import { SettingsView } from './app/views/SettingsView';
-import { TransferCallView } from './app/views/TransferCallView';
-import { TransferInternalView } from './app/views/TransferInternalView';
-import { TransferPhoneBookView } from './app/views/TransferPhoneBookView';
-import { TransferManualEntryView } from './app/views/TransferManualEntryView';
-import { RequeueCallGroupView } from './app/views/RequeueCallGroupView';
-import { RequeueCallGroupItemView } from './app/views/RequeueCallGroupItemView';
-import { ActiveCallListView } from './app/views/ActiveCallListView';
-import { CallHistoryDetailView } from './app/views/CallHistoryDetailView';
+import { ChooseAccountView } from './views/ChooseAccountView';
+import { SessionUpdateView } from './views/SessionUpdateView';
+import { SessionInfoView } from './views/SessionInfoView';
+import { SettingsView } from './views/SettingsView';
+import { TransferCallView } from './views/TransferCallView';
+import { TransferInternalView } from './views/TransferInternalView';
+import { TransferPhoneBookView } from './views/TransferPhoneBookView';
+import { TransferManualEntryView } from './views/TransferManualEntryView';
+import { RequeueCallGroupView } from './views/RequeueCallGroupView';
+import { RequeueCallGroupItemView } from './views/RequeueCallGroupItemView';
+import { ActiveCallListView } from './views/ActiveCallListView';
+import { CallHistoryDetailView } from './views/CallHistoryDetailView';
+import { AgentView } from './views/AgentView';
 
-import type { AppViewOptions } from './interfaces';
+import type { AppViewOptions } from '../interfaces';
 
 /**
  * AppView - Root application view
@@ -70,6 +70,7 @@ class AppView extends RcViewModule {
     {
       path: '/chooseAccount',
       component: this._chooseAccountView.component,
+      authentication: true,
     },
     {
       path: '/sessionConfig',
@@ -82,8 +83,13 @@ class AppView extends RcViewModule {
       authentication: true,
     },
     {
-      path: '/dialer',
-      component: this._dialerView.component,
+      path: '/sessionInfo',
+      component: this._sessionInfoView.component,
+      authentication: true,
+    },
+    {
+      path: '/agent/:tabId?',
+      component: this._agentView.component,
       authentication: true,
     },
     // Call-related routes (more specific routes first)
@@ -127,30 +133,19 @@ class AppView extends RcViewModule {
       component: this._activityCallView.component,
       authentication: true,
     },
-    // History routes
+    // History detail route (for viewing specific call history)
     {
       path: '/history/:id/:method',
       component: this._callHistoryDetailView.component,
       authentication: true,
     },
     {
-      path: '/history',
-      component: this._callHistoryView.component,
-      authentication: true,
-    },
-    // Other authenticated routes
-    {
-      path: '/leads',
-      component: this._leadsView.component,
-      authentication: true,
-    },
-    {
-      path: '/settings/main',
+      path: '/settings',
       component: this._settingsView.component,
       authentication: true,
     },
     {
-      path: '/settings',
+      path: '/settings/manualDial',
       component: this._manualDialSettingsView.component,
       authentication: true,
     },
@@ -179,19 +174,19 @@ class AppView extends RcViewModule {
 
   constructor(
     private _appRootView: SpringAppRootView,
+    private _headerView: HeaderView,
     private _headerNavView: HeaderNavViewSpring,
     private _loginView: LoginView,
     // Core views
     private _mainView: MainView,
     private _sessionConfigView: SessionConfigView,
-    private _dialerView: DialerView,
+    private _agentView: AgentView,
     private _activityCallView: ActivityCallView,
-    private _callHistoryView: CallHistoryView,
-    private _leadsView: LeadsView,
     private _manualDialSettingsView: ManualDialSettingsView,
     // New views
     private _chooseAccountView: ChooseAccountView,
     private _sessionUpdateView: SessionUpdateView,
+    private _sessionInfoView: SessionInfoView,
     private _settingsView: SettingsView,
     private _transferCallView: TransferCallView,
     private _transferInternalView: TransferInternalView,
@@ -216,9 +211,14 @@ class AppView extends RcViewModule {
           path="/"
           component={() => (
             <>
-              <main className="flex flex-col flex-auto overflow-y-auto h-full overflow-x-hidden">
-                <Switch>{this.routesMap.authentication}</Switch>
-              </main>
+              <this._headerView.component
+                standAlone
+                ContactAvatar={ContactAvatar}
+              >
+                <main className="flex flex-col flex-auto overflow-y-auto h-full overflow-x-hidden">
+                  <Switch>{this.routesMap.authentication}</Switch>
+                </main>
+              </this._headerView.component>
               <this.Footer />
             </>
           )}

@@ -1,10 +1,9 @@
 import {
-  action,
   injectable,
-  inject,
   optional,
-  state,
   watch,
+  PortManager,
+  RouterPlugin,
 } from '@ringcentral-integration/next-core';
 import {
   Auth,
@@ -18,9 +17,6 @@ import {
   Locale,
   Toast,
 } from '@ringcentral-integration/micro-core/src/app/services';
-import { popWindow } from '@ringcentral-integration/widgets/lib/popWindow';
-import { oAuthMessageTypes } from '../../../enums';
-import { TabManager } from '../EvTabManager';
 
 /**
  * OAuth options for configuration
@@ -39,10 +35,25 @@ export interface OAuthOptions extends OAuthBaseOptions {
 @injectable({
   name: 'OAuth',
 })
-class OAuth extends OAuthBase {
+export class OAuth extends OAuthBase {
   private _userLogout = false;
   private _jwtLogged = false;
-  private _loginWindow: Window | null = null;
+
+  constructor(
+    protected _client: Client,
+    protected _router: RouterPlugin,
+    protected _portManager: PortManager,
+    protected override _auth: Auth,
+    protected override _toast: Toast,
+    protected override _locale: Locale,
+    protected override _brand: Brand,
+    @optional('TabManager')
+    protected override _tabManager?: any,
+    @optional('OAuthOptions')
+    protected override _oAuthOptions?: OAuthOptions,
+  ) {
+    super(_client, _router, _portManager, _auth, _toast, _locale, _brand, _tabManager, _oAuthOptions);
+  }
 
   get disableLoginPopup(): boolean {
     return (this._oAuthOptions as OAuthOptions)?.disableLoginPopup || false;
@@ -50,7 +61,7 @@ class OAuth extends OAuthBase {
 
   get jwtOwnerId(): string | null {
     if (!window.localStorage) return null;
-    return localStorage.getItem(`${this._prefix}-jwt-owner-id`);
+    return localStorage.getItem(`${this.prefix}-jwt-owner-id`);
   }
 
   get jwtOwnerChanged(): boolean {
@@ -60,7 +71,7 @@ class OAuth extends OAuthBase {
 
   setJwtOwnerId(jwtOwnerId: string): void {
     if (!window.localStorage) return;
-    localStorage.setItem(`${this._prefix}-jwt-owner-id`, jwtOwnerId);
+    localStorage.setItem(`${this.prefix}-jwt-owner-id`, jwtOwnerId);
   }
 
   /**
@@ -97,25 +108,8 @@ class OAuth extends OAuthBase {
     }
   }
 
-  override onInitOnce(): void {
-    // Listen for callback messages from redirect page
-    window.addEventListener('message', ({ data = {} }) => {
-      if (!data) return;
-      const { callbackUri } = data;
-      if (callbackUri) {
-        this.handleCallbackLogin(callbackUri);
-      }
-    });
-    // Close login window on page unload
-    window.addEventListener('beforeunload', () => {
-      if (this._loginWindow) {
-        try {
-          this._loginWindow.close();
-        } catch (error) {
-          /* ignore error */
-        }
-      }
-    });
+  override initialize(): void {
+    super.initialize();
     // Watch for auth status changes to handle JWT login
     watch(
       this,
@@ -134,5 +128,3 @@ class OAuth extends OAuthBase {
     );
   }
 }
-
-export { OAuth };

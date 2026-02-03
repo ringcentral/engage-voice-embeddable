@@ -6,16 +6,11 @@
   box-sizing: border-box;
 }
 
+body,
 html,
-body {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
+#app {
+  @apply h-full w-full;
+
+  @apply bg-neutral-base text-neutral-b0;
 }
 
-#app {
-  height: 100%;
-  width: 100%;
-}

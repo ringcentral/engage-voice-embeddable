@@ -19,7 +19,7 @@ export interface RedirectOptions {
   sessionConfigPath?: string;
   /**
    * Route to redirect to after successful login and session configuration
-   * @default '/dialer'
+   * @default '/agent/dialer'
    */
   dialerPath?: string;
 }

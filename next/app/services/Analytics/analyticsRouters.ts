@@ -6,7 +6,9 @@ import type { TrackRouter } from './Analytics.interface';
  */
 export const trackRoutersMap = new Map<string, TrackRouter>([
   ['/sessionconfig', { router: '/sessionconfig', eventPostfix: 'Session Config' }],
-  ['/dialer', { router: '/dialer', eventPostfix: 'Dialer' }],
+  ['/agent/dialer', { router: '/agent/dialer', eventPostfix: 'Dialer' }],
+  ['/agent/leads', { router: '/agent/leads', eventPostfix: 'Leads' }],
+  ['/agent/history', { router: '/agent/history', eventPostfix: 'History' }],
   ['/calls', { router: '/calls', eventPostfix: 'Calls' }],
   ['/calls/active', { router: '/calls/active', eventPostfix: 'Call Control' }],
   ['/history', { router: '/history', eventPostfix: 'Call History' }],

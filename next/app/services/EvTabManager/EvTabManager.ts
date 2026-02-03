@@ -7,6 +7,8 @@ import {
   state,
   storage,
   StoragePlugin,
+  PortManager,
+  isSharedWorker,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
 
@@ -43,11 +45,22 @@ class TabManager extends RcModule {
   constructor(
     @inject('Prefix') private prefix: string,
     private storagePlugin: StoragePlugin,
+    private portManager: PortManager,
     @optional('EvTabManagerOptions')
     private evTabManagerOptions?: EvTabManagerOptions,
   ) {
     super();
     this.storagePlugin.enable(this);
+    if (this.portManager?.shared) {
+      this.portManager.onClient(() => {
+        this.initialize();
+      });
+    } else {
+      this.initialize();
+    }
+  }
+
+  initialize() {
     this._startHeartBeat();
   }
 
@@ -104,6 +117,9 @@ class TabManager extends RcModule {
   }
 
   override async onInit(): Promise<void> {
+    if (isSharedWorker) {
+      return;
+    }
     if (this.fromPopup) {
       this.setIsPopupWindowOpened(true);
     } else {

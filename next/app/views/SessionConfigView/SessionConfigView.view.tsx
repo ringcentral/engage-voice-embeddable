@@ -11,8 +11,8 @@ import {
 } from '@ringcentral-integration/next-core';
 import { Brand, Locale } from '@ringcentral-integration/micro-core/src/app/services';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
-import { Button, Switch, Icon } from '@ringcentral/spring-ui';
-import { ArrowLeftMd, CaretDownMd } from '@ringcentral/spring-icon';
+import { Button, Icon } from '@ringcentral/spring-ui';
+import { ArrowLeftMd } from '@ringcentral/spring-icon';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 
 import type { LoginTypes } from '../../../enums';
@@ -27,6 +27,7 @@ import type {
   SessionConfigViewUIFunctions,
 } from './SessionConfigView.interface';
 import i18n from './i18n';
+import { SessionConfig } from '../../components/SessionConfig';
 import { InboundQueuesPanel } from './InboundQueuesPanel';
 
 /**
@@ -190,14 +191,13 @@ class SessionConfigView extends RcViewModule {
       showInboundQueues,
       showSkillProfile,
       showAutoAnswer,
-      showDialGroup,
-      inboundQueuesFieldText,
       loginTypeList,
       skillProfileList,
       inboundQueues,
       dialGroups,
       formGroup,
       logoUrl,
+      allowOutbound,
     } = useConnector(() => ({
       ...this.getUIProps(),
       loginTypeList: this._evAgentSession.loginTypeList,
@@ -206,39 +206,47 @@ class SessionConfigView extends RcViewModule {
       dialGroups: this._evAgentSession.dialGroups,
       formGroup: this._evAgentSession.formGroup,
       logoUrl: this._brand.assets?.['logo'] as string | undefined,
+      allowOutbound: this._evAuth.agentPermissions?.allowOutbound || false,
     }));
 
     const handleLoginTypeChange = useCallback(
-      (value: string) => {
-        this.setLoginType(value as LoginTypes);
+      (type: LoginTypes) => {
+        this.setLoginType(type);
       },
       [],
     );
 
     const handleSkillProfileChange = useCallback(
-      (value: string) => {
-        this.setSkillProfileId(value);
+      (profileId: string) => {
+        this.setSkillProfileId(profileId);
       },
       [],
     );
 
     const handleExtensionChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        this.setExtensionNumber(e.target.value);
+      (number: string) => {
+        this.setExtensionNumber(number);
       },
       [],
     );
 
     const handleAutoAnswerChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        this.setAutoAnswer(e.target.checked);
+      (enabled: boolean) => {
+        this.setAutoAnswer(enabled);
       },
       [],
     );
 
     const handleDialGroupChange = useCallback(
-      (value: string) => {
-        this.setDialGroupId(value);
+      (groupId: string) => {
+        this.setDialGroupId(groupId);
+      },
+      [],
+    );
+
+    const handleInboundQueuesChange = useCallback(
+      (selectedIds: string[]) => {
+        this.setInboundQueueIds(selectedIds);
       },
       [],
     );
@@ -258,6 +266,7 @@ class SessionConfigView extends RcViewModule {
       return t(selectedAgent.agentType as 'agent' | 'supervisor');
     }, [selectedAgent?.agentType, t]);
 
+    // Show inbound queues panel
     if (showQueuesPanel) {
       return (
         <InboundQueuesPanel
@@ -314,126 +323,32 @@ class SessionConfigView extends RcViewModule {
         </div>
         {/* Form Content */}
         <div className="flex-1 overflow-y-auto px-4">
-          {/* Inbound Queues */}
-          {showInboundQueues && (
-            <div className="mb-4">
-              <label className="typography-descriptor text-neutral-b2 block mb-1">
-                {t('inboundQueues')}
-              </label>
-              <button
-                type="button"
-                onClick={() => setShowQueuesPanel(true)}
-                className="w-full h-10 px-3 flex items-center justify-between border border-neutral-b4 rounded-lg bg-neutral-base hover:border-neutral-b3 transition-colors cursor-pointer"
-                data-sign="inboundQueues"
-              >
-                <span className="typography-mainText text-neutral-b1 truncate">
-                  {inboundQueuesFieldText}
-                </span>
-                <Icon symbol={CaretDownMd} size="medium" className="text-neutral-b2 flex-shrink-0" />
-              </button>
-            </div>
-          )}
-          {/* Skill Profile */}
-          {showSkillProfile && (
-            <div className="mb-4">
-              <label className="typography-descriptor text-neutral-b2 block mb-1">
-                {t('skillProfile')}
-              </label>
-              <div className="relative">
-                <select
-                  value={formGroup.selectedSkillProfileId}
-                  onChange={(e) => handleSkillProfileChange(e.target.value)}
-                  className="w-full h-10 px-3 pr-8 border border-neutral-b4 rounded-lg bg-neutral-base typography-mainText text-neutral-b1 appearance-none cursor-pointer hover:border-neutral-b3 focus:border-primary-b focus:outline-none transition-colors"
-                  data-sign="skillProfile"
-                  aria-label={t('skillProfile')}
-                >
-                  {skillProfileList.map((profile) => (
-                    <option key={profile.profileId} value={profile.profileId}>
-                      {profile.profileName}
-                    </option>
-                  ))}
-                </select>
-                <Icon symbol={CaretDownMd} size="medium" className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-b2 pointer-events-none" />
-              </div>
-            </div>
-          )}
-          {/* Dial Group */}
-          {showDialGroup && (
-            <div className="mb-4">
-              <label className="typography-descriptor text-neutral-b2 block mb-1">
-                {t('dialGroup')}
-              </label>
-              <div className="relative">
-                <select
-                  value={formGroup.dialGroupId || ''}
-                  onChange={(e) => handleDialGroupChange(e.target.value)}
-                  className="w-full h-10 px-3 pr-8 border border-neutral-b4 rounded-lg bg-neutral-base typography-mainText text-neutral-b1 appearance-none cursor-pointer hover:border-neutral-b3 focus:border-primary-b focus:outline-none transition-colors"
-                  data-sign="dialGroup"
-                  aria-label={t('dialGroup')}
-                >
-                  {dialGroups.map((group: any) => (
-                    <option key={group.groupId} value={group.groupId}>
-                      {group.groupId ? `ID: ${group.groupId} ${group.groupName}` : group.groupName}
-                    </option>
-                  ))}
-                </select>
-                <Icon symbol={CaretDownMd} size="medium" className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-b2 pointer-events-none" />
-              </div>
-            </div>
-          )}
-          {/* Voice Connection */}
-          <div className="mb-4">
-            <label className="typography-descriptor text-neutral-b2 block mb-1">
-              {t('voiceConnection')}
-            </label>
-            <div className="relative">
-              <select
-                value={formGroup.loginType}
-                onChange={(e) => handleLoginTypeChange(e.target.value)}
-                className="w-full h-10 px-3 pr-8 border border-neutral-b4 rounded-lg bg-neutral-base typography-mainText text-neutral-b1 appearance-none cursor-pointer hover:border-neutral-b3 focus:border-primary-b focus:outline-none transition-colors"
-                data-sign="loginType"
-                aria-label={t('voiceConnection')}
-              >
-                {loginTypeList.map((type) => (
-                  <option key={type.id} value={type.id}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-              <Icon symbol={CaretDownMd} size="medium" className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-b2 pointer-events-none" />
-            </div>
-          </div>
-          {/* External Phone Number */}
-          {isExternalPhone && (
-            <div className="mb-4">
-              <label className="typography-descriptor text-neutral-b2 block mb-1">
-                {t('extensionNumber')}
-              </label>
-              <input
-                type="text"
-                value={formGroup.extensionNumber || ''}
-                onChange={handleExtensionChange}
-                placeholder={t('enterYourPhoneNumber')}
-                className="w-full h-10 px-3 border border-neutral-b4 rounded-lg bg-neutral-base typography-mainText text-neutral-b1 placeholder:text-neutral-b3 hover:border-neutral-b3 focus:border-primary-b focus:outline-none transition-colors"
-                data-sign="extensionNumber"
-              />
-            </div>
-          )}
-          {/* Auto Answer */}
-          {showAutoAnswer && (
-            <div className="mb-4">
-              <div className="flex items-center justify-between">
-                <span className="typography-mainText text-neutral-b1">
-                  {t('autoAnswer')}
-                </span>
-                <Switch
-                  checked={formGroup.autoAnswer || false}
-                  onChange={handleAutoAnswerChange}
-                  data-sign="autoAnswer"
-                />
-              </div>
-            </div>
-          )}
+          <SessionConfig
+            showInboundQueues={showInboundQueues}
+            inboundQueues={inboundQueues}
+            selectedInboundQueueIds={formGroup.selectedInboundQueueIds || []}
+            onInboundQueuesChange={handleInboundQueuesChange}
+            showInboundQueuesPanel={showQueuesPanel}
+            onShowInboundQueuesPanelChange={setShowQueuesPanel}
+            showSkillProfile={showSkillProfile}
+            skillProfileList={skillProfileList}
+            selectedSkillProfileId={formGroup.selectedSkillProfileId}
+            onSkillProfileChange={handleSkillProfileChange}
+            showDialGroup={allowOutbound}
+            dialGroups={dialGroups}
+            dialGroupId={formGroup.dialGroupId}
+            onDialGroupChange={handleDialGroupChange}
+            showVoiceConnection
+            loginTypeList={loginTypeList}
+            loginType={formGroup.loginType}
+            onLoginTypeChange={handleLoginTypeChange}
+            showExtensionNumber={isExternalPhone}
+            extensionNumber={formGroup.extensionNumber || ''}
+            onExtensionNumberChange={handleExtensionChange}
+            showAutoAnswer={showAutoAnswer}
+            autoAnswer={formGroup.autoAnswer || false}
+            onAutoAnswerChange={handleAutoAnswerChange}
+          />
         </div>
         {/* Continue Button */}
         <div className="px-4 py-4">

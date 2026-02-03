@@ -37,7 +37,7 @@ class Redirect extends RcModule {
     this._loginPath = this._options?.loginPath ?? '/';
     this._chooseAccountPath = this._options?.chooseAccountPath ?? '/chooseAccount';
     this._sessionConfigPath = this._options?.sessionConfigPath ?? '/sessionConfig';
-    this._dialerPath = this._options?.dialerPath ?? '/dialer';
+    this._dialerPath = this._options?.dialerPath ?? '/agent/dialer';
     if (this._portManager?.shared) {
       this._portManager.onClient(() => {
         this.initialize();

@@ -4,6 +4,7 @@ import {
   computed,
   injectable,
   optional,
+  PortManager,
   RcModule,
   state,
   storage,
@@ -92,13 +93,21 @@ class EvLeads extends RcModule {
     private evCall: EvCall,
     private toast: Toast,
     private storagePlugin: StoragePlugin,
+    private portManager: PortManager,
     @optional('EvLeadsOptions') private evLeadsOptions?: EvLeadsOptions,
   ) {
     super();
     this.storagePlugin.enable(this);
+    if (this.portManager?.shared) {
+      this.portManager.onClient(() => {
+        this.initialize();
+      });
+    } else {
+      this.initialize();
+    }
   }
 
-  override onInitOnce() {
+  initialize() {
     this._bindSubscription();
     this.evAuth.beforeAgentLogout(() => {
       this.clearLeads();

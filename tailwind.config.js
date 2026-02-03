@@ -7,6 +7,7 @@ module.exports = {
     './next/index.html',
     './next/*.{tsx,ts}',
     './next/app/**/*.{tsx,ts}',
+    './node_modules/@ringcentral-integration/**/*.{js,ts,jsx,tsx}',
     './node_modules/@ringcentral/spring-ui/**/*.{js,ts,jsx,tsx}',
   ],
 };

@@ -399,7 +399,7 @@ class ActivityCallView extends RcViewModule {
 
   goBack = () => {
     this.evCall.setDialoutStatus(dialoutStatuses.idle);
-    this.router.push('/dialer');
+    this.router.push('/agent/dialer');
     this.resetState();
     this.evCall.activityCallId = '';
   };

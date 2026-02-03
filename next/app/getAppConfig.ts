@@ -20,8 +20,10 @@ import {
   Toast,
 } from '@ringcentral-integration/micro-core/src/app/services';
 import {
-  HeaderNavViewSpring,
   SpringAppRootView,
+  HeaderNavViewSpring,
+  HeaderNavViewOptions,
+  SyncTabView,
 } from '@ringcentral-integration/micro-core/src/app/views';
 import {
   Auth,
@@ -31,7 +33,58 @@ import {
   OAuth,
 } from '@ringcentral-integration/micro-auth/src/app/services';
 
-import { AppView } from '../AppView';
+import { AppView } from './AppView';
+
+// Services
+import {
+  EvClient,
+  EvSubscription,
+  EvAuth,
+  EvAgentSession,
+  EvSettings,
+  EvWorkingState,
+  EvCall,
+  EvIntegratedSoftphone,
+  EvPresence,
+  Environment,
+  EvCallDisposition,
+  EvCallHistory,
+  EvTransferCall,
+  EvLeads,
+  Adapter,
+  Analytics,
+  ThirdPartyService,
+  TabManager,
+  Redirect,
+  AnalyticsOptions,
+  OAuth as OAuthWithJWT,
+} from './services';
+
+// Views
+import {
+  MainView,
+  HeaderNavViewSpring as HeaderNavView,
+  SessionConfigView,
+  DialerView,
+  ActivityCallView,
+  CallHistoryView,
+  LeadsView,
+  ManualDialSettingsView,
+  ChooseAccountView,
+  SessionUpdateView,
+  SettingsView,
+  TransferCallView,
+  TransferInternalView,
+  TransferPhoneBookView,
+  TransferManualEntryView,
+  RequeueCallGroupView,
+  RequeueCallGroupItemView,
+  ActiveCallListView,
+  CallHistoryDetailView,
+  LoginView,
+  LoginViewOptions,
+  AgentView,
+} from './views';
 
 /**
  * Brand configuration interface
@@ -59,55 +112,6 @@ export interface SDKConfig {
   brandId?: string;
   redirectUri?: string;
 }
-
-// Services
-import {
-  EvClient,
-  EvSubscription,
-  EvAuth,
-  EvAgentSession,
-  EvSettings,
-  EvWorkingState,
-  EvCall,
-  EvIntegratedSoftphone,
-  EvPresence,
-  Environment,
-  EvCallDisposition,
-  EvCallHistory,
-  EvTransferCall,
-  EvLeads,
-  Adapter,
-  Analytics,
-  ThirdPartyService,
-  TabManager,
-  Redirect,
-  AnalyticsOptions,
-  // OAuth,
-} from './services';
-
-// Views
-import {
-  MainView,
-  SessionConfigView,
-  DialerView,
-  ActivityCallView,
-  CallHistoryView,
-  LeadsView,
-  ManualDialSettingsView,
-  ChooseAccountView,
-  SessionUpdateView,
-  SettingsView,
-  TransferCallView,
-  TransferInternalView,
-  TransferPhoneBookView,
-  TransferManualEntryView,
-  RequeueCallGroupView,
-  RequeueCallGroupItemView,
-  ActiveCallListView,
-  CallHistoryDetailView,
-  LoginView,
-  LoginViewOptions,
-} from './views';
 
 /**
  * Engage Voice Agent SDK configuration
@@ -238,7 +242,10 @@ export const getAppConfig = ({
     Analytics,
     ThirdPartyService,
     TabManager,
-    OAuth,
+    {
+      provide: OAuth,
+      useClass: OAuthWithJWT,
+    },
     Redirect,
     {
       provide: 'EvClientOptions',
@@ -266,13 +273,21 @@ export const getAppConfig = ({
     {
       provide: 'EvSubscriptionOptions',
       useValue: {},
+    },
+    {
+      provide: 'HeaderNavViewOptions',
+      useValue: {} satisfies HeaderNavViewOptions,
     }
   ];
 
   // Core views
   const coreViews = [
     SpringAppRootView,
-    HeaderNavViewSpring,
+    SyncTabView,
+    {
+      provide: HeaderNavViewSpring,
+      useClass: HeaderNavView,
+    },
     LoginView,
     {
       provide: 'LoginViewOptions',
@@ -291,6 +306,7 @@ export const getAppConfig = ({
     CallHistoryView,
     LeadsView,
     ManualDialSettingsView,
+    AgentView,
     // New views
     ChooseAccountView,
     SessionUpdateView,

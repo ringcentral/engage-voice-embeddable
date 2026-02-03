@@ -1,9 +1,9 @@
 export default {
   settings: 'Settings',
-  manualDialSettings: 'Manual Dial Settings',
-  updateSession: 'Update Session',
-  logout: 'Logout',
+  agent: 'Agent',
+  general: 'General',
+  manualDialSettings: 'Manual dial settings',
+  sessionInfo: 'Session info',
+  logout: 'Sign out',
   version: 'Version',
-  agentInfo: 'Agent Information',
-  loginType: 'Login Type',
 };

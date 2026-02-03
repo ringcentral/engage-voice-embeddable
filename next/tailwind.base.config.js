@@ -34,8 +34,8 @@ const globalClasses = plugin(({ matchUtilities, theme, addBase }) => {
 const commonInclude =
   process.env.NODE_ENV === 'production'
     ? [
-        path.join(__dirname, '../node_modules/@ringcentral-integration/**/*.{tsx,ts}'),
-        path.join(__dirname, '../node_modules/@ringcentral/**/*.{tsx,ts}'),
+        path.join(__dirname, '../node_modules/@ringcentral-integration/**/*.{tsx,ts,jsx,js}'),
+        path.join(__dirname, '../node_modules/@ringcentral/**/*.{tsx,ts,jsx,js}'),
       ]
     : /**å
        * in non production mode, we only watch one file in order to speed up the build process

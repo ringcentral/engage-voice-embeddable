@@ -10,7 +10,13 @@ import { getWebpackConfig } from './webpack.config';
 export async function devServer() {
   const projectConfig = getProjectConfig<AppConfig>();
   projectConfig.themePath = path.resolve(__dirname, 'next');
-  const webpackConfig = getWebpackConfig({ projectConfig, devServer: true });
+  const webpackConfig = getWebpackConfig({
+    projectConfig,
+    devServer: true,
+    templateParameters: {
+      agentConfig: projectConfig.appConfig.evAgentConfig,
+    },
+  });
   const compiler = webpack({
     ...webpackConfig,
     stats: {
@@ -44,7 +50,12 @@ export async function devServer() {
 export async function build() {
   const projectConfig = getProjectConfig<AppConfig>();
   projectConfig.themePath = path.resolve(__dirname, 'next');
-  const webpackConfig = getWebpackConfig({ projectConfig });
+  const webpackConfig = getWebpackConfig({
+    projectConfig,
+    templateParameters: {
+      agentConfig: projectConfig.appConfig.evAgentConfig,
+    },
+  });
   await new Promise((resolve, reject) => {
     webpack(webpackConfig, (err, stats) => {
       if (err || stats!.hasErrors()) {

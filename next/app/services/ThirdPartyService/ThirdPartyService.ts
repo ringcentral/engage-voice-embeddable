@@ -2,6 +2,7 @@ import {
   action,
   injectable,
   optional,
+  PortManager,
   RcModule,
   state,
 } from '@ringcentral-integration/next-core';
@@ -39,10 +40,21 @@ class ThirdPartyService extends RcModule {
   private _activityMatches: Record<string, any[]> = {};
 
   constructor(
+    protected portManager: PortManager,
     @optional('ThirdPartyServiceOptions')
     private thirdPartyServiceOptions?: ThirdPartyServiceOptions,
   ) {
     super();
+    if (this.portManager?.shared) {
+      this.portManager.onClient(() => {
+        this.initialize();
+      });
+    } else {
+      this.initialize();
+    }
+  }
+
+  initialize() {
     this._initTransport();
   }
 

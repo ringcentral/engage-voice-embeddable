@@ -4,6 +4,9 @@
     <%= meta %> <%= fontSpring %>
     <title><%= appName %></title>
     <link rel="icon" type="image/x-icon" href="icon.svg" />
+    <script>
+      window.evAuthHost = '<%= agentConfig.authHost %>';
+    </script>
     <script src="./agentLibrary.js"></script>
     <!-- prettier-ignore -->
     <%= themeInject %>

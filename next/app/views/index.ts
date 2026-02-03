@@ -7,10 +7,12 @@ export * from './ActivityCallView';
 export * from './CallHistoryView';
 export * from './LeadsView';
 export * from './ManualDialSettingsView';
+export * from './AgentView';
 
 // New views
 export * from './ChooseAccountView';
 export * from './SessionUpdateView';
+export * from './SessionInfoView';
 export * from './SettingsView';
 export * from './TransferCallView';
 export * from './TransferInternalView';
@@ -20,3 +22,6 @@ export * from './RequeueCallGroupView';
 export * from './RequeueCallGroupItemView';
 export * from './ActiveCallListView';
 export * from './CallHistoryDetailView';
+
+// Layout views
+export * from './HeaderNavViewSpring';
