@@ -140,14 +140,15 @@ class AppView extends RcViewModule {
       authentication: true,
     },
     {
-      path: '/settings',
-      component: this._settingsView.component,
-      authentication: true,
-    },
-    {
       path: '/settings/manualDial',
       component: this._manualDialSettingsView.component,
       authentication: true,
+    },
+    {
+      path: '/settings',
+      component: this._settingsView.component,
+      authentication: true,
+      exact: true,
     },
     // Custom routes from options
     ...(this._appViewOptions?.routes || []),
