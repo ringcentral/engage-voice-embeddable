@@ -11,7 +11,7 @@ import {
   Line,
   LinkLine,
 } from '@ringcentral-integration/next-widgets/components';
-import { Button, Tooltip, Text } from '@ringcentral/spring-ui';
+import { Button, Text } from '@ringcentral/spring-ui';
 import React, { useCallback } from 'react';
 
 import { EvAuth } from '../../services/EvAuth';
@@ -82,24 +82,6 @@ class SettingsView extends RcViewModule {
   }
 
   /**
-   * Get agent name from config
-   */
-  get agentName(): string | null {
-    const settings = this._evAuth.agentConfig?.agentSettings;
-    if (!settings?.firstName && !settings?.lastName) {
-      return null;
-    }
-    return `${settings.firstName || ''} ${settings.lastName || ''}`.trim();
-  }
-
-  /**
-   * Get username from agent settings
-   */
-  get userName(): string {
-    return this._evAuth.agentSettings?.username || '';
-  }
-
-  /**
    * Check if session info page should be accessible
    */
   get canAccessSessionInfo(): boolean {
@@ -109,9 +91,7 @@ class SettingsView extends RcViewModule {
   component(_props?: SettingsViewProps) {
     const { t } = useLocale(i18n);
 
-    const { agentName, userName, canAccessSessionInfo } = useConnector(() => ({
-      agentName: this.agentName,
-      userName: this.userName,
+    const { canAccessSessionInfo } = useConnector(() => ({
       canAccessSessionInfo: this.canAccessSessionInfo,
     }));
 
@@ -140,41 +120,22 @@ class SettingsView extends RcViewModule {
           <div className="space-y-3 py-3">
             {/* Agent Section */}
             <Section label={t('agent')}>
-              {/* Agent Info */}
-              <Line data-sign="agentInfo">
-                <div className="flex flex-col py-1">
-                  {agentName && (
-                    <Tooltip title={agentName}>
-                      <span className="typography-subtitle text-neutral-b0 truncate">
-                        {agentName}
-                      </span>
-                    </Tooltip>
-                  )}
-                  <Tooltip title={userName}>
-                    <span className="typography-descriptor text-neutral-b2 truncate">
-                      {userName}
-                    </span>
-                  </Tooltip>
-                </div>
-              </Line>
-
               {/* Session Info - Navigate to detail page */}
               {canAccessSessionInfo && (
                 <LinkLine data-sign="sessionInfo" onClick={handleSessionInfo}>
                   {t('sessionInfo')}
                 </LinkLine>
               )}
-            </Section>
-
-            {/* General Section */}
-            <Section label={t('general')}>
               <LinkLine
                 data-sign="manualDialSettings"
                 onClick={handleManualDialSettings}
               >
                 {t('manualDialSettings')}
               </LinkLine>
+            </Section>
 
+            {/* General Section */}
+            <Section label={t('general')}>
               <Line
                 data-sign="version"
                 endAdornment={

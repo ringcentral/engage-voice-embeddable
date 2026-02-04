@@ -14,13 +14,13 @@ import {
 import {
   HeaderNavViewSpring,
   SpringAppRootView,
-  HeaderView,
   VIEW_TRANSITION_DETAIL_IDENTIFY,
 } from '@ringcentral-integration/micro-core/src/app/views';
-import { ContactAvatar } from '@ringcentral-integration/micro-contacts/src/app/components';
+import { ContactAvatar } from './components/ContactAvatar';
 // Core Views
 import { MainView } from './views/MainView';
 import { LoginView } from './views/LoginView';
+import { HeaderView } from './views/HeaderView';
 import { SessionConfigView } from './views/SessionConfigView';
 import { ActivityCallView } from './views/ActivityCallView';
 import { ManualDialSettingsView } from './views/ManualDialSettingsView';

@@ -63,6 +63,7 @@ import {
 // Views
 import {
   MainView,
+  HeaderView,
   HeaderNavViewSpring as HeaderNavView,
   SessionConfigView,
   DialerView,
@@ -294,7 +295,8 @@ export const getAppConfig = ({
       useValue: {
         routeAfterLogin: '/sessionConfig',
       } satisfies LoginViewOptions,
-    }
+    },
+    HeaderView,
   ];
 
   // Engage Voice views
