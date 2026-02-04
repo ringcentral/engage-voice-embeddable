@@ -6,7 +6,7 @@ export interface EvCallHistoryOptions {
 }
 
 /**
- * Formatted call entry
+ * Formatted call entry - compatible with CallsListPage from micro-phone
  */
 export interface FormattedCall {
   id: string;
@@ -20,6 +20,14 @@ export interface FormattedCall {
   activityMatches: ActivityMatch[];
   startTime: number;
   isDisposed?: boolean;
+  /** Call result status - used for filtering (e.g., 'Missed', 'Answered', 'Answered Elsewhere') */
+  result?: string;
+  /** Whether the call is logged in CRM */
+  isLogged?: boolean;
+  /** Telephony session ID */
+  telephonySessionId?: string;
+  /** Session ID */
+  sessionId?: string;
 }
 
 /**

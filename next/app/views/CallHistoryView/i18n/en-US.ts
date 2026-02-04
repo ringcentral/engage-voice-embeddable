@@ -3,4 +3,19 @@ export default {
   noCallHistory: 'No call history',
   inbound: 'Inbound',
   outbound: 'Outbound',
+  // Filter labels
+  callsFilterAll: 'All calls',
+  callsFilterOutgoing: 'Outgoing',
+  callsFilterIncoming: 'Incoming',
+  // Empty states
+  noCalls: 'No calls',
+  noSearchResults: 'No search results',
+  // Action menu
+  updateCallLog: 'Update call log',
+  createCallLog: 'Create call log',
+  // Time formatting
+  yesterday: 'Yesterday',
+  // Status
+  unknown: 'Unknown',
+  logged: 'Logged',
 } as const;

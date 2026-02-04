@@ -2,10 +2,12 @@ import { Locale } from '@ringcentral-integration/micro-core/src/app/services';
 
 import { callDirection } from '../../../enums';
 import {
+  action,
   computed,
   injectable,
   optional,
   RcModule,
+  state,
   watch,
 } from '@ringcentral-integration/next-core';
 
@@ -15,6 +17,7 @@ import { makeCallsUniqueIdentifies } from '../../../lib/callUniqueIdentifies';
 import { EvPresence } from '../EvPresence';
 import { EvSubscription } from '../EvSubscription';
 import { EvAgentSession } from '../EvAgentSession';
+import { EvCallDisposition } from '../EvCallDisposition';
 import type {
   EvCallHistoryOptions,
   FormattedCall,
@@ -32,16 +35,39 @@ import type {
 class EvCallHistory extends RcModule {
   private _contactMatches: ContactMatchMapping = {};
   private _activityMatches: ActivityMatchMapping = {};
+  private _searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private evPresence: EvPresence,
     private evSubscription: EvSubscription,
     private evAgentSession: EvAgentSession,
+    private evCallDisposition: EvCallDisposition,
     private locale: Locale,
     @optional('EvCallHistoryOptions')
     private evCallHistoryOptions?: EvCallHistoryOptions,
   ) {
     super();
+  }
+
+  @state
+  searchInput = '';
+
+  @action
+  updateSearchInput(value: string) {
+    this.searchInput = value;
+  }
+
+  /**
+   * Debounced search - triggers search after delay
+   */
+  debouncedSearch() {
+    if (this._searchDebounceTimer) {
+      clearTimeout(this._searchDebounceTimer);
+    }
+    this._searchDebounceTimer = setTimeout(() => {
+      // Search is applied via computed property filtering
+      this._searchDebounceTimer = null;
+    }, 300);
   }
 
   get contactMatches(): ContactMatchMapping {
@@ -83,6 +109,7 @@ class EvCallHistory extends RcModule {
     that.contactMatches,
     that.activityMatches,
     that.locale.currentLocale,
+    that.evCallDisposition.dispositionStateMapping,
   ])
   get formattedCalls(): FormattedCall[] {
     return this.rawCalls.slice(0, 250).map((call: any) => {
@@ -101,11 +128,12 @@ class EvCallHistory extends RcModule {
         name: call.agentId,
         phoneNumber: this._formatPhoneNumber(call.agentId),
       };
-      // Get contact name from matches
+      // Get contact name from matches (enhanced matching from old module)
       let name = '';
       if (contactMatches.length > 0) {
         name = contactMatches[0].name;
       }
+      // Enhanced: when both contactMatches and activityMatches exist, find the matched contact
       if (contactMatches.length && activityMatches.length) {
         const contactId = activityMatches[0]?.contactId;
         const matched = contactMatches.find(
@@ -121,6 +149,9 @@ class EvCallHistory extends RcModule {
       };
       const from = direction === callDirection.outbound ? agent : contact;
       const to = direction === callDirection.outbound ? contact : agent;
+      // Calculate isDisposed from evCallDisposition or activityMatches
+      const isDisposed =
+        this.evCallDisposition.isDisposed(id) || activityMatches.length > 0;
       return {
         id,
         direction,
@@ -132,7 +163,11 @@ class EvCallHistory extends RcModule {
         toMatches: contactMatches,
         activityMatches,
         startTime: call.timestamp,
-        isDisposed: false,
+        isDisposed,
+        isLogged: isDisposed,
+        result: call.result || undefined,
+        telephonySessionId: call.session?.uii,
+        sessionId: call.session?.sessionId,
       };
     });
   }
@@ -156,9 +191,39 @@ class EvCallHistory extends RcModule {
     return this.formattedCalls.length > 0 ? this.formattedCalls[0] : null;
   }
 
+  /**
+   * Latest calls - filtered by search input if provided
+   */
+  @computed((that: EvCallHistory) => [that.formattedCalls, that.searchInput])
+  get latestCalls(): FormattedCall[] {
+    if (!this.searchInput || this.searchInput.trim() === '') {
+      return this.formattedCalls;
+    }
+    const searchTerm = this.searchInput.toLowerCase().trim();
+    return this.formattedCalls.filter((call) => {
+      const fromName = call.fromName?.toLowerCase() || '';
+      const toName = call.toName?.toLowerCase() || '';
+      const fromPhone = call.from?.phoneNumber?.toLowerCase() || '';
+      const toPhone = call.to?.phoneNumber?.toLowerCase() || '';
+      return (
+        fromName.includes(searchTerm) ||
+        toName.includes(searchTerm) ||
+        fromPhone.includes(searchTerm) ||
+        toPhone.includes(searchTerm)
+      );
+    });
+  }
+
   @computed((that: EvCallHistory) => [that.rawCalls])
   get uniqueIdentifies(): string[] {
     return makeCallsUniqueIdentifies(this.rawCalls);
+  }
+
+  /**
+   * Update last check timestamp - called on focus
+   */
+  updateLastCheckTimeStamp() {
+    // Placeholder for any timestamp tracking logic
   }
 
   override onInitOnce() {

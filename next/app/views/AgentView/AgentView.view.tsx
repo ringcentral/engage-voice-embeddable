@@ -14,6 +14,7 @@ import {
   SyncTabView,
   type SyncTabProps,
 } from '@ringcentral-integration/micro-core/src/app/views';
+import { AppHeaderNav } from '@ringcentral-integration/micro-core/src/app/components';
 import clsx from 'clsx';
 import React, { useEffect, useState } from 'react';
 
@@ -117,19 +118,25 @@ class AgentView extends RcViewModule {
         this._router.replace('/agent');
       }
     }, [routeTabId, tabs]);
-
-    return tabs.length > 0 ? (
-      <this._syncTabView.component
-        id={AGENT_TAB_ID}
-        className={clsx('[&_.sui-tab]:max-w-none [&_.sui-tab]:flex-grow')}
-        variant="scrollable"
-        tabs={tabs.map((tab) => ({
-          ...tab,
-          label: t(tab.id as 'dialer' | 'leads' | 'history'),
-        }))}
-        defaultValue={props?.initialTab ?? this.defaultTab}
-      />
-    ) : null;
+    return (
+      <>
+        <AppHeaderNav title={t('agentTitle')}>{null}</AppHeaderNav>
+        {
+          tabs.length > 0 ? (
+            <this._syncTabView.component
+              id={AGENT_TAB_ID}
+              className={clsx('[&_.sui-tab]:max-w-none [&_.sui-tab]:flex-grow')}
+              variant="scrollable"
+              tabs={tabs.map((tab) => ({
+                ...tab,
+                label: t(tab.id as 'dialer' | 'leads' | 'history'),
+              }))}
+              defaultValue={props?.initialTab ?? this.defaultTab}
+            />
+          ) : null
+        }
+      </>
+    );
   }
 }
 

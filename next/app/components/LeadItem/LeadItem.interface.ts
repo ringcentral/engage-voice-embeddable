@@ -1,26 +1,12 @@
 import type { ReactNode } from 'react';
 
+import type { Lead as ServiceLead } from '../../services/EvLeads';
+
 /**
  * Lead data interface
+ * Compatible with the service Lead type
  */
-export interface Lead {
-  /** Lead ID */
-  leadId?: string;
-  /** First name */
-  firstName?: string;
-  /** Middle name */
-  midName?: string;
-  /** Last name */
-  lastName?: string;
-  /** Destination phone number */
-  destination?: string;
-  /** Destination in E.164 format */
-  destinationE164?: string;
-  /** Campaign ID */
-  campaignId?: string;
-  /** Lead state */
-  leadState?: string;
-}
+export type Lead = ServiceLead;
 
 /**
  * Phone number display data

@@ -18,3 +18,4 @@ export * from './LeadItem';
 export * from './TimezoneSelect';
 export * from './EvAlertRenderer';
 export * from './SessionConfig';
+export * from './ManualPassModal';
