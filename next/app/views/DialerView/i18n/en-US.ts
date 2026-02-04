@@ -1,9 +1,7 @@
 export default {
-  dial: 'Dial',
   enterNumber: 'Enter phone number',
-  callerId: 'Caller ID',
-  queue: 'Queue',
-  country: 'Country',
-  ringTime: 'Ring Time',
-  cancel: 'Cancel',
+  manualDialSettings: 'Manual dial settings',
+  callButtonTip: 'To make a call, enter a phone number in the field above',
+  callButtonEmergencyTip: 'Emergency calling is not available',
+  callButton: 'Request a call',
 } as const;
