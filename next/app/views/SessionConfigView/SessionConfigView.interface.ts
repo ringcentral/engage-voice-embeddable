@@ -30,8 +30,6 @@ export interface SessionConfigViewUIProps {
   showAutoAnswer: boolean;
   /** Whether dial group section should be shown */
   showDialGroup: boolean;
-  /** Display text for selected inbound queues */
-  inboundQueuesFieldText: string;
 }
 
 /**

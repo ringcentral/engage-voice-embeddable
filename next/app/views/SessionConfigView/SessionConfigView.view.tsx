@@ -8,17 +8,20 @@ import {
   useConnector,
   UIFunctions,
   UIProps,
+  RouterPlugin,
 } from '@ringcentral-integration/next-core';
 import { Brand, Locale } from '@ringcentral-integration/micro-core/src/app/services';
+import { TabManager } from '../../services/EvTabManager';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import { Button, Icon } from '@ringcentral/spring-ui';
 import { ArrowLeftMd } from '@ringcentral/spring-icon';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 
 import type { LoginTypes } from '../../../enums';
-import { loginTypes } from '../../../enums';
+import { loginTypes, tabManagerEvents } from '../../../enums';
 import { EvAgentSession } from '../../services/EvAgentSession';
 import { EvAuth } from '../../services/EvAuth';
+import { EvClient } from '../../services/EvClient';
 import type { EvAgent } from '../../services/EvClient/interfaces';
 import type {
   SessionConfigViewOptions,
@@ -41,12 +44,23 @@ class SessionConfigView extends RcViewModule {
   constructor(
     private _evAgentSession: EvAgentSession,
     private _evAuth: EvAuth,
+    private _evClient: EvClient,
     private _locale: Locale,
     private _brand: Brand,
+    private _router: RouterPlugin,
+    @optional() private _tabManager?: TabManager,
     @optional('SessionConfigViewOptions')
     private _sessionConfigViewOptions?: SessionConfigViewOptions,
   ) {
     super();
+  }
+
+  private get _tabManagerEnabled(): boolean {
+    return !!this._tabManager?.enable;
+  }
+
+  private get _hasMultipleTabs(): boolean {
+    return !!this._tabManager?.hasMultipleTabs;
   }
 
   @state
@@ -73,26 +87,35 @@ class SessionConfigView extends RcViewModule {
   }
 
   get showReChooseAccount(): boolean {
-    const agents = this._evAuth.authenticateResponse?.agents || [];
+    return !this._evAuth.isOnlyOneAgent;
+  }
+
+  get selectedIntegratedSoftphone(): boolean {
     return (
-      this._sessionConfigViewOptions?.showReChooseAccount !== false &&
-      agents.length > 1
+      this._evAgentSession.formGroup.loginType === loginTypes.integratedSoftphone
     );
   }
 
   get showInboundQueues(): boolean {
+    const { allowLoginControl, allowInbound } = this._evAuth.agentPermissions || {};
     return (
-      (this._evAuth.agentPermissions?.allowInbound || false) &&
+      (allowLoginControl || false) &&
+      (allowInbound || false) &&
       this._evAgentSession.inboundQueues.length > 0
     );
   }
 
   get showSkillProfile(): boolean {
-    return this._evAgentSession.skillProfileList.length > 0;
+    const { allowLoginControl } = this._evAuth.agentPermissions || {};
+    return (
+      (allowLoginControl || false) &&
+      this._evAgentSession.skillProfileList.length > 0
+    );
   }
 
   get showAutoAnswer(): boolean {
-    return true;
+    const { allowAutoAnswer } = this._evAuth.agentPermissions || {};
+    return (allowAutoAnswer || false) && this.selectedIntegratedSoftphone;
   }
 
   get showDialGroup(): boolean {
@@ -102,25 +125,29 @@ class SessionConfigView extends RcViewModule {
     );
   }
 
-  @computed((that: SessionConfigView) => [
-    that._evAgentSession.formGroup.selectedInboundQueueIds,
-    that._evAgentSession.inboundQueues,
-    that._locale.currentLocale,
-  ])
-  get inboundQueuesFieldText(): string {
+  getInboundQueuesFieldText(t: (key: string) => string): string {
     const selectedIds = this._evAgentSession.formGroup.selectedInboundQueueIds || [];
     const allQueues = this._evAgentSession.inboundQueues;
     if (selectedIds.length === 0) {
-      return 'None selected';
+      return t('none');
     }
-    if (selectedIds.length === allQueues.length) {
-      return `All (${allQueues.length})`;
+    if (selectedIds.length === 1) {
+      const selectedQueue = allQueues.find(
+        (queue) => queue.gateId === selectedIds[0],
+      );
+      return selectedQueue?.gateName || t('none');
     }
-    return `${selectedIds.length} selected`;
+    return `${t('multiple')} (${selectedIds.length})`;
   }
 
   setLoginType(type: LoginTypes) {
+    // Set login type first, then reset autoAnswer based on the new login type
     this._evAgentSession.setFormGroup({ loginType: type });
+    const isIntegratedSoftphone = type === loginTypes.integratedSoftphone;
+    const autoAnswer = isIntegratedSoftphone
+      ? this._evAgentSession.autoAnswer
+      : this._evAgentSession.defaultAutoAnswerOn;
+    this._evAgentSession.setFormGroup({ autoAnswer });
   }
 
   setSkillProfileId(profileId: string) {
@@ -143,16 +170,30 @@ class SessionConfigView extends RcViewModule {
     this._evAgentSession.setFormGroup({ dialGroupId: groupId });
   }
 
-  async onAccountReChoose() {
-    if (this._sessionConfigViewOptions?.onAccountReChoose) {
-      await this._sessionConfigViewOptions.onAccountReChoose();
+  async onAccountReChoose(syncAllTabs = true) {
+    // Sync to other tabs if enabled
+    if (syncAllTabs && this._tabManagerEnabled && this._hasMultipleTabs) {
+      this._tabManager!.send(tabManagerEvents.RE_CHOOSE_ACCOUNT);
     }
+    // Close existing socket connection
+    if (this._evClient.ifSocketExist) {
+      this._evClient.closeSocket();
+    }
+    // Clear auth state
+    this._evAuth.clearAgentId();
+    this._evAuth.setNotAuth();
+    // Navigate to choose account
+    this._router.push('/chooseAccount');
   }
 
   async setConfigure() {
     this.setIsLoading(true);
     try {
-      await this._evAgentSession.configureAgent();
+      await this._evAgentSession.configureAgent({
+        needAssignFormGroupValue: true,
+      });
+    } catch (e) {
+      console.error(e);
     } finally {
       this.setIsLoading(false);
     }
@@ -168,7 +209,6 @@ class SessionConfigView extends RcViewModule {
       showSkillProfile: this.showSkillProfile,
       showAutoAnswer: this.showAutoAnswer,
       showDialGroup: this.showDialGroup,
-      inboundQueuesFieldText: this.inboundQueuesFieldText,
     };
   }
 
@@ -283,7 +323,7 @@ class SessionConfigView extends RcViewModule {
         {/* Header with Logo */}
         <div className="flex justify-center py-5 px-4">
           {logoUrl ? (
-            <img src={logoUrl} alt="Logo" className="h-8" />
+            <img src={logoUrl} alt="Logo" className="h-6" />
           ) : (
             <div className="typography-title text-neutral-b1">
               {this._brand.name}
@@ -308,7 +348,7 @@ class SessionConfigView extends RcViewModule {
         </div>
         {/* Account Info */}
         <div
-          className="flex justify-between items-center px-4 pt-4 pb-6"
+          className="flex justify-between items-center px-4 pt-4 pb-4"
           data-sign="accountInfo"
         >
           <span className="typography-mainText text-neutral-b1 truncate">

@@ -70,7 +70,6 @@ class AppView extends RcViewModule {
     {
       path: '/chooseAccount',
       component: this._chooseAccountView.component,
-      authentication: true,
     },
     {
       path: '/sessionConfig',

@@ -14,4 +14,6 @@ export default {
   takingCalls: 'Persistent Voice Connection',
   agent: 'Agent',
   supervisor: 'Supervisor',
+  none: 'None',
+  multiple: 'Multiple assignments',
 } as const;

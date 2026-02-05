@@ -87,6 +87,7 @@ import {
   LoginViewOptions,
   AgentView,
   MultiLoginView,
+  SessionConfigViewOptions,
 } from './views';
 
 /**
@@ -331,6 +332,12 @@ export const getAppConfig = ({
         analyticsKey,
         enableMixpanel: true,
       } satisfies AnalyticsOptions,
+    },
+    {
+      provide: 'SessionConfigViewOptions',
+      useValue: {
+        showReChooseAccount: true,
+      } satisfies SessionConfigViewOptions,
     }
   ];
 
