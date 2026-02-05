@@ -1,3 +1,4 @@
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   action,
   computed,
@@ -11,12 +12,10 @@ import {
   RouterPlugin,
 } from '@ringcentral-integration/next-core';
 import { Brand, Locale } from '@ringcentral-integration/micro-core/src/app/services';
-import { TabManager } from '../../services/EvTabManager';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import { Button, Icon } from '@ringcentral/spring-ui';
 import { ArrowLeftMd } from '@ringcentral/spring-icon';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-
+import { TabManager } from '../../services/EvTabManager';
 import type { LoginTypes } from '../../../enums';
 import { loginTypes, tabManagerEvents } from '../../../enums';
 import { EvAgentSession } from '../../services/EvAgentSession';
@@ -31,7 +30,7 @@ import type {
 } from './SessionConfigView.interface';
 import i18n from './i18n';
 import { SessionConfig } from '../../components/SessionConfig';
-import { InboundQueuesPanel } from './InboundQueuesPanel';
+import { InboundQueuesPanel } from '../../components/InboundQueuesPanel';
 
 /**
  * SessionConfigView - Session configuration view for agent setup
@@ -334,17 +333,15 @@ class SessionConfigView extends RcViewModule {
         <div
           className={`bg-neutral-b5 ${showReChooseAccount ? 'visible' : 'invisible'}`}
         >
-          <button
-            type="button"
+          <Button
             onClick={uiFunctions.onAccountReChoose}
-            className="flex items-center h-7 px-4 cursor-pointer"
-            data-sign="reChooseAccountButton"
+            startIcon={ArrowLeftMd}
+            variant="text"
+            size="medium"
+            color="primary"
           >
-            <Icon symbol={ArrowLeftMd} size="medium" className="text-primary-b mr-2" />
-            <span className="typography-mainText text-primary-b">
-              {t('switchAccount')}
-            </span>
-          </button>
+            {t('switchAccount')}
+          </Button>
         </div>
         {/* Account Info */}
         <div

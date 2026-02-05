@@ -10,4 +10,5 @@ export default {
   all: 'All',
   selected: 'selected',
   none: 'None',
+  multipleAssignments: 'Multiple assignments',
 } as const;

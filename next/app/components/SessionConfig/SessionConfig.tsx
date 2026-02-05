@@ -1,5 +1,14 @@
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
-import { TextField, Switch, Icon } from '@ringcentral/spring-ui';
+import {
+  TextField,
+  Switch,
+  Select,
+  Option,
+  FormField,
+  FormLabel,
+  Icon,
+  MenuItemText,
+} from '@ringcentral/spring-ui';
 import { CaretDownMd } from '@ringcentral/spring-icon';
 import React, { useCallback, useMemo } from 'react';
 
@@ -41,21 +50,21 @@ function SessionConfig({
   const { t } = useLocale(i18n);
 
   const handleSkillProfileChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       onSkillProfileChange?.(e.target.value);
     },
     [onSkillProfileChange],
   );
 
   const handleDialGroupChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       onDialGroupChange?.(e.target.value);
     },
     [onDialGroupChange],
   );
 
   const handleLoginTypeChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       onLoginTypeChange?.(e.target.value as LoginTypes);
     },
     [onLoginTypeChange],
@@ -81,12 +90,9 @@ function SessionConfig({
 
   const inboundQueuesFieldText = useMemo(() => {
     if (selectedInboundQueueIds.length === 0) {
-      return t('noneSelected');
+      return t('none');
     }
-    if (selectedInboundQueueIds.length === inboundQueues.length) {
-      return `${t('all')} (${inboundQueues.length})`;
-    }
-    return `${selectedInboundQueueIds.length} ${t('selected')}`;
+    return `${t('multipleAssignments')} (${inboundQueues.length})`;
   }, [selectedInboundQueueIds, inboundQueues.length, t]);
 
   // Add "None" option to dial groups only if there isn't one already
@@ -99,6 +105,16 @@ function SessionConfig({
     return [noneOption, ...dialGroups];
   }, [dialGroups, t]);
 
+  // Render value for dial group select
+  const renderDialGroupValue = useCallback(
+    (value: string | number) => {
+      const selected = dialGroupOptions.find((g) => g.groupId === value);
+      if (!selected?.groupId) return t('none');
+      return `${selected.groupId} - ${selected.groupName}`;
+    },
+    [dialGroupOptions, t],
+  );
+
   // Don't render form when inbound queues panel is shown
   if (showInboundQueuesPanel) {
     return null;
@@ -108,96 +124,101 @@ function SessionConfig({
     <div className="flex flex-col gap-4">
       {/* Inbound Queues */}
       {showInboundQueues && inboundQueues.length > 0 && (
-        <button
-          type="button"
-          onClick={handleOpenQueuesPanel}
-          className="w-full text-left"
-          data-sign="inboundQueues"
+        <FormField
+          label={t('inboundQueues')}
+          variant="outlined"
+          size="large"
+          contentProps={{ 'data-sign': 'inboundQueues' }}
         >
-          <div className="relative">
-            <label className="typography-descriptor text-neutral-b2 block mb-1">
-              {t('inboundQueues')}
-            </label>
-            <div className="w-full h-10 px-3 flex items-center justify-between border border-neutral-b4 rounded-lg bg-neutral-base hover:border-neutral-b3 transition-colors cursor-pointer">
-              <span className="typography-mainText text-neutral-b1 truncate">
-                {inboundQueuesFieldText}
-              </span>
-              <Icon symbol={CaretDownMd} size="medium" className="text-neutral-b2 flex-shrink-0" />
-            </div>
+          <div
+            className="flex items-center justify-between w-full cursor-pointer sui-select-value"
+            onClick={handleOpenQueuesPanel}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                handleOpenQueuesPanel();
+              }
+            }}
+          >
+            <span className="truncate">{inboundQueuesFieldText}</span>
+            <Icon symbol={CaretDownMd} size="medium" />
           </div>
-        </button>
+        </FormField>
       )}
       {/* Skill Profile */}
       {showSkillProfile && skillProfileList.length > 0 && (
-        <div>
-          <label className="typography-descriptor text-neutral-b2 block mb-1">
-            {t('skillProfile')}
-          </label>
-          <div className="relative">
-            <select
-              value={selectedSkillProfileId || ''}
-              onChange={handleSkillProfileChange}
-              className="w-full h-10 px-3 pr-8 border border-neutral-b4 rounded-lg bg-neutral-base typography-mainText text-neutral-b1 appearance-none cursor-pointer hover:border-neutral-b3 focus:border-primary-b focus:outline-none transition-colors"
-              data-sign="skillProfile"
-              aria-label={t('skillProfile')}
-            >
-              {skillProfileList.map((profile) => (
-                <option key={profile.profileId} value={profile.profileId}>
-                  {profile.profileName}
-                </option>
-              ))}
-            </select>
-            <Icon symbol={CaretDownMd} size="medium" className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-b2 pointer-events-none" />
-          </div>
-        </div>
+        <Select
+          data-sign="skillProfile"
+          label={t('skillProfile')}
+          value={selectedSkillProfileId || ''}
+          onChange={handleSkillProfileChange}
+          variant="outlined"
+          size="large"
+          renderValue={(value) => {
+            const selected = skillProfileList.find((p) => p.profileId === value);
+            if (!selected?.profileId) return t('none');
+            return selected.profileName;
+          }}
+        >
+          {skillProfileList.map((profile) => (
+            <Option key={profile.profileId} value={profile.profileId}>
+              <MenuItemText>{profile.profileName}</MenuItemText>
+            </Option>
+          ))}
+        </Select>
       )}
-      {/* Dial Group - Always show when showDialGroup is true */}
+      {/* Dial Group */}
       {showDialGroup && (
-        <div>
-          <label className="typography-descriptor text-neutral-b2 block mb-1">
-            {t('dialGroup')}
-          </label>
-          <div className="relative">
-            <select
-              value={dialGroupId || ''}
-              onChange={handleDialGroupChange}
-              className="w-full h-10 px-3 pr-8 border border-neutral-b4 rounded-lg bg-neutral-base typography-mainText text-neutral-b1 appearance-none cursor-pointer hover:border-neutral-b3 focus:border-primary-b focus:outline-none transition-colors"
-              data-sign="dialGroup"
-              aria-label={t('dialGroup')}
-            >
-              {dialGroupOptions.map((group) => (
-                <option key={group.groupId || 'none'} value={group.groupId}>
-                  {group.groupId ? `ID: ${group.groupId} ${group.groupName}` : t('none')}
-                </option>
-              ))}
-            </select>
-            <Icon symbol={CaretDownMd} size="medium" className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-b2 pointer-events-none" />
-          </div>
-        </div>
+        <Select
+          data-sign="dialGroup"
+          label={t('dialGroup')}
+          value={dialGroupId || ''}
+          onChange={handleDialGroupChange}
+          variant="outlined"
+          size="large"
+          placeholder={t('none')}
+          renderValue={renderDialGroupValue}
+        >
+          {dialGroupOptions.map((group) => (
+            <Option key={group.groupId || 'none'} value={group.groupId}>
+              {group.groupId ? (
+                <div className="flex flex-col">
+                  <span className="typography-mainText text-neutral-b1">
+                    {group.groupName}
+                  </span>
+                  <span className="typography-descriptor text-neutral-b2">
+                    {`ID: ${group.groupId} description: ${group.groupDesc}`}
+                  </span>
+                </div>
+              ) : (
+                t('none')
+              )}
+            </Option>
+          ))}
+        </Select>
       )}
       {/* Voice Connection */}
       {showVoiceConnection && loginTypeList.length > 0 && (
-        <div>
-          <label className="typography-descriptor text-neutral-b2 block mb-1">
-            {t('voiceConnection')}
-          </label>
-          <div className="relative">
-            <select
-              value={loginType as string || ''}
-              onChange={handleLoginTypeChange}
-              className="w-full h-10 px-3 pr-8 border border-neutral-b4 rounded-lg bg-neutral-base typography-mainText text-neutral-b1 appearance-none cursor-pointer hover:border-neutral-b3 focus:border-primary-b focus:outline-none transition-colors"
-              data-sign="loginType"
-              aria-label={t('voiceConnection')}
-            >
-              {loginTypeList.map((type) => (
-                <option key={type.id} value={type.id}>
-                  {type.label}
-                </option>
-              ))}
-            </select>
-            <Icon symbol={CaretDownMd} size="medium" className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-b2 pointer-events-none" />
-          </div>
-        </div>
+        <Select
+          data-sign="loginType"
+          label={t('voiceConnection')}
+          value={(loginType as string) || ''}
+          onChange={handleLoginTypeChange}
+          variant="outlined"
+          size="large"
+          renderValue={(value) => {
+            const selected = loginTypeList.find((t) => t.id === value);
+            if (!selected?.id) return t('none');
+            return selected.label;
+          }}
+        >
+          {loginTypeList.map((type) => (
+            <Option key={type.id} value={type.id}>
+              {type.label}
+            </Option>
+          ))}
+        </Select>
       )}
       {/* Extension Number */}
       {showExtensionNumber && (
@@ -218,16 +239,17 @@ function SessionConfig({
       )}
       {/* Auto Answer */}
       {showAutoAnswer && (
-        <div className="flex items-center justify-between">
-          <span className="typography-mainText text-neutral-b1">
-            {t('autoAnswer')}
-          </span>
+        <FormLabel
+          label={t('autoAnswer')}
+          placement="start"
+          fullWidth
+        >
           <Switch
             checked={autoAnswer}
             onChange={handleAutoAnswerChange}
             data-sign="autoAnswer"
           />
-        </div>
+        </FormLabel>
       )}
     </div>
   );

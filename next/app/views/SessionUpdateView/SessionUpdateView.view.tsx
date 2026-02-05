@@ -22,7 +22,7 @@ import type {
 } from './SessionUpdateView.interface';
 import i18n from './i18n';
 import { SessionConfig } from '../../components/SessionConfig';
-import { InboundQueuesPanel } from '../SessionConfigView/InboundQueuesPanel';
+import { InboundQueuesPanel } from '../../components/InboundQueuesPanel';
 
 /**
  * SessionUpdateView - Session update view for modifying agent session
@@ -137,12 +137,18 @@ class SessionUpdateView extends RcViewModule {
     // Show inbound queues panel
     if (showQueuesPanel) {
       return (
-        <InboundQueuesPanel
-          inboundQueues={inboundQueues}
-          selectedQueueIds={formGroup.selectedInboundQueueIds || []}
-          onSubmit={handleSubmitInboundQueues}
-          onBack={() => setShowQueuesPanel(false)}
-        />
+        <>
+          <AppHeaderNav override>
+            <></>
+          </AppHeaderNav>
+          <InboundQueuesPanel
+            inboundQueues={inboundQueues}
+            selectedQueueIds={formGroup.selectedInboundQueueIds || []}
+            onSubmit={handleSubmitInboundQueues}
+            onBack={() => setShowQueuesPanel(false)}
+          />
+          <AppFooterNav />
+        </>
       );
     }
 
