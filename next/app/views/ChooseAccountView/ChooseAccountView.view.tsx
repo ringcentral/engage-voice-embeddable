@@ -5,12 +5,12 @@ import {
   RouterPlugin,
   useConnector,
 } from '@ringcentral-integration/next-core';
+import { Brand } from '@ringcentral-integration/micro-core/src/app/services';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
-import { Icon } from '@ringcentral/spring-ui';
-import { ArrowRightMd } from '@ringcentral/spring-icon';
 import React, { useCallback, useState } from 'react';
 
 import { EvAuth } from '../../services/EvAuth';
+import { ChooseAccountPanel } from '../../components/ChooseAccountPanel';
 import type {
   ChooseAccountViewOptions,
   ChooseAccountViewProps,
@@ -28,6 +28,7 @@ class ChooseAccountView extends RcViewModule {
   constructor(
     private _evAuth: EvAuth,
     private _router: RouterPlugin,
+    private _brand: Brand,
     @optional('ChooseAccountViewOptions')
     private _options?: ChooseAccountViewOptions,
   ) {
@@ -36,6 +37,7 @@ class ChooseAccountView extends RcViewModule {
 
   async selectAgent(agentId: string): Promise<void> {
     this._evAuth.setAgentId(agentId);
+    this._options?.onAccountSelected?.(agentId);
     await this._evAuth.openSocketWithSelectedAgentId({
       syncOtherTabs: true,
       retryOpenSocket: true,
@@ -47,8 +49,9 @@ class ChooseAccountView extends RcViewModule {
     const { t } = useLocale(i18n);
     const [isLoading, setIsLoading] = useState(false);
 
-    const { agents } = useConnector(() => ({
+    const { agents, logoUrl } = useConnector(() => ({
       agents: this._evAuth.authenticateResponse?.agents || [],
+      logoUrl: this._brand.assets?.['logo'] as string | undefined,
     }));
 
     const handleSelectAgent = useCallback(
@@ -65,34 +68,14 @@ class ChooseAccountView extends RcViewModule {
     );
 
     return (
-      <div className="flex flex-col h-full bg-neutral-base p-4 overflow-y-auto">
-        <h1 className="typography-title text-center mb-6">
-          {t('chooseAccount')}
-        </h1>
-
-        <div className="flex-1 overflow-y-auto">
-          {agents.map((agent) => (
-            <button
-              key={agent.agentId}
-              type="button"
-              disabled={isLoading}
-              onClick={() => handleSelectAgent(agent.agentId)}
-              data-sign="subAccount"
-              className="w-full h-14 px-4 border-b border-neutral-b4 bg-neutral-base hover:bg-neutral-b5 transition-colors text-left flex items-center justify-between disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="typography-subtitle truncate">
-                  {agent.accountName}
-                </div>
-                <div className="typography-descriptor text-neutral-b2 truncate">
-                  {t(agent.agentType)}
-                </div>
-              </div>
-              <Icon symbol={ArrowRightMd} size="medium" />
-            </button>
-          ))}
-        </div>
-      </div>
+      <ChooseAccountPanel
+        agents={agents}
+        isLoading={isLoading}
+        onSelectAgent={handleSelectAgent}
+        logoUrl={logoUrl}
+        brandName={this._brand.name}
+        title={t('chooseAccount')}
+      />
     );
   }
 }
