@@ -44,6 +44,8 @@ export const messageTypes = ObjectMap.fromKeys([
   'RECORD_RESUME',
   // TCPA_SAFE_LEAD_STATE
   'INTERCEPT',
+  // Working state
+  'PENDING_DISPOSITION',
 ]);
 
 export type MessageTypes = keyof typeof messageTypes;

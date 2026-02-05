@@ -11,6 +11,7 @@ import {
 } from '@ringcentral-integration/next-core';
 
 import { requeueEvents } from '../../../enums';
+import { t } from './i18n';
 import { EvClient } from '../EvClient';
 import { EvAuth } from '../EvAuth';
 import { EvCall } from '../EvCall';
@@ -112,7 +113,7 @@ class EvRequeueCall extends RcModule {
     try {
       this.setStatus({ requeuing: true });
       this.toast.info({
-        message: requeueEvents.START,
+        message: t(requeueEvents.START),
       });
 
       const result = await this.evClient.requeueCall({
@@ -129,11 +130,11 @@ class EvRequeueCall extends RcModule {
       }
 
       this.toast.success({
-        message: requeueEvents.SUCCESS,
+        message: t(requeueEvents.SUCCESS),
       });
     } catch (error) {
       this.toast.danger({
-        message: requeueEvents.FAILURE,
+        message: t(requeueEvents.FAILURE),
       });
       throw error;
     } finally {

@@ -5,11 +5,6 @@ export default {
   [loginTypes.externalPhone]: 'Use external phone',
   [loginTypes.integratedSoftphone]: 'Integrated softphone',
   [dropDownOptions.None]: 'None',
-  multipleLoginsConfirm: 'Continue',
-  multipleLoginsCancel: 'Cancel',
-  multipleLoginsTitle: 'Multiple logins',
-  multipleLoginsContent:
-    'This username is still logged in. Press continue to end the existing session and start a new one.',
   [messageTypes.NOT_INBOUND_QUEUE_SELECTED]: 'Please select at least one inbound queue.',
   [messageTypes.EMPTY_PHONE_NUMBER]: 'Phone number is required.',
   [messageTypes.INVALID_PHONE_NUMBER]: 'Invalid phone number.',

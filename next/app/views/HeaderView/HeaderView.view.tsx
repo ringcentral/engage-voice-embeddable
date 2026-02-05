@@ -26,7 +26,7 @@ import { EvAuth } from '../../services';
 @injectable({
   name: 'HeaderView',
 })
-export class HeaderView extends RcViewModule {
+class HeaderView extends RcViewModule {
   constructor(
     protected _router: RouterPlugin,
     protected _locale: Locale,
@@ -104,3 +104,6 @@ export class HeaderView extends RcViewModule {
     return <HeaderPanel {..._props} {...uiFunctions} />;
   }
 }
+
+export { HeaderView };
+

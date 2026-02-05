@@ -14,6 +14,7 @@ import { EventEmitter } from 'events';
 
 import type { DialoutStatusesType } from '../../../enums';
 import { callStatus, dialoutStatuses, messageTypes } from '../../../enums';
+import { t } from './i18n';
 import { EvCallbackTypes } from '../EvClient/enums';
 import type {
   EvAddSessionNotification,
@@ -262,7 +263,7 @@ class EvPresence extends RcModule {
           } else {
             if (this.showOffHookInitError) {
               this.toast.danger({
-                message: messageTypes.OFFHOOK_INIT_ERROR,
+                message: t(messageTypes.OFFHOOK_INIT_ERROR),
               });
             }
             this.setOffhookTerm();
@@ -282,7 +283,7 @@ class EvPresence extends RcModule {
             this.setOffhookTerm();
           } else {
             this.toast.danger({
-              message: messageTypes.OFFHOOK_TERM_ERROR,
+              message: t(messageTypes.OFFHOOK_TERM_ERROR),
             });
             console.error(data);
           }
@@ -294,7 +295,7 @@ class EvPresence extends RcModule {
           this.evPresenceEvents.emit(callStatus.RINGING, data);
         } else {
           this.toast.danger({
-            message: messageTypes.ADD_SESSION_ERROR,
+            message: t(messageTypes.ADD_SESSION_ERROR),
           });
         }
       })
@@ -303,7 +304,7 @@ class EvPresence extends RcModule {
           this.dropSession(data);
         } else {
           this.toast.danger({
-            message: messageTypes.DROP_SESSION_ERROR,
+            message: t(messageTypes.DROP_SESSION_ERROR),
           });
         }
       })
@@ -312,7 +313,7 @@ class EvPresence extends RcModule {
           this.setCallHoldStatus(data);
         } else {
           this.toast.danger({
-            message: messageTypes.HOLD_ERROR,
+            message: t(messageTypes.HOLD_ERROR),
           });
         }
       })

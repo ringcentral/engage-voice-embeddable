@@ -28,9 +28,11 @@ import {
 } from '../../../enums';
 import type { EvAgentConfig } from '../EvClient/interfaces';
 import { EvClient } from '../EvClient';
+import { evStatus } from '../EvClient/enums';
 import { EvAuth } from '../EvAuth';
 import { EvPresence } from '../EvPresence';
 import { Redirect } from '../Redirect';
+import { MultiLoginView } from '../../views/MultiLoginView';
 import type {
   EvAgentSessionOptions,
   FormGroup,
@@ -39,7 +41,7 @@ import type {
   DialGroup,
   EvConfigureAgentOptions,
 } from './EvAgentSession.interface';
-import i18n from './i18n';
+import i18n, { t } from './i18n';
 
 const WAIT_EV_SERVER_ROLLBACK_DELAY = 2000;
 
@@ -87,6 +89,7 @@ class EvAgentSession extends RcModule {
     private block: BlockPlugin,
     private storagePlugin: StoragePlugin,
     private portManager: PortManager,
+    private multiLoginView: MultiLoginView,
     @optional('EvAgentSessionOptions')
     private evAgentSessionOptions?: EvAgentSessionOptions,
   ) {
@@ -108,6 +111,14 @@ class EvAgentSession extends RcModule {
     } else {
       this._initialize();
     }
+  }
+
+  /**
+   * Show multi-login confirmation modal and return user's choice
+   * @returns true if user confirms, false if user cancels
+   */
+  private async _showMultiLoginConfirm(): Promise<boolean> {
+    return this.multiLoginView.showConfirm();
   }
 
   private _initialize(): void {
@@ -619,7 +630,7 @@ class EvAgentSession extends RcModule {
   } = {}): Promise<void> {
     const fn = async () => {
       if (alertMessage) {
-        this.toast.danger({ message: alertMessage });
+        this.toast.danger({ message: alertMessage, ttl: 0 });
       }
       const { access_token } = await this.auth.refreshToken();
       this.setAccessToken(access_token);
@@ -645,7 +656,7 @@ class EvAgentSession extends RcModule {
 
   private _showUpdateSuccessAlert(): void {
     this.toast.success({
-      message: i18n.getString(messageTypes.UPDATE_AGENT_SUCCESS, this.locale.currentLocale),
+      message: t(messageTypes.UPDATE_AGENT_SUCCESS),
     });
   }
 
@@ -653,7 +664,8 @@ class EvAgentSession extends RcModule {
     const { selectedInboundQueueIds = [], selectedSkillProfileId } = formGroup;
     if (this.notInboundQueueSelected) {
       this.toast.danger({
-        message: i18n.getString(messageTypes.NOT_INBOUND_QUEUE_SELECTED, this.locale.currentLocale),
+        message: t(messageTypes.NOT_INBOUND_QUEUE_SELECTED),
+        ttl: 0,
       });
       throw new Error(`'queueIds' is an empty array.`);
     }
@@ -672,7 +684,8 @@ class EvAgentSession extends RcModule {
       case loginTypes.externalPhone: {
         if (!extensionNumber) {
           this.toast.danger({
-            message: i18n.getString(messageTypes.EMPTY_PHONE_NUMBER, this.locale.currentLocale),
+            message: t(messageTypes.EMPTY_PHONE_NUMBER),
+            ttl: 0,
           });
           throw new Error(`'extensionNumber' is an empty number.`);
         }
@@ -684,7 +697,8 @@ class EvAgentSession extends RcModule {
         });
         if (!isValid || !parsedNumber || parsedNumber === '') {
           this.toast.danger({
-            message: i18n.getString(messageTypes.INVALID_PHONE_NUMBER, this.locale.currentLocale),
+            message: t(messageTypes.INVALID_PHONE_NUMBER),
+            ttl: 0,
           });
           throw new Error(`'extensionNumber' is not a valid number.`);
         }
@@ -710,15 +724,15 @@ class EvAgentSession extends RcModule {
   }): void {
     if (status !== 'SUCCESS') {
       if (typeof message === 'string') {
-        this.toast.danger({ message });
+        this.toast.danger({ message, ttl: 0 });
       } else {
         this.toast.danger({
-          message: i18n.getString(
+          message: t(
             isAgentUpdating
               ? messageTypes.UPDATE_AGENT_ERROR
               : messageTypes.AGENT_CONFIG_ERROR,
-            this.locale.currentLocale,
           ),
+          ttl: 0,
         });
       }
       throw new Error(message);
@@ -735,7 +749,17 @@ class EvAgentSession extends RcModule {
     const { status } = result.data;
     const existingLoginFound = status === messageTypes.EXISTING_LOGIN_FOUND;
     if (existingLoginFound) {
-      // For force login scenario, retry with isForce flag
+      // Show confirmation modal to user
+      const confirmed = await this._showMultiLoginConfirm();
+      if (!confirmed) {
+        this.isForceLogin = false;
+        throw new Error(status);
+      }
+      // If EV client connection was closed, need to re-login first
+      if (this.evClient.appStatus === evStatus.CLOSED) {
+        await this.evAuth.loginAgent();
+      }
+      // Retry with isForce flag after user confirms
       result = await this.evClient.configureAgent({
         ...config,
         isForce: true,
@@ -743,7 +767,8 @@ class EvAgentSession extends RcModule {
       this.isForceLogin = true;
     } else if (status === messageTypes.EXISTING_LOGIN_ENGAGED) {
       this.toast.danger({
-        message: i18n.getString(messageTypes.EXISTING_LOGIN_ENGAGED, this.locale.currentLocale),
+        message: t(messageTypes.EXISTING_LOGIN_ENGAGED),
+        ttl: 0,
       });
       throw new Error(messageTypes.EXISTING_LOGIN_ENGAGED);
     }

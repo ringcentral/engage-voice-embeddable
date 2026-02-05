@@ -33,7 +33,7 @@ import type {
   AuthenticateWithTokenParams,
   OpenSocketParams,
 } from './EvAuth.interface';
-import i18n from './i18n';
+import i18n, { t } from './i18n';
 import { track } from '../Analytics/track';
 import { trackEvents } from '../../../lib/trackEvents';
 
@@ -269,7 +269,7 @@ class EvAuth extends RcModule {
       this._emitLogoutBefore();
       if (!this._logoutByOtherTab) {
         this.toast.info({
-          message: messageTypes.FORCE_LOGOUT,
+          message: t(messageTypes.FORCE_LOGOUT),
         });
         this._logoutByOtherTab = false;
         await this.newReconnect();
@@ -389,18 +389,18 @@ class EvAuth extends RcModule {
       switch (error.type) {
         case messageTypes.NO_AGENT:
           this.toast.warning({
-            message: error.type,
+            message: t(error.type),
           });
           break;
         case messageTypes.CONNECT_TIMEOUT:
         case messageTypes.UNEXPECTED_AGENT:
           this.toast.danger({
-            message: error.type,
+            message: t(error.type),
           });
           break;
         default:
           this.toast.danger({
-            message: messageTypes.CONNECT_ERROR,
+            message: t(messageTypes.CONNECT_ERROR),
           });
       }
       await this._logout();
@@ -460,18 +460,18 @@ class EvAuth extends RcModule {
       switch (error.type) {
         case messageTypes.NO_AGENT:
           this.toast.warning({
-            message: error.type,
+            message: t(error.type),
           });
           break;
         case messageTypes.INVALID_BROWSER:
         case messageTypes.OPEN_SOCKET_ERROR:
           this.toast.danger({
-            message: error.type,
+            message: t(error.type),
           });
           break;
         default:
           this.toast.danger({
-            message: messageTypes.CONNECT_ERROR,
+            message: t(messageTypes.CONNECT_ERROR),
           });
       }
       await this._logout();

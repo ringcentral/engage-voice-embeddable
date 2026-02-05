@@ -11,6 +11,7 @@ import {
 } from '@ringcentral-integration/next-core';
 
 import { agentStateTypes, messageTypes } from '../../../enums';
+import { t } from './i18n';
 import { EvCallbackTypes } from '../EvClient/enums';
 import { EvClient } from '../EvClient';
 import { EvAuth } from '../EvAuth';
@@ -153,7 +154,9 @@ class EvWorkingState extends RcModule {
   async changeWorkingState(state: AgentState): Promise<void> {
     if (this.isPendingDisposition) {
       this.toast.warning({
-        message: messageTypes.PENDING_DISPOSITION,
+        message: t(messageTypes.PENDING_DISPOSITION),
+        allowDuplicates: false,
+        ttl: 0,
       });
       return;
     }
@@ -179,7 +182,9 @@ class EvWorkingState extends RcModule {
    */
   alertOverBreakTime() {
     this.toast.warning({
-      message: messageTypes.BREAK_TIME_EXCEEDED,
+      message: t(messageTypes.OVER_BREAK_TIME),
+      ttl: 0,
+      allowDuplicates: false,
     });
   }
 }

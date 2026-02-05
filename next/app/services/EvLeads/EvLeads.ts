@@ -12,6 +12,7 @@ import {
 } from '@ringcentral-integration/next-core';
 
 import { EvCallbackTypes } from '../EvClient/enums';
+import { t } from './i18n';
 import { EvClient } from '../EvClient';
 import { EvAuth } from '../EvAuth';
 import { EvSubscription } from '../EvSubscription';
@@ -226,7 +227,9 @@ class EvLeads extends RcModule {
       });
       this.updateLead(lead.leadId, { completed: true });
     } catch (error) {
-      this.toast.danger({ message: 'leadPassFailed' });
+      this.toast.danger({
+        message: t('leadPassFailed'),
+      });
     }
   }
 
@@ -238,7 +241,9 @@ class EvLeads extends RcModule {
       return false;
     }
     if (this._requiredToCall()) {
-      this.toast.warning({ message: 'requiredLeadCall' });
+      this.toast.warning({
+        message: t('requiredLeadCall'),
+      });
       return false;
     }
     try {

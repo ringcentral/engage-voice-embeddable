@@ -26,3 +26,6 @@ export * from './CallHistoryDetailView';
 // Layout views
 export * from './HeaderNavViewSpring';
 export * from './HeaderView';
+
+// Modal views
+export * from './MultiLoginView';

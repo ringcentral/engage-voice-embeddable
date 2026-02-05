@@ -26,9 +26,9 @@ import { EvTransferCall } from '../../services/EvTransferCall';
 import { EvRequeueCall } from '../../services/EvRequeueCall';
 import { EvAgentScript } from '../../services/EvAgentScript';
 import { EvAuth } from '../../services/EvAuth';
-import { dialoutStatuses, transferTypes, messageTypes } from '../../../enums';
+import { dialoutStatuses, transferTypes } from '../../../enums';
 import type { EvBaseCall } from '../../services/EvClient/interfaces';
-import i18n from './i18n';
+import i18n, { t as translate } from './i18n';
 
 /**
  * Save status enum
@@ -349,7 +349,9 @@ class ActivityCallView extends RcViewModule {
   onPauseRecord = async () => {
     try {
       await this.evActiveCallControl.pauseRecord();
-      this.toast.success({ message: messageTypes.RECORD_PAUSED });
+      this.toast.success({
+        message: translate('recordPaused'),
+      });
     } catch (error: any) {
       console.error(error?.message);
     }
@@ -357,7 +359,9 @@ class ActivityCallView extends RcViewModule {
 
   onResumeRecord = () => {
     this.evActiveCallControl.resumeRecord();
-    this.toast.success({ message: messageTypes.RECORD_RESUME });
+    this.toast.success({
+      message: translate('recordResume'),
+    });
   };
 
   // Keypad Actions
@@ -458,14 +462,17 @@ class ActivityCallView extends RcViewModule {
       }
 
       this.setSaveStatus(SaveStatus.SAVED);
-      this.toast.success({ message: 'Call disposition saved successfully' });
+      this.toast.success({ message: translate('callDispositionSuccess') });
       this.evWorkingState.setIsPendingDisposition(false);
 
       setTimeout(() => this.goBack(), 1000);
     } catch (e) {
       console.error(e);
       this.setSaveStatus(SaveStatus.SUBMIT);
-      this.toast.danger({ message: 'Failed to save call disposition' });
+      this.toast.danger({
+        message: translate('callDispositionFailed'),
+        ttl: 0,
+      });
     }
   };
 

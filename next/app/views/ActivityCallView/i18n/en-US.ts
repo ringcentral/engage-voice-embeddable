@@ -43,4 +43,10 @@ export default {
 
   // Keypad
   keypadInput: 'Keypad input',
+
+  // Toast messages
+  recordPaused: 'Call recording paused.',
+  recordResume: 'Call recording resumed.',
+  callDispositionSuccess: 'Call disposition saved successfully.',
+  callDispositionFailed: 'Failed to save call disposition.',
 } as const;

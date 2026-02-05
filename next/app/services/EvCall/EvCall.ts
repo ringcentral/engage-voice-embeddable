@@ -13,6 +13,7 @@ import {
 import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
 
 import { dialoutStatuses, messageTypes } from '../../../enums';
+import { t } from './i18n';
 import { callErrors } from '../../../enums/callErrors';
 import { EvCallbackTypes } from '../EvClient/enums';
 import type { EvOffhookInitResponse, EvBaseCall } from '../EvClient/interfaces';
@@ -259,7 +260,8 @@ class EvCall extends RcModule {
         this.setPhoneIdle();
       }
       this.toast.danger({
-        message: messageTypes.FAILED_TO_CALL,
+        message: t(messageTypes.FAILED_TO_CALL),
+        ttl: 0,
       });
       return false;
     }
@@ -289,11 +291,11 @@ class EvCall extends RcModule {
             this.evClient.offhookTerm();
           }
           this.setPhoneIdle();
-          if (data.leadState === 'INTERCEPT') {
-            this.toast.info({
-              message: messageTypes.INTERCEPT,
-            });
-          }
+        if (data.leadState === 'INTERCEPT') {
+          this.toast.info({
+            message: t(messageTypes.INTERCEPT),
+          });
+        }
         }
       },
     );
@@ -320,7 +322,8 @@ class EvCall extends RcModule {
       switch (error.type) {
         case messageTypes.NO_SUPPORT_COUNTRY:
           this.toast.danger({
-            message: messageTypes.NO_SUPPORT_COUNTRY,
+            message: t(messageTypes.NO_SUPPORT_COUNTRY),
+            ttl: 0,
           });
           break;
         case callErrors.emergencyNumber:

@@ -24,6 +24,7 @@ import {
   HeaderNavViewSpring,
   HeaderNavViewOptions,
   SyncTabView,
+  ModalView,
 } from '@ringcentral-integration/micro-core/src/app/views';
 import {
   Auth,
@@ -85,6 +86,7 @@ import {
   LoginView,
   LoginViewOptions,
   AgentView,
+  MultiLoginView,
 } from './views';
 
 /**
@@ -297,6 +299,7 @@ export const getAppConfig = ({
       } satisfies LoginViewOptions,
     },
     HeaderView,
+    ModalView,
   ];
 
   // Engage Voice views
@@ -321,6 +324,7 @@ export const getAppConfig = ({
     RequeueCallGroupItemView,
     ActiveCallListView,
     CallHistoryDetailView,
+    MultiLoginView,
     {
       provide: 'AnalyticsOptions',
       useValue: {

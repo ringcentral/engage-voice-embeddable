@@ -12,6 +12,7 @@ import {
 } from '@ringcentral-integration/next-core';
 import MessageTransport from '@ringcentral-integration/commons/lib/MessageTransport';
 import { adapterMessageTypes } from '../../../enums';
+import { t } from './i18n';
 import { EvAuth } from '../EvAuth';
 import { EvCall } from '../EvCall';
 import { EvLeads } from '../EvLeads';
@@ -216,7 +217,9 @@ class Adapter extends RcModule {
         if (payload.type === this.messageTypes.checkPopupWindow) {
           let result = this.tabManager.isPopupWindowOpened;
           if (result) {
-            this.toast.warning({ message: 'popupWindowOpened' });
+            this.toast.warning({
+              message: t('popupWindowOpened'),
+            });
           }
           if (
             !result &&
@@ -224,7 +227,9 @@ class Adapter extends RcModule {
             this.evPresence.calls.length > 0
           ) {
             result = true;
-            this.toast.warning({ message: 'cannotPopupWindowWithCall' });
+            this.toast.warning({
+              message: t('cannotPopupWindowWithCall'),
+            });
           }
           this.response({ requestId, result });
         }
