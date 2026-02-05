@@ -108,7 +108,7 @@ class Redirect extends RcModule {
   private _watchEvAuthStatus(): void {
     this._evAuth.onAuthSuccess(async () => {
       if (this._evAuth.isOnlyOneAgent) {
-        this._evAuth.setAgentId(
+        await this._evAuth.setAgentId(
           this._evAuth.authenticateResponse!.agents[0].agentId,
         );
         await this._evAuth.openSocketWithSelectedAgentId();

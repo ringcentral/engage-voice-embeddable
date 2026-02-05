@@ -139,14 +139,14 @@ class SessionConfigView extends RcViewModule {
     return `${t('multiple')} (${selectedIds.length})`;
   }
 
-  setLoginType(type: LoginTypes) {
+  async setLoginType(type: LoginTypes) {
     // Set login type first, then reset autoAnswer based on the new login type
-    this._evAgentSession.setFormGroup({ loginType: type });
+    await this._evAgentSession.setFormGroup({ loginType: type });
     const isIntegratedSoftphone = type === loginTypes.integratedSoftphone;
     const autoAnswer = isIntegratedSoftphone
       ? this._evAgentSession.autoAnswer
       : this._evAgentSession.defaultAutoAnswerOn;
-    this._evAgentSession.setFormGroup({ autoAnswer });
+    await this._evAgentSession.setFormGroup({ autoAnswer });
   }
 
   setSkillProfileId(profileId: string) {
@@ -179,8 +179,8 @@ class SessionConfigView extends RcViewModule {
       this._evClient.closeSocket();
     }
     // Clear auth state
-    this._evAuth.clearAgentId();
-    this._evAuth.setNotAuth();
+    await this._evAuth.clearAgentId();
+    await this._evAuth.setNotAuth();
     // Navigate to choose account
     this._router.push('/chooseAccount');
   }

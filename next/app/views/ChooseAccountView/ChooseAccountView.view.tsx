@@ -36,7 +36,7 @@ class ChooseAccountView extends RcViewModule {
   }
 
   async selectAgent(agentId: string): Promise<void> {
-    this._evAuth.setAgentId(agentId);
+    await this._evAuth.setAgentId(agentId);
     this._options?.onAccountSelected?.(agentId);
     await this._evAuth.openSocketWithSelectedAgentId({
       syncOtherTabs: true,

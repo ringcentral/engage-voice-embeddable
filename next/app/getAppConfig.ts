@@ -4,8 +4,10 @@ import {
   RouterOptions,
   RouterPlugin,
   StoragePlugin,
+  StorageOptions,
   IRouterOptions,
   ISharedAppOptions,
+  IStorageOptions,
 } from '@ringcentral-integration/next-core';
 import {
   BlockPlugin,
@@ -224,6 +226,12 @@ export const getAppConfig = ({
     },
     Auth,
     RateLimiter,
+    {
+      provide: StorageOptions,
+      useValue: {
+        disableClientRehydrated: false,
+      } satisfies IStorageOptions,
+    }
   ];
 
   // Engage Voice services

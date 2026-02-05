@@ -15,6 +15,7 @@ import {
   StoragePlugin,
   PortManager,
   watch,
+  delegate,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
 
@@ -62,14 +63,14 @@ class EvAuth extends RcModule {
     private locale: Locale,
     private toast: Toast,
     private block: BlockPlugin,
-    private storagePlugin: StoragePlugin,
+    private storage: StoragePlugin,
     private portManager: PortManager,
     @optional() private tabManager?: TabManager,
     @optional() private oAuth?: OAuth,
     @optional('EvAuthOptions') private evAuthOptions?: EvAuthOptions,
   ) {
     super();
-    this.storagePlugin.enable(this);
+    this.storage.enable(this);
     if (this.portManager?.shared) {
       this.portManager.onClient(() => {
         this.initialize();
@@ -86,7 +87,6 @@ class EvAuth extends RcModule {
     return !!this.tabManager?.enable;
   }
 
-  @storage
   @state
   connected = false;
 
@@ -102,13 +102,17 @@ class EvAuth extends RcModule {
   loginStatus: string | null = null;
 
   @action
-  setAgentId(agentId: string) {
+  _setAgentId(agentId: string) {
     this.agentId = agentId;
   }
 
-  @track(trackEvents.loginAgent)
+  @delegate('server')
+  async setAgentId(agentId: string): Promise<void> {
+    this._setAgentId(agentId);
+  }
+
   @action
-  setConnectionData({ connected, agent }: Partial<EvAuthState>) {
+  _setConnectionData({ connected, agent }: Partial<EvAuthState>) {
     if (agent !== undefined) {
       this.agent = agent;
     }
@@ -117,14 +121,30 @@ class EvAuth extends RcModule {
     }
   }
 
-  @action
-  setAgent(agent: EvAgentData | null) {
-    this.agent = agent;
+  @track(trackEvents.loginAgent)
+  @delegate('server')
+  async setConnectionData({ connected, agent }: Partial<EvAuthState>): Promise<void> {
+    this._setConnectionData({ connected, agent });
   }
 
   @action
-  clearAgentId() {
+  _setAgent(agent: EvAgentData | null) {
+    this.agent = agent;
+  }
+
+  @delegate('server')
+  async setAgent(agent: EvAgentData | null): Promise<void> {
+    this._setAgent(agent);
+  }
+
+  @action
+  _clearAgentId() {
     this.agentId = '';
+  }
+
+  @delegate('server')
+  async clearAgentId(): Promise<void> {
+    this._clearAgentId();
   }
 
   @action
@@ -258,11 +278,11 @@ class EvAuth extends RcModule {
 
   initialize() {
     this.auth.addAfterLoggedInHandler(() => {
-      console.log('addAfterLoggedInHandler~~');
+      this.logger.info('addAfterLoggedInHandler~~');
       this.clearAgentId();
     });
     this.auth.addBeforeLogoutHandler(() => {
-      console.log('addBeforeLogoutHandler~~');
+      this.logger.info('addBeforeLogoutHandler~~');
       this.clearAgentId();
     });
     this.evSubscription.subscribe(EvCallbackTypes.LOGOUT, async () => {
@@ -333,15 +353,15 @@ class EvAuth extends RcModule {
     if (!(await this.canUserLogoutFn())) {
       return;
     }
-    console.log('logout~~');
+    this.logger.info('logout~~');
     const agentId = this.agentId;
     this.sendLogoutTabEvent();
     await this.block.next(this._logout);
     const logoutAgentResponse = await this.logoutAgent(agentId);
     if (!logoutAgentResponse.message || logoutAgentResponse.message !== 'OK') {
-      console.log('logoutAgent failed');
+      this.logger.info('logoutAgent failed');
     }
-    this.setConnectionData({ connected: false, agent: null });
+    await this.setConnectionData({ connected: false, agent: null });
   }
 
   sendLogoutTabEvent() {
@@ -370,7 +390,7 @@ class EvAuth extends RcModule {
     tokenType = 'Bearer',
     shouldEmitAuthSuccess = true,
   }: AuthenticateWithTokenParams = {}) {
-    console.log('authenticateWithToken', shouldEmitAuthSuccess);
+    this.logger.info('authenticateWithToken', shouldEmitAuthSuccess);
     try {
       this.evClient.initSDK();
       const authenticateResponse =
@@ -379,8 +399,8 @@ class EvAuth extends RcModule {
           tokenType,
         );
       const agent = { ...this.agent, authenticateResponse } as EvAgentData;
-      this.setAgent(agent);
-      this.setAuthSuccess();
+      await this.setAgent(agent);
+      await this.setAuthSuccess();
       if (shouldEmitAuthSuccess) {
         this._emitAuthSuccess();
       }
@@ -411,7 +431,7 @@ class EvAuth extends RcModule {
     syncOtherTabs = false,
     retryOpenSocket = false,
   }: OpenSocketParams = {}): Promise<EvAgentConfig | undefined> {
-    console.log(
+    this.logger.info(
       'openSocketWithSelectedAgentId',
       syncOtherTabs,
       retryOpenSocket,
@@ -432,7 +452,7 @@ class EvAuth extends RcModule {
         this.tabManager!.send(tabManagerEvents.OPEN_SOCKET);
       }
       if (openSocketResult.error) {
-        console.log('retryOpenSocket~~', retryOpenSocket);
+        this.logger.info('retryOpenSocket~~', retryOpenSocket);
         if (retryOpenSocket) {
           const { access_token } = await this.auth.refreshToken();
           const authenticateRes = await this.authenticateWithToken({
@@ -451,9 +471,9 @@ class EvAuth extends RcModule {
       }
       const agentConfig = await getAgentConfig;
       const agent = { ...this.agent, agentConfig } as EvAgentData;
-      this.setConnectionData({ agent, connected: true });
+      await this.setConnectionData({ agent, connected: true });
       this.connecting = false;
-      this.setLoginSuccess();
+      await this.setLoginSuccess();
       this._emitLoginSuccess();
       return agentConfig;
     } catch (error: any) {

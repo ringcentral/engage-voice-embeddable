@@ -6,6 +6,7 @@ import {
   state,
   storage,
   StoragePlugin,
+  PortManager,
   watch,
 } from '@ringcentral-integration/next-core';
 import { debounce } from '@ringcentral-integration/commons/lib/debounce-throttle';
@@ -53,12 +54,20 @@ class EvAgentScript extends RcModule {
     private evCall: EvCall,
     private evPresence: EvPresence,
     private storagePlugin: StoragePlugin,
+    private portManager: PortManager,
     @optional() private tabManager?: TabManager,
     @optional('EvAgentScriptOptions')
     private evAgentScriptOptions?: EvAgentScriptOptions,
   ) {
     super();
     this.storagePlugin.enable(this);
+    if (this.portManager?.shared) {
+      this.portManager.onClient(() => {
+        this.initialize();
+      });
+    } else {
+      this.initialize();
+    }
   }
 
   @storage
@@ -112,7 +121,7 @@ class EvAgentScript extends RcModule {
     this._eventEmitter.on(agentScriptEvents.UPDATE_DISPOSITION, cb);
   }
 
-  override onInitOnce(): void {
+  initialize(): void {
     this._bindChannel();
 
     // When script changes, emit the response

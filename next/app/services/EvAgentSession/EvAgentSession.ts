@@ -12,6 +12,7 @@ import {
   StoragePlugin,
   watch,
   PortManager,
+  delegate,
 } from '@ringcentral-integration/next-core';
 import { format, parse } from '@ringcentral-integration/phone-number';
 import { sleep } from '@ringcentral-integration/commons/utils';
@@ -97,7 +98,7 @@ class EvAgentSession extends RcModule {
     this.storagePlugin.enable(this);
     // Login success event should be registered in constructor to capture event before onInitOnce
     this.evAuth.onceLoginSuccess(() => {
-      console.log('----------onLoginSuccess in EvAgentSession');
+      this.logger.info('----------onLoginSuccess in EvAgentSession');
       this._isLogin = true;
     });
     // Logout event should be in constructor, when logout that will not call init
@@ -131,7 +132,7 @@ class EvAgentSession extends RcModule {
       if (this.isAgentUpdating) {
         this.isAgentUpdating = false;
       } else {
-        console.log('!!!!to Dialer');
+        this.logger.info('!!!!to Dialer');
         this.redirect.goToDialer();
       }
     });
@@ -159,7 +160,7 @@ class EvAgentSession extends RcModule {
       () => this.isOnLoginSuccess,
       async (isOnLoginSuccess) => {
         if (isOnLoginSuccess) {
-          console.log('----------onLoginSuccess2');
+          this.logger.info('----------onLoginSuccess2');
           await this.initAgentSession();
         }
       },
@@ -392,7 +393,7 @@ class EvAgentSession extends RcModule {
   }
 
   @action
-  resetAllConfig() {
+  _resetAllConfig() {
     this.selectedInboundQueueIds = [];
     this.selectedSkillProfileId = NONE;
     this.loginType = DEFAULT_LOGIN_TYPE;
@@ -404,60 +405,115 @@ class EvAgentSession extends RcModule {
     this.dialGroupId = this.defaultDialGroupId;
   }
 
+  @delegate('server')
+  async resetAllConfig(): Promise<void> {
+    this._resetAllConfig();
+  }
+
   @action
-  setDialGroupId(groupId: string) {
+  _setDialGroupId(groupId: string) {
     this.dialGroupId = groupId;
   }
 
-  @action
-  setAccessToken(token: string) {
-    this.accessToken = token;
+  @delegate('server')
+  async setDialGroupId(groupId: string): Promise<void> {
+    this._setDialGroupId(groupId);
   }
 
   @action
-  setConfigSuccess(status: boolean) {
-    console.log('setConfigSuccess~', status);
+  _setAccessToken(token: string) {
+    this.accessToken = token;
+  }
+
+  @delegate('server')
+  async setAccessToken(token: string): Promise<void> {
+    this._setAccessToken(token);
+  }
+
+  @action
+  _setConfigSuccess(status: boolean) {
+    this.logger.info('setConfigSuccess~', status);
     this.configSuccess = status;
     this.configured = status;
   }
 
+  @delegate('server')
+  async setConfigSuccess(status: boolean): Promise<void> {
+    this._setConfigSuccess(status);
+  }
+
   @action
-  setLoginType(type: LoginTypes) {
+  _setLoginType(type: LoginTypes) {
     this.loginType = type;
   }
 
+  @delegate('server')
+  async setLoginType(type: LoginTypes): Promise<void> {
+    this._setLoginType(type);
+  }
+
   @action
-  setSkillProfileId(skillProfileId: string) {
+  _setSkillProfileId(skillProfileId: string) {
     this.selectedSkillProfileId = skillProfileId;
   }
 
+  @delegate('server')
+  async setSkillProfileId(skillProfileId: string): Promise<void> {
+    this._setSkillProfileId(skillProfileId);
+  }
+
   @action
-  setInboundQueueIds(ids: string[]) {
+  _setInboundQueueIds(ids: string[]) {
     this.selectedInboundQueueIds = ids;
   }
 
+  @delegate('server')
+  async setInboundQueueIds(ids: string[]): Promise<void> {
+    this._setInboundQueueIds(ids);
+  }
+
   @action
-  setExtensionNumber(extensionNumber: string) {
+  _setExtensionNumber(extensionNumber: string) {
     this.extensionNumber = extensionNumber;
   }
 
+  @delegate('server')
+  async setExtensionNumber(extensionNumber: string): Promise<void> {
+    this._setExtensionNumber(extensionNumber);
+  }
+
   @action
-  setTakingCall(takingCall: boolean) {
+  _setTakingCall(takingCall: boolean) {
     this.takingCall = takingCall;
   }
 
+  @delegate('server')
+  async setTakingCall(takingCall: boolean): Promise<void> {
+    this._setTakingCall(takingCall);
+  }
+
   @action
-  setAutoAnswer(autoAnswer: boolean) {
+  _setAutoAnswer(autoAnswer: boolean) {
     this.autoAnswer = autoAnswer;
   }
 
-  @action
-  setFormGroup(data: FormGroup) {
-    this.formGroup = { ...this.formGroup, ...data };
+  @delegate('server')
+  async setAutoAnswer(autoAnswer: boolean): Promise<void> {
+    this._setAutoAnswer(autoAnswer);
   }
 
   @action
-  assignFormGroupValue() {
+  _setFormGroup(data: FormGroup) {
+    this.formGroup = { ...this.formGroup, ...data };
+  }
+
+  @delegate('server')
+  async setFormGroup(data: FormGroup): Promise<void> {
+    this._setFormGroup(data);
+  }
+
+  @action
+  _assignFormGroupValue() {
     const {
       selectedInboundQueueIds,
       extensionNumber,
@@ -486,6 +542,11 @@ class EvAgentSession extends RcModule {
     }
   }
 
+  @delegate('server')
+  async assignFormGroupValue(): Promise<void> {
+    this._assignFormGroupValue();
+  }
+
   @action
   private _setFreshConfig() {
     this.loginType = DEFAULT_LOGIN_TYPE;
@@ -503,13 +564,14 @@ class EvAgentSession extends RcModule {
     }
   }
 
-  setFreshConfig(): void {
-    this._clearCalls();
+  @delegate('server')
+  async setFreshConfig(): Promise<void> {
     this._setFreshConfig();
   }
 
-  resetFormGroup() {
-    this.setFormGroup({
+  @delegate('server')
+  async resetFormGroup(): Promise<void> {
+    await this.setFormGroup({
       selectedInboundQueueIds: this.selectedInboundQueueIds,
       selectedSkillProfileId: this.selectedSkillProfileId,
       loginType: this.loginType,
@@ -519,15 +581,11 @@ class EvAgentSession extends RcModule {
     });
   }
 
-  private _resetAllState(): void {
-    console.log('_resetAllState~~', this.isMainTab);
+  private async _resetAllState(): Promise<void> {
+    this.logger.info('_resetAllState~~', this.isMainTab);
     if (!this.isAgentUpdating) {
-      this.resetAllConfig();
+      await this.resetAllConfig();
     }
-    this.setConfigSuccess(false);
-    this.isReconnected = false;
-    this._isLogin = false;
-    // Clear calls when resetting
     this._clearCalls();
   }
 
@@ -550,7 +608,7 @@ class EvAgentSession extends RcModule {
     triggerEvent = true,
     needAssignFormGroupValue = false,
   }: ConfigureAgentParams = {}): Promise<void> {
-    console.log('configureAgent~~', triggerEvent);
+    this.logger.info('configureAgent~~', triggerEvent);
     this._clearCalls();
     const connectResult = await this._connectEvServer(config);
     let result = connectResult.result;
@@ -564,10 +622,10 @@ class EvAgentSession extends RcModule {
       }
       result = (await this._connectEvServer(config)).result;
     }
-    this._handleAgentResult({ config: result.data, needAssignFormGroupValue });
+    await this._handleAgentResult({ config: result.data, needAssignFormGroupValue });
     if (triggerEvent) {
       this._emitTriggerConfig();
-      this.setConfigSuccess(true);
+      await this.setConfigSuccess(true);
     }
   }
 
@@ -580,8 +638,8 @@ class EvAgentSession extends RcModule {
       ...this.evAuth.agent,
       agentConfig,
     };
-    this.evAuth.setAgent(agent);
-    this.setConfigSuccess(true);
+    await this.evAuth.setAgent(agent);
+    await this.setConfigSuccess(true);
   }
 
   /**
@@ -600,7 +658,7 @@ class EvAgentSession extends RcModule {
         }
         config.isForce = true;
         const { result } = await this._connectEvServer(config);
-        this._handleAgentResult({
+        await this._handleAgentResult({
           config: result.data,
           isAgentUpdating: true,
           needAssignFormGroupValue: true,
@@ -613,7 +671,7 @@ class EvAgentSession extends RcModule {
         this._showUpdateSuccessAlert();
       });
     } catch (error) {
-      console.error('updateAgent error', error);
+      this.logger.error('updateAgent error', error);
       throw error;
     }
   }
@@ -633,7 +691,7 @@ class EvAgentSession extends RcModule {
         this.toast.danger({ message: alertMessage, ttl: 0 });
       }
       const { access_token } = await this.auth.refreshToken();
-      this.setAccessToken(access_token);
+      await this.setAccessToken(access_token);
       await this.evAuth.logoutAgent();
       // Wait for server to finish logout
       await sleep(WAIT_EV_SERVER_ROLLBACK_DELAY);
@@ -669,8 +727,9 @@ class EvAgentSession extends RcModule {
       });
       throw new Error(`'queueIds' is an empty array.`);
     }
+    const dialDest = this._getDialDest(formGroup);
     return {
-      dialDest: this._getDialDest(formGroup),
+      dialDest,
       queueIds: selectedInboundQueueIds,
       skillProfileId:
         selectedSkillProfileId === NONE ? '' : selectedSkillProfileId || '',
@@ -713,7 +772,7 @@ class EvAgentSession extends RcModule {
     }
   }
 
-  private _handleAgentResult({
+  private async _handleAgentResult({
     config: { message, status },
     isAgentUpdating,
     needAssignFormGroupValue,
@@ -721,7 +780,7 @@ class EvAgentSession extends RcModule {
     config: EvAgentConfig;
     isAgentUpdating?: boolean;
     needAssignFormGroupValue?: boolean;
-  }): void {
+  }): Promise<void> {
     if (status !== 'SUCCESS') {
       if (typeof message === 'string') {
         this.toast.danger({ message, ttl: 0 });
@@ -738,7 +797,7 @@ class EvAgentSession extends RcModule {
       throw new Error(message);
     }
     if (needAssignFormGroupValue) {
-      this.assignFormGroupValue();
+      await this.assignFormGroupValue();
     }
   }
 
@@ -811,23 +870,34 @@ class EvAgentSession extends RcModule {
     });
   }
 
+  async shouldAutoConfigureAgent(): Promise<boolean> {
+    if (this.auth.isFreshLogin) {
+      return false;
+    }
+    if (!this.configured) {
+      return false;
+    }
+    const multipleTabs = await this.hasMultipleTabs();
+    if (!multipleTabs) {
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Internal agent session initialization logic
    */
   private async _initAgentSession(): Promise<void> {
-    console.log('_initAgentSession~', this.isAgentUpdating);
+    this.logger.info('_initAgentSession~', this.isAgentUpdating);
     if (this.isAgentUpdating) {
       return;
     }
     // Validate stored selections against current agent config
-    this._afterLogin();
-    console.log('autoconfig~', !this.auth.isFreshLogin, this.configured);
+    await this._afterLogin();
+    this.logger.info('autoconfig~', !this.auth.isFreshLogin, this.configured);
     // If not fresh login and already configured (and not multi-tab), auto-configure
-    if (
-      this.auth.isFreshLogin === false &&
-      this.configured &&
-      (!this.tabManagerEnabled || !this.hasMultipleTabs)
-    ) {
+    const shouldAutoConfigure = await this.shouldAutoConfigureAgent();
+    if (shouldAutoConfigure) {
       try {
         await this._autoConfigureAgent();
         return;
@@ -837,15 +907,15 @@ class EvAgentSession extends RcModule {
     }
     // Otherwise set fresh config and navigate to session config page
     this._clearCalls();
-    this.setFreshConfig();
-    this.resetFormGroup();
+    await this.setFreshConfig();
+    await this.resetFormGroup();
     this._navigateToSessionConfigPage();
   }
 
   /**
    * Validate stored selections against current agent config after re-login
    */
-  private _afterLogin(): void {
+  private async _afterLogin(): void {
     // If not fresh login, validate stored config against current config
     if (!this.auth.isFreshLogin) {
       // Check if selected skill profile is still in the list
@@ -853,7 +923,7 @@ class EvAgentSession extends RcModule {
         (profile) => profile.profileId === this.selectedSkillProfileId,
       );
       if (!checkSelectIsInList) {
-        this.setSkillProfileId(this.defaultSkillProfileId);
+        await this.setSkillProfileId(this.defaultSkillProfileId);
       }
       // Check all selected queues are in inbound queue list
       const checkedInboundQueues = this.selectedInboundQueueIds.reduce<string[]>(
@@ -869,7 +939,7 @@ class EvAgentSession extends RcModule {
         },
         [],
       );
-      this.setInboundQueueIds(checkedInboundQueues);
+      await this.setInboundQueueIds(checkedInboundQueues);
     }
   }
 
@@ -877,8 +947,8 @@ class EvAgentSession extends RcModule {
    * Auto configure agent with stored settings
    */
   private async _autoConfigureAgent(): Promise<void> {
-    console.log('_autoConfigureAgent~');
-    const config = this._checkFieldsResult({
+    this.logger.info('_autoConfigureAgent~');
+    const config = await this._checkFieldsResult({
       selectedInboundQueueIds: this.selectedInboundQueueIds,
       selectedSkillProfileId: this.selectedSkillProfileId,
       loginType: this.loginType,
@@ -894,7 +964,7 @@ class EvAgentSession extends RcModule {
    */
   private _navigateToSessionConfigPage(): void {
     this.redirect.goToSessionConfig();
-    console.log('to sessionConfig~~');
+    this.logger.info('to sessionConfig~~');
   }
 
   /**
@@ -932,21 +1002,19 @@ class EvAgentSession extends RcModule {
     return !!this.portManager?.shared;
   }
 
-  /**
-   * Check if there are multiple tabs
-   */
-  get hasMultipleTabs(): boolean {
-    if (this.portManager?.shared) {
-      return true; // Assume multiple tabs in shared mode
+  @delegate('server')
+  async hasMultipleTabs(): Promise<boolean> {
+    if (!this.portManager?.shared) {
+      return false;
     }
-    return false;
+    return this.portManager?.portDetector?.clientIds?.length > 1;
   }
 
   /**
    * Check if browser should be blocked on unload
    */
   get shouldBlockBrowser(): boolean {
-    return !this.isIntegratedSoftphone && !this.hasMultipleTabs;
+    return !this.isIntegratedSoftphone;
   }
 }
 
