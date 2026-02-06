@@ -7,25 +7,23 @@ import {
 } from '@ringcentral-integration/next-core';
 
 import { EvClient } from '../EvClient';
-import { EvAuth } from '../EvAuth';
 import { EvAgentSession } from '../EvAgentSession';
+import { EvPresence } from '../EvPresence';
 import type { EvSettingsOptions, OffhookState } from './EvSettings.interface';
 
 /**
  * EvSettings module - Application settings management
- * Provides access to Engage Voice settings and phone offhook state
+ * Facade over EvPresence for offhook state and EvAgentSession for login type.
+ * All offhook state is managed reactively by EvPresence (@state + @action).
  */
 @injectable({
   name: 'EvSettings',
 })
 class EvSettings extends RcModule {
-  private _offhookState: OffhookState = 'disconnected';
-  private _isOffhooking = false;
-
   constructor(
     private evClient: EvClient,
-    private evAuth: EvAuth,
     private evAgentSession: EvAgentSession,
+    private evPresence: EvPresence,
     private portManager: PortManager,
     @optional('EvSettingsOptions') private evSettingsOptions?: EvSettingsOptions,
   ) {
@@ -41,55 +39,49 @@ class EvSettings extends RcModule {
 
   initialize() {
     this.evAgentSession.onTriggerConfig(() => {
-      this._resetOffhook();
+      this.evPresence.setOffhookTerm();
     });
-  }
-
-  get offhookState(): OffhookState {
-    return this._offhookState;
-  }
-
-  get isOffhook(): boolean {
-    return this._offhookState === 'connected';
-  }
-
-  get isOffhooking(): boolean {
-    return this._isOffhooking;
-  }
-
-  get isManualOffhook(): boolean {
-    return this.evAuth.agentConfig?.agentSettings?.manualOutdialPaMode === 'MANUAL_PA';
   }
 
   get loginType() {
     return this.evAgentSession.loginType;
   }
 
-  private _resetOffhook() {
-    this._offhookState = 'disconnected';
-    this._isOffhooking = false;
+  get isOffhook(): boolean {
+    return this.evPresence.isOffhook;
+  }
+
+  get isOffhooking(): boolean {
+    return this.evPresence.isOffhooking;
+  }
+
+  get isManualOffhook(): boolean {
+    return this.evPresence.isManualOffhook;
+  }
+
+  @computed((that: EvSettings) => [
+    that.evPresence.isOffhooking,
+    that.evPresence.isOffhook,
+  ])
+  get offhookState(): OffhookState {
+    if (this.isOffhooking) {
+      return this.isOffhook ? 'disconnecting' : 'connecting';
+    }
+    return this.isOffhook ? 'connected' : 'disconnected';
   }
 
   /**
-   * Toggle offhook state
+   * Toggle offhook state - delegates state management to EvPresence
+   * and sends offhook commands via EvClient
    */
-  async offHook(): Promise<void> {
-    if (this._isOffhooking) {
-      return;
-    }
-    this._isOffhooking = true;
-    try {
-      if (this.isOffhook) {
-        this._offhookState = 'disconnecting';
-        this.evClient.offhookTerm();
-        this._offhookState = 'disconnected';
-      } else {
-        this._offhookState = 'connecting';
-        this.evClient.offhookInit();
-        this._offhookState = 'connected';
-      }
-    } finally {
-      this._isOffhooking = false;
+  offHook(): void {
+    this.evPresence.setOffhooking(true);
+    if (this.isOffhook) {
+      this.evPresence.setIsManualOffhook(false);
+      this.evClient.offhookTerm();
+    } else {
+      this.evPresence.setIsManualOffhook(true);
+      this.evClient.offhookInit();
     }
   }
 }

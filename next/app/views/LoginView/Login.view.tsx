@@ -19,19 +19,7 @@ import {
   useConnector,
   useMainTabSyncState,
 } from '@ringcentral-integration/next-core';
-import { AuthPage as JunoAuthPage } from '@ringcentral-integration/next-widgets/deprecated/Auth/AuthPage';
 import React, { useRef } from 'react';
-import {
-  concatMap,
-  delay,
-  EMPTY,
-  filter,
-  identity,
-  map,
-  merge,
-  of,
-  switchMap,
-} from 'rxjs';
 
 import {
   AppFeatures,
@@ -182,19 +170,15 @@ export class LoginView extends RcViewModule {
         showMicroCore: this.showMicroCore,
       };
     });
+    console.log('syncCompleted', syncCompleted);
+    console.log('props', _props);
 
     const showSpinner = !syncCompleted || _props.showSpinner;
 
-    if (process.env.THEME_SYSTEM === 'spring-ui') {
-      const Component = this._loginViewOptions?.component || AuthPage;
+    const Component = this._loginViewOptions?.component || AuthPage;
 
-      return (
-        <Component {..._props} {...uiFunctions} showSpinner={showSpinner} />
-      );
-    }
-
-    const Component = this._loginViewOptions?.component || JunoAuthPage;
-
-    return <Component {..._props} {...uiFunctions} showSpinner={showSpinner} />;
+    return (
+      <Component {..._props} {...uiFunctions} showSpinner={showSpinner} />
+    );
   }
 }

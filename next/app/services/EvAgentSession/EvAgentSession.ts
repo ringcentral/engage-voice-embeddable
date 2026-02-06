@@ -613,6 +613,7 @@ class EvAgentSession extends RcModule {
     const connectResult = await this._connectEvServer(config);
     let result = connectResult.result;
     const existingLoginFound = connectResult.existingLoginFound;
+    this.logger.info('existingLoginFound~~', existingLoginFound);
     // Session timeout - this will occur when stay in session config page for long time
     if (result.data.status !== 'SUCCESS') {
       this._navigateToSessionConfigPage();
@@ -806,8 +807,12 @@ class EvAgentSession extends RcModule {
   ): Promise<{ result: { data: EvAgentConfig }; existingLoginFound: boolean }> {
     let result = await this.evClient.configureAgent(config);
     const { status } = result.data;
+    this.logger.info('configureAgent status~~', status);
     const existingLoginFound = status === messageTypes.EXISTING_LOGIN_FOUND;
+    this.logger.info('existingLoginFound~~', existingLoginFound);
     if (existingLoginFound) {
+      // Dismiss the block spinner overlay so user can interact with the confirmation dialog
+      this.block.unblockAll();
       // Show confirmation modal to user
       const confirmed = await this._showMultiLoginConfirm();
       if (!confirmed) {
@@ -897,7 +902,9 @@ class EvAgentSession extends RcModule {
     this.logger.info('autoconfig~', !this.auth.isFreshLogin, this.configured);
     // If not fresh login and already configured (and not multi-tab), auto-configure
     const shouldAutoConfigure = await this.shouldAutoConfigureAgent();
+    this.logger.info('shouldAutoConfigure~~', shouldAutoConfigure);
     if (shouldAutoConfigure) {
+      this._navigateToSessionConfigPage();
       try {
         await this._autoConfigureAgent();
         return;
