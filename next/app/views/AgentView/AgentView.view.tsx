@@ -22,6 +22,7 @@ import { DialerView } from '../DialerView';
 import { LeadsView } from '../LeadsView';
 import { CallHistoryView } from '../CallHistoryView';
 import { WorkingStateSelectView } from '../WorkingStateSelectView';
+import { OffhookButtonView } from '../OffhookButtonView';
 
 import type {
   AgentViewOptions,
@@ -50,6 +51,7 @@ class AgentView extends RcViewModule {
     protected _leadsView: LeadsView,
     protected _callHistoryView: CallHistoryView,
     protected _workingStateSelectView: WorkingStateSelectView,
+    protected _offhookButtonView: OffhookButtonView,
     @optional('AgentViewOptions')
     protected _agentViewOptions?: AgentViewOptions,
   ) {
@@ -126,6 +128,7 @@ class AgentView extends RcViewModule {
           title={t('agentTitle')}
         >
           <this._workingStateSelectView.component />
+          <this._offhookButtonView.component />
         </AppHeaderNav>
         {
           tabs.length > 0 ? (

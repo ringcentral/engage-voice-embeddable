@@ -65,7 +65,6 @@ import {
 
 // Views
 import {
-  MainView,
   HeaderView,
   HeaderNavViewSpring as HeaderNavView,
   SessionConfigView,
@@ -91,6 +90,7 @@ import {
   MultiLoginView,
   SessionConfigViewOptions,
   WorkingStateSelectView,
+  OffhookButtonView,
 } from './views';
 
 /**
@@ -314,7 +314,6 @@ export const getAppConfig = ({
 
   // Engage Voice views
   const evViews = [
-    MainView,
     SessionConfigView,
     DialerView,
     ActivityCallView,
@@ -336,6 +335,7 @@ export const getAppConfig = ({
     CallHistoryDetailView,
     MultiLoginView,
     WorkingStateSelectView,
+    OffhookButtonView,
     {
       provide: 'AnalyticsOptions',
       useValue: {

@@ -18,7 +18,6 @@ import {
 } from '@ringcentral-integration/micro-core/src/app/views';
 import { ContactAvatar } from './components/ContactAvatar';
 // Core Views
-import { MainView } from './views/MainView';
 import { LoginView } from './views/LoginView';
 import { HeaderView } from './views/HeaderView';
 import { SessionConfigView } from './views/SessionConfigView';
@@ -178,7 +177,6 @@ class AppView extends RcViewModule {
     private _headerNavView: HeaderNavViewSpring,
     private _loginView: LoginView,
     // Core views
-    private _mainView: MainView,
     private _sessionConfigView: SessionConfigView,
     private _agentView: AgentView,
     private _activityCallView: ActivityCallView,

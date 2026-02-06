@@ -1,5 +1,4 @@
 // Core views
-export * from './MainView';
 export * from './LoginView';
 export * from './SessionConfigView';
 export * from './DialerView';
@@ -29,6 +28,9 @@ export * from './HeaderView';
 
 // Working state views
 export * from './WorkingStateSelectView';
+
+// Offhook button view
+export * from './OffhookButtonView';
 
 // Modal views
 export * from './MultiLoginView';

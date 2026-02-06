@@ -97,7 +97,7 @@ export const Header: FunctionComponent<HeaderProps> = ({
               </Text>
             </div>
             <i className="flex-auto" />
-            <nav className="flex gap-3 justify-center items-center">{nav}</nav>
+            <nav className="flex justify-center items-center">{nav}</nav>
           </div>
 
           {
