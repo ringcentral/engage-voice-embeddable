@@ -10,4 +10,7 @@ export default {
   noneSelected: 'None selected',
   all: 'All',
   selected: 'selected',
+  saveEditionModalTitle: 'Confirm Update',
+  saveEditionModalContent: 'Your changes have not been saved.',
+  save: 'Save',
 };

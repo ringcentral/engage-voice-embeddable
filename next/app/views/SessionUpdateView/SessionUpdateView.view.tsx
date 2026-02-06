@@ -11,11 +11,14 @@ import {
 } from '@ringcentral-integration/micro-core/src/app/components';
 import { PageHeader } from '@ringcentral-integration/next-widgets/components';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
-import { Button } from '@ringcentral/spring-ui';
+import { Button, Dialog } from '@ringcentral/spring-ui';
 import React, { useCallback, useState } from 'react';
 
+import type { LoginTypes } from '../../../enums';
+import { loginTypes } from '../../../enums';
 import { EvAgentSession } from '../../services/EvAgentSession';
 import { EvAuth } from '../../services/EvAuth';
+import type { LoginTypeOption } from '../../components/SessionConfig/SessionConfig.interface';
 import type {
   SessionUpdateViewOptions,
   SessionUpdateViewProps,
@@ -58,14 +61,46 @@ class SessionUpdateView extends RcViewModule {
     this._evAgentSession.setFormGroup({ dialGroupId: groupId });
   }
 
+  async setLoginType(type: LoginTypes) {
+    await this._evAgentSession.setFormGroup({ loginType: type });
+    const isIntegratedSoftphone = type === loginTypes.integratedSoftphone;
+    const autoAnswer = isIntegratedSoftphone
+      ? this._evAgentSession.autoAnswer
+      : this._evAgentSession.defaultAutoAnswerOn;
+    await this._evAgentSession.setFormGroup({ autoAnswer });
+  }
+
+  setExtensionNumber(number: string) {
+    this._evAgentSession.setFormGroup({ extensionNumber: number });
+  }
+
+  get isIntegratedSoftphone(): boolean {
+    return (
+      this._evAgentSession.formGroup.loginType === loginTypes.integratedSoftphone
+    );
+  }
+
+  get showAutoAnswer(): boolean {
+    const { allowAutoAnswer } = this._evAuth.agentPermissions || {};
+    return (allowAutoAnswer || false) && this.isIntegratedSoftphone;
+  }
+
+  get voiceConnectionChanged(): boolean {
+    return this._evAgentSession.loginType !== this._evAgentSession.formGroup.loginType;
+  }
+
   async updateSession() {
-    // Voice connection is not changed in update view
-    await this._evAgentSession.updateAgent(false);
+    if (!this._evAgentSession.isSessionChanged) {
+      this._router.goBack();
+      return;
+    }
+    await this._evAgentSession.updateAgent(this.voiceConnectionChanged);
     this._options?.onUpdateComplete?.();
     this._router.push('/agent/dialer');
   }
 
-  cancel() {
+  cancelWithoutSave() {
+    this._evAgentSession.resetFormGroup();
     this._options?.onCancel?.();
     this._router.goBack();
   }
@@ -73,21 +108,30 @@ class SessionUpdateView extends RcViewModule {
   component(_props?: SessionUpdateViewProps) {
     const { t } = useLocale(i18n);
     const [showQueuesPanel, setShowQueuesPanel] = useState(false);
+    const [showSaveEditionModal, setShowSaveEditionModal] = useState(false);
 
     const {
       skillProfileList,
       inboundQueues,
       dialGroups,
+      loginTypeList,
       formGroup,
+      allowLoginControl,
       allowInbound,
       allowOutbound,
+      showAutoAnswer,
+      isSessionChanged,
     } = useConnector(() => ({
       skillProfileList: this._evAgentSession.skillProfileList,
       inboundQueues: this._evAgentSession.inboundQueues,
       dialGroups: this._evAgentSession.dialGroups,
+      loginTypeList: this._evAgentSession.loginTypeList,
       formGroup: this._evAgentSession.formGroup,
+      allowLoginControl: this._evAuth.agentPermissions?.allowLoginControl || false,
       allowInbound: this._evAuth.agentPermissions?.allowInbound || false,
       allowOutbound: this._evAuth.agentPermissions?.allowOutbound || false,
+      showAutoAnswer: this.showAutoAnswer,
+      isSessionChanged: this._evAgentSession.isSessionChanged,
     }));
 
     const handleSkillProfileChange = useCallback(
@@ -118,6 +162,20 @@ class SessionUpdateView extends RcViewModule {
       [],
     );
 
+    const handleLoginTypeChange = useCallback(
+      (type: LoginTypes) => {
+        this.setLoginType(type);
+      },
+      [],
+    );
+
+    const handleExtensionNumberChange = useCallback(
+      (number: string) => {
+        this.setExtensionNumber(number);
+      },
+      [],
+    );
+
     const handleSubmitInboundQueues = useCallback(
       (selectedIds: string[]) => {
         this.setInboundQueueIds(selectedIds);
@@ -131,7 +189,21 @@ class SessionUpdateView extends RcViewModule {
     }, []);
 
     const handleCancel = useCallback(() => {
-      this.cancel();
+      if (isSessionChanged) {
+        setShowSaveEditionModal(true);
+        return;
+      }
+      this.cancelWithoutSave();
+    }, [isSessionChanged]);
+
+    const handleConfirmSave = useCallback(async () => {
+      setShowSaveEditionModal(false);
+      await this.updateSession();
+    }, []);
+
+    const handleConfirmDiscard = useCallback(() => {
+      setShowSaveEditionModal(false);
+      this.cancelWithoutSave();
     }, []);
 
     // Show inbound queues panel
@@ -161,11 +233,11 @@ class SessionUpdateView extends RcViewModule {
         </AppHeaderNav>
         <div className="flex-1 overflow-y-auto px-4 py-4">
           <SessionConfig
-            showSkillProfile={skillProfileList.length > 0}
+            showSkillProfile={allowLoginControl && skillProfileList.length > 0}
             skillProfileList={skillProfileList}
             selectedSkillProfileId={formGroup.selectedSkillProfileId}
             onSkillProfileChange={handleSkillProfileChange}
-            showInboundQueues={allowInbound && inboundQueues.length > 0}
+            showInboundQueues={allowLoginControl && allowInbound && inboundQueues.length > 0}
             inboundQueues={inboundQueues}
             selectedInboundQueueIds={formGroup.selectedInboundQueueIds || []}
             onInboundQueuesChange={handleInboundQueuesChange}
@@ -175,7 +247,14 @@ class SessionUpdateView extends RcViewModule {
             dialGroups={dialGroups}
             dialGroupId={formGroup.dialGroupId}
             onDialGroupChange={handleDialGroupChange}
-            showAutoAnswer
+            showVoiceConnection
+            loginTypeList={loginTypeList as LoginTypeOption[]}
+            loginType={formGroup.loginType}
+            onLoginTypeChange={handleLoginTypeChange}
+            showExtensionNumber={formGroup.loginType === loginTypes.externalPhone}
+            extensionNumber={formGroup.extensionNumber || ''}
+            onExtensionNumberChange={handleExtensionNumberChange}
+            showAutoAnswer={showAutoAnswer}
             autoAnswer={formGroup.autoAnswer || false}
             onAutoAnswerChange={handleAutoAnswerChange}
           />
@@ -201,6 +280,40 @@ class SessionUpdateView extends RcViewModule {
             {t('update')}
           </Button>
         </div>
+        <Dialog
+          open={showSaveEditionModal}
+          onClose={() => setShowSaveEditionModal(false)}
+          data-sign="saveEditionModal"
+        >
+          <div className="p-4 flex flex-col gap-3">
+            <h3 className="typography-title text-neutral-b1">
+              {t('saveEditionModalTitle')}
+            </h3>
+            <p className="typography-mainText text-neutral-b2">
+              {t('saveEditionModalContent')}
+            </p>
+            <div className="flex gap-3 mt-2">
+              <Button
+                variant="outlined"
+                color="neutral"
+                fullWidth
+                onClick={handleConfirmDiscard}
+                data-sign="discardButton"
+              >
+                {t('cancel')}
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                fullWidth
+                onClick={handleConfirmSave}
+                data-sign="saveButton"
+              >
+                {t('save')}
+              </Button>
+            </div>
+          </div>
+        </Dialog>
         <AppFooterNav />
       </>
     );
