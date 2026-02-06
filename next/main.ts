@@ -15,6 +15,7 @@ async function runApp() {
     port: 'client',
     type: 'SharedWorker',
     worker,
+    // forcedSyncClient: false,
   });
 
   if (typeof document !== 'undefined') {

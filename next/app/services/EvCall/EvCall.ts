@@ -9,6 +9,7 @@ import {
   storage,
   StoragePlugin,
   watch,
+  delegate,
 } from '@ringcentral-integration/next-core';
 import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
 
@@ -160,20 +161,30 @@ class EvCall extends RcModule {
   }
 
   @action
-  setFormGroup(data: Partial<DialoutFormGroup>) {
+  _setFormGroup(data: Partial<DialoutFormGroup>) {
     this.formGroup = { ...this.formGroup, ...data };
   }
 
+  @delegate('server')
+  async setFormGroup(data: Partial<DialoutFormGroup>): Promise<void> {
+    this._setFormGroup(data);
+  }
+
   @action
-  saveForm() {
+  _saveForm() {
     this.dialoutCallerId = this.formGroup.dialoutCallerId;
     this.dialoutQueueId = this.formGroup.dialoutQueueId;
     this.dialoutCountryId = this.formGroup.dialoutCountryId;
     this.dialoutRingTime = this.formGroup.dialoutRingTime;
   }
 
+  @delegate('server')
+  async saveForm(): Promise<void> {
+    this._saveForm();
+  }
+
   @action
-  resetOutBoundDialSetting() {
+  _resetOutBoundDialSetting() {
     this.dialoutCallerId = DEFAULT_OUTBOUND_SETTING.dialoutCallerId;
     this.dialoutQueueId = DEFAULT_OUTBOUND_SETTING.dialoutQueueId;
     this.dialoutCountryId = DEFAULT_OUTBOUND_SETTING.dialoutCountryId;
@@ -203,8 +214,13 @@ class EvCall extends RcModule {
     };
   }
 
-  resetFormGroup() {
-    this.setFormGroup({
+  @delegate('server')
+  async resetOutBoundDialSetting(): Promise<void> {
+    this._resetOutBoundDialSetting();
+  }
+
+  async resetFormGroup() {
+    await this.setFormGroup({
       dialoutCallerId: this.dialoutCallerId,
       dialoutQueueId: this.dialoutQueueId,
       dialoutCountryId: this.dialoutCountryId,
@@ -215,8 +231,8 @@ class EvCall extends RcModule {
   /**
    * Alias for resetFormGroup for backwards compatibility
    */
-  resetForm() {
-    this.resetFormGroup();
+  async resetForm() {
+    await this.resetFormGroup();
   }
 
   setDialoutStatus(status: string) {
@@ -305,9 +321,9 @@ class EvCall extends RcModule {
     });
   }
 
-  override onInit() {
+  override async onInit() {
     if (this.evAuth.isFreshLogin) {
-      this.resetOutBoundDialSetting();
+      await this.resetOutBoundDialSetting();
     }
   }
 

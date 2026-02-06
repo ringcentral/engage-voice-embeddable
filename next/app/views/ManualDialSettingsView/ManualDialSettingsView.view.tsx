@@ -108,8 +108,8 @@ class ManualDialSettingsView extends RcViewModule {
   /**
    * Save all form changes and go back
    */
-  save = () => {
-    this.evCall.saveForm();
+  save = async () => {
+    await this.evCall.saveForm();
     this._router.goBack();
   };
 

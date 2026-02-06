@@ -905,6 +905,7 @@ class EvAgentSession extends RcModule {
         this.logger.error('Auto configure failed', e);
       }
     }
+    // TODO: handle multiple tabs
     // Otherwise set fresh config and navigate to session config page
     this._clearCalls();
     await this.setFreshConfig();
