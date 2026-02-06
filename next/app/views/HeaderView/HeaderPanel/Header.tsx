@@ -86,7 +86,7 @@ export const Header: FunctionComponent<HeaderProps> = ({
         nav
       ) : (
         <>
-          <div className="flex relative gap-10 justify-center items-center px-3 w-full bg-neutral-base h-9">
+          <div className="flex relative justify-center items-center px-3 w-full bg-neutral-base h-9">
             <div className="flex gap-3 justify-center items-center">
               {avatarRoot}
               <Text

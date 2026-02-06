@@ -21,6 +21,7 @@ import React, { useEffect, useState } from 'react';
 import { DialerView } from '../DialerView';
 import { LeadsView } from '../LeadsView';
 import { CallHistoryView } from '../CallHistoryView';
+import { WorkingStateSelectView } from '../WorkingStateSelectView';
 
 import type {
   AgentViewOptions,
@@ -48,6 +49,7 @@ class AgentView extends RcViewModule {
     protected _dialerView: DialerView,
     protected _leadsView: LeadsView,
     protected _callHistoryView: CallHistoryView,
+    protected _workingStateSelectView: WorkingStateSelectView,
     @optional('AgentViewOptions')
     protected _agentViewOptions?: AgentViewOptions,
   ) {
@@ -120,7 +122,11 @@ class AgentView extends RcViewModule {
     }, [routeTabId, tabs]);
     return (
       <>
-        <AppHeaderNav title={t('agentTitle')}>{null}</AppHeaderNav>
+        <AppHeaderNav
+          title={t('agentTitle')}
+        >
+          <this._workingStateSelectView.component />
+        </AppHeaderNav>
         {
           tabs.length > 0 ? (
             <this._syncTabView.component

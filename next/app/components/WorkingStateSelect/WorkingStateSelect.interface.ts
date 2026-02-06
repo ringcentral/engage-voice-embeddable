@@ -28,6 +28,8 @@ export interface WorkingStateSelectProps {
   timerText: string;
   /** Callback when state is changed */
   onChangeState: (state: AgentStateOption) => void;
+  /** Whether break time has been exceeded */
+  isOverTime?: boolean;
   /** Whether the select is disabled */
   disabled?: boolean;
   /** Custom class name */

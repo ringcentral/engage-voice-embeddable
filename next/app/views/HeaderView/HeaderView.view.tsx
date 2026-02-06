@@ -14,7 +14,6 @@ import type { PropsWithChildren } from 'react';
 import React, { useRef } from 'react';
 
 import { Brand, Locale } from '@ringcentral-integration/micro-core/src/app/services';
-
 import type {
   HeaderContainerProps,
   HeaderViewOptions,

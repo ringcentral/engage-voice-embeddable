@@ -27,5 +27,8 @@ export * from './CallHistoryDetailView';
 export * from './HeaderNavViewSpring';
 export * from './HeaderView';
 
+// Working state views
+export * from './WorkingStateSelectView';
+
 // Modal views
 export * from './MultiLoginView';

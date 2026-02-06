@@ -1,22 +1,44 @@
-import { Menu, MenuItem, Icon, Tooltip } from '@ringcentral/spring-ui';
+import {
+  Menu,
+  MenuItem,
+  MenuList,
+  MenuItemText,
+  Icon,
+  StatusIndicator,
+  Tooltip,
+  Text,
+} from '@ringcentral/spring-ui';
+import type { ComponentProps } from 'react';
 import { CaretDownMd, CaretUpMd } from '@ringcentral/spring-icon';
 import clsx from 'clsx';
 import type { FunctionComponent, MouseEvent } from 'react';
 import React, { useState, useCallback, useRef } from 'react';
 
-import type { WorkingStateSelectProps, AgentStateOption } from './WorkingStateSelect.interface';
+import type {
+  WorkingStateSelectProps,
+  AgentStateOption,
+} from './WorkingStateSelect.interface';
+
+type StatusVariant = ComponentProps<typeof StatusIndicator>['variant'];
 
 /**
- * Color mapping for agent state indicator
+ * Map agent state color string to StatusIndicator variant
  */
-const stateColorMap: Record<string, string> = {
-  green: 'bg-success',
-  red: 'bg-danger',
-  orange: 'bg-warning',
-  yellow: 'bg-warning',
-  grey: 'bg-neutral-b3',
-  gray: 'bg-neutral-b3',
-  blue: 'bg-primary-b',
+const mapColorToStatusVariant = (color?: string): StatusVariant => {
+  switch (color) {
+    case 'green':
+      return 'available';
+    case 'red':
+      return 'dnd';
+    case 'orange':
+    case 'yellow':
+      return 'busy';
+    case 'grey':
+    case 'gray':
+    case 'blue':
+    default:
+      return 'unavailable';
+  }
 };
 
 /**
@@ -32,13 +54,14 @@ export const WorkingStateSelect: FunctionComponent<WorkingStateSelectProps> = ({
   stateColor,
   timerText,
   onChangeState,
+  isOverTime = false,
   disabled = false,
   className,
   'data-sign': dataSign,
 }) => {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
-  const menuOpen = Boolean(anchorEl);
+  const isMenuOpen = Boolean(anchorEl);
 
   const handleClick = useCallback(
     (event: MouseEvent<HTMLButtonElement>) => {
@@ -61,89 +84,75 @@ export const WorkingStateSelect: FunctionComponent<WorkingStateSelectProps> = ({
     [handleClose, onChangeState],
   );
 
-  const colorClass = stateColorMap[stateColor] || 'bg-neutral-b3';
+  const statusVariant = mapColorToStatusVariant(stateColor);
 
   return (
     <div className={clsx('flex-1', className)} data-sign={dataSign}>
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={handleClick}
-        disabled={disabled}
-        className={clsx(
-          'flex items-center gap-2 w-full px-3 py-2 rounded-lg transition-colors',
-          'hover:bg-neutral-b5 focus:outline-none focus:ring-2 focus:ring-primary-b',
-          disabled && 'opacity-50 cursor-not-allowed',
-          !disabled && 'cursor-pointer',
-        )}
-        data-sign="workingStateButton"
-      >
-        {/* State indicator dot */}
-        <div
-          className={clsx('w-2.5 h-2.5 rounded-full flex-shrink-0', colorClass)}
-        />
-
-        {/* State name with tooltip */}
-        <Tooltip content={stateText}>
-          <span
-            className="typography-subtitle text-neutral-b1 truncate flex-1 text-left"
-            data-sign="stateName"
-          >
-            {stateText}
-          </span>
-        </Tooltip>
-
-        {/* Timer */}
-        <span
-          className="typography-descriptor text-neutral-b2 flex-shrink-0"
-          data-sign="timer"
+      <Tooltip title={stateText} triggerWhenDisabled={disabled}>
+        <button
+          ref={buttonRef}
+          type="button"
+          onClick={handleClick}
+          disabled={disabled}
+          className={clsx(
+            'flex items-center gap-1.5 w-full px-1.5 py-1 rounded border transition-colors',
+            'hover:bg-neutral-b5 focus:outline-none',
+            isOverTime
+              ? 'border-danger'
+              : 'border-transparent',
+            disabled && 'opacity-50 cursor-not-allowed',
+            !disabled && 'cursor-pointer',
+          )}
+          data-sign="workingStateButton"
         >
-          {timerText}
-        </span>
-
-        {/* Arrow icon */}
-        <Icon
-          symbol={menuOpen ? CaretUpMd : CaretDownMd}
-          size="small"
-          className="text-neutral-b2 flex-shrink-0"
-        />
-      </button>
-
-      {/* State selection menu */}
+          <StatusIndicator variant={statusVariant} size="medium" />
+          <Text className="typography-descriptorMini text-neutral-b1 truncate flex-1 text-left">
+            {stateText}
+          </Text>
+          <span
+            className={clsx(
+              'typography-descriptorMini flex-shrink-0',
+              isOverTime ? 'text-danger' : 'text-neutral-b2',
+            )}
+            data-sign="timer"
+          >
+            {timerText}
+          </span>
+          <Icon
+            symbol={isMenuOpen ? CaretUpMd : CaretDownMd}
+            size="xsmall"
+            className="text-neutral-b2 flex-shrink-0"
+          />
+        </button>
+      </Tooltip>
       <Menu
         anchorEl={anchorEl}
-        open={menuOpen}
+        open={isMenuOpen}
         onClose={handleClose}
         placement="bottom-start"
-        PopperPaperProps={{
-          style: { maxHeight: 280, minWidth: 200 },
-        }}
       >
-        {agentStates.map((state, index) => {
-          const isSelected = currentStateIndex === index;
-          const itemColorClass = stateColorMap[state.color || 'grey'] || 'bg-neutral-b3';
+        <MenuList>
+          {agentStates.map((state, index) => {
+            const isSelected = currentStateIndex === index;
+            const itemStatusVariant = mapColorToStatusVariant(state.color);
+            const displayText =
+              state.title || state.agentAuxState || state.agentState;
 
-          return (
-            <MenuItem
-              key={`${state.agentState}-${state.agentAuxState}-${index}`}
-              onClick={() => handleSelectState(state)}
-              selected={isSelected}
-              data-sign="workingStateItem"
-            >
-              <div className="flex items-center gap-2 w-full">
-                <div
-                  className={clsx(
-                    'w-2 h-2 rounded-full flex-shrink-0',
-                    itemColorClass,
-                  )}
-                />
-                <span className="typography-mainText text-neutral-b1 truncate">
-                  {state.title || state.agentAuxState || state.agentState}
-                </span>
-              </div>
-            </MenuItem>
-          );
-        })}
+            return (
+              <MenuItem
+                key={`${state.agentState}-${state.agentAuxState}-${index}`}
+                onClick={() => handleSelectState(state)}
+                selected={isSelected}
+                data-sign="workingStateItem"
+              >
+                <div className="flex items-center gap-2 w-full">
+                  <StatusIndicator variant={itemStatusVariant} size="medium" />
+                  <MenuItemText primary={displayText} />
+                </div>
+              </MenuItem>
+            );
+          })}
+        </MenuList>
       </Menu>
     </div>
   );

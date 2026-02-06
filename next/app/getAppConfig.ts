@@ -90,6 +90,7 @@ import {
   AgentView,
   MultiLoginView,
   SessionConfigViewOptions,
+  WorkingStateSelectView,
 } from './views';
 
 /**
@@ -334,6 +335,7 @@ export const getAppConfig = ({
     ActiveCallListView,
     CallHistoryDetailView,
     MultiLoginView,
+    WorkingStateSelectView,
     {
       provide: 'AnalyticsOptions',
       useValue: {
