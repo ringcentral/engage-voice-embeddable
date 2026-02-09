@@ -19,14 +19,13 @@ import {
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
 
-import { loginStatus, messageTypes, tabManagerEvents } from '../../../enums';
+import { loginStatus, messageTypes } from '../../../enums';
 import type { EvAgentConfig, EvAgentData } from '../EvClient/interfaces';
 import { EvCallbackTypes } from '../EvClient/enums';
 import { EvTypeError } from '../../../lib/EvTypeError';
 import { sortByName } from '../../../lib/sortByName';
 import { EvClient } from '../EvClient';
 import { EvSubscription } from '../EvSubscription';
-import { TabManager } from '../EvTabManager';
 import { OAuth } from '../OAuth';
 import type {
   EvAuthOptions,
@@ -65,26 +64,18 @@ class EvAuth extends RcModule {
     private block: BlockPlugin,
     private storage: StoragePlugin,
     private portManager: PortManager,
-    @optional() private tabManager?: TabManager,
     @optional() private oAuth?: OAuth,
     @optional('EvAuthOptions') private evAuthOptions?: EvAuthOptions,
   ) {
     super();
     this.storage.enable(this);
     if (this.portManager?.shared) {
-      this.portManager.onClient(() => {
+      this.portManager.onMainTab(() => {
         this.initialize();
       });
     } else {
       this.initialize();
     }
-  }
-
-  /**
-   * Check if tab manager is enabled
-   */
-  get tabManagerEnabled(): boolean {
-    return !!this.tabManager?.enable;
   }
 
   @state
@@ -160,9 +151,6 @@ class EvAuth extends RcModule {
   @action
   setNotAuth(asyncAllTabs = false) {
     this.loginStatus = loginStatus.NOT_AUTH;
-    if (asyncAllTabs && this.tabManagerEnabled) {
-      this.tabManager!.send(tabManagerEvents.LOGGED_OUT);
-    }
   }
 
   get isFreshLogin(): boolean {
@@ -295,18 +283,6 @@ class EvAuth extends RcModule {
         await this.newReconnect();
       }
     });
-    // Watch for tab manager events
-    if (this.tabManagerEnabled) {
-      watch(
-        this,
-        () => this.tabManager?.event,
-        (event) => {
-          if (event) {
-            this.handleTabManagerEvent(event);
-          }
-        },
-      );
-    }
     // Auto-login when RC auth is complete but EV auth hasn't happened yet
     watch(
       this,
@@ -349,13 +325,13 @@ class EvAuth extends RcModule {
     return this.evSubscription.once(EvCallbackTypes.LOGOUT, cb);
   }
 
+  @delegate('mainClient')
   async logout(): Promise<void> {
     if (!(await this.canUserLogoutFn())) {
       return;
     }
     this.logger.info('logout~~');
     const agentId = this.agentId;
-    this.sendLogoutTabEvent();
     await this.block.next(this._logout);
     const logoutAgentResponse = await this.logoutAgent(agentId);
     if (!logoutAgentResponse.message || logoutAgentResponse.message !== 'OK') {
@@ -364,14 +340,8 @@ class EvAuth extends RcModule {
     await this.setConnectionData({ connected: false, agent: null });
   }
 
-  sendLogoutTabEvent() {
-    this._emitLogoutBefore();
-    if (this.tabManagerEnabled) {
-      this.tabManager!.send(tabManagerEvents.LOGOUT);
-    }
-  }
-
-  logoutAgent(agentId: string = this.agentId) {
+  @delegate('mainClient')
+  async logoutAgent(agentId: string = this.agentId) {
     return this.evClient.logoutAgent(agentId);
   }
 
@@ -379,12 +349,14 @@ class EvAuth extends RcModule {
     this._eventEmitter.on(loginStatus.LOGOUT_BEFORE, callback);
   }
 
-  newReconnect(isBlock = true) {
-    this.evClient.closeSocket();
+  @delegate('mainClient')
+  async newReconnect(isBlock = true) {
+    await this.evClient.closeSocket();
     const fn = this.loginAgent;
     return isBlock ? this.block.next(fn) : fn();
   }
 
+  @delegate('mainClient')
   async authenticateWithToken({
     rcAccessToken = this.auth.accessToken,
     tokenType = 'Bearer',
@@ -427,6 +399,7 @@ class EvAuth extends RcModule {
     }
   }
 
+  @delegate('mainClient')
   async openSocketWithSelectedAgentId({
     syncOtherTabs = false,
     retryOpenSocket = false,
@@ -448,9 +421,6 @@ class EvAuth extends RcModule {
       }
       const openSocketResult = await this.evClient.openSocket(selectedAgentId);
       await sleep(0);
-      if (!openSocketResult.error && syncOtherTabs && this.tabManagerEnabled) {
-        this.tabManager!.send(tabManagerEvents.OPEN_SOCKET);
-      }
       if (openSocketResult.error) {
         this.logger.info('retryOpenSocket~~', retryOpenSocket);
         if (retryOpenSocket) {
@@ -498,7 +468,8 @@ class EvAuth extends RcModule {
     }
   }
 
-  loginAgent = async (token: string = this.auth.accessToken): Promise<void> => {
+  @delegate('mainClient')
+  async loginAgent(token: string = this.auth.accessToken): Promise<void> {
     const authenticateRes = await this.authenticateWithToken({
       rcAccessToken: token,
       shouldEmitAuthSuccess: false,
@@ -539,31 +510,6 @@ class EvAuth extends RcModule {
    */
   get isI18nEnabled(): boolean {
     return !!(this.agent as any)?.isI18nEnabled;
-  }
-
-  /**
-   * Handle tab manager events for multi-tab synchronization
-   */
-  async handleTabManagerEvent(event: { name: string }): Promise<void> {
-    if (!event) return;
-    switch (event.name) {
-      case tabManagerEvents.LOGOUT:
-        this._logoutByOtherTab = true;
-        this.evClient.closeSocket();
-        break;
-      case tabManagerEvents.OPEN_SOCKET:
-        await this.block.next(async () => {
-          await this.openSocketWithSelectedAgentId({
-            retryOpenSocket: true,
-          });
-        });
-        break;
-      case tabManagerEvents.LOGGED_OUT:
-        this.setNotAuth();
-        break;
-      default:
-        break;
-    }
   }
 }
 

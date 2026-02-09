@@ -5,9 +5,8 @@ import {
   injectable,
   RcModule,
   state,
-  isSharedWorker,
-  isWebWorker,
   PortManager,
+  delegate,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
 
@@ -117,7 +116,7 @@ class EvClient extends RcModule {
     }
 
     if (this._portManager.shared) {
-      this._portManager.onClient(() => {
+      this._portManager.onMainTab(() => {
         // execute this code when client is opened
         this.initialize();
       });
@@ -141,7 +140,8 @@ class EvClient extends RcModule {
     this._eventEmitter.removeListener(type, listener);
   }
 
-  loadCurrentCall(): Promise<EvBaseCall | void> {
+  @delegate('mainClient')
+  async loadCurrentCall(): Promise<EvBaseCall | void> {
     return new Promise<EvBaseCall | void>((resolve) => {
       this._sdk.loadCurrentCall(resolve);
     });
@@ -178,7 +178,7 @@ class EvClient extends RcModule {
     if (typeof window === 'undefined' || !window.AgentSDK) {
       return;
     }
-    console.log('initSDK');
+    this.logger.info('initSDK...');
     this._sdk = new window.AgentSDK({
       callbacks: {
         ...this._callbacks,
@@ -211,7 +211,8 @@ class EvClient extends RcModule {
     this._sdk.getRefreshedToken();
   }
 
-  authenticateAgentWithEngageAccessToken(
+  @delegate('mainClient')
+  async authenticateAgentWithEngageAccessToken(
     engageAccessToken: string,
   ): Promise<EvAuthenticateAgentWithEngageAccessTokenRes> {
     return new Promise<EvAuthenticateAgentWithEngageAccessTokenRes>(
@@ -227,7 +228,8 @@ class EvClient extends RcModule {
     );
   }
 
-  configureAgent({
+  @delegate('mainClient')
+  async configureAgent({
     dialDest,
     queueIds,
     chatIds,
@@ -255,7 +257,8 @@ class EvClient extends RcModule {
     });
   }
 
-  dispositionManualPass({
+  @delegate('mainClient')
+  async dispositionManualPass({
     dispId,
     notes,
     callbackDTS,
@@ -278,7 +281,8 @@ class EvClient extends RcModule {
     });
   }
 
-  dispositionCall({
+  @delegate('mainClient')
+  async dispositionCall({
     uii,
     dispId = '',
     notes = '',
@@ -304,6 +308,7 @@ class EvClient extends RcModule {
     );
   }
 
+  @delegate('mainClient')
   authenticateAgent(
     rcAccessToken: string,
     tokenType: EvTokenType,
@@ -332,6 +337,7 @@ class EvClient extends RcModule {
     });
   }
 
+  @delegate('mainClient')
   openSocket(agentId: string): Promise<EvOpenSocketResult> {
     const hasSupportWebSocket =
       typeof window !== 'undefined' && 'WebSocket' in window;
@@ -348,7 +354,8 @@ class EvClient extends RcModule {
     });
   }
 
-  getAgentConfig(): Promise<EvAgentConfig> {
+  @delegate('mainClient')
+  async getAgentConfig(): Promise<EvAgentConfig> {
     return new Promise<EvAgentConfig>((resolve) => {
       this._sdk.getAgentConfig((res: EvAgentConfig) => {
         resolve(res);
@@ -356,6 +363,7 @@ class EvClient extends RcModule {
     });
   }
 
+  @delegate('mainClient')
   async getAndHandleAuthenticateResponse(
     rcAccessToken: string,
     tokenType: EvTokenType,
@@ -405,19 +413,25 @@ class EvClient extends RcModule {
   /**
    * when manual close socket, that closeSocket will auto reconnected by agent SDK
    */
-  closeSocket() {
-    this._sdk.closeSocket();
+  @delegate('mainClient')
+  async closeSocket() {
+    if (!this.ifSocketExist) {
+      return;
+    }
+    await this._sdk.closeSocket();
   }
 
   get ifSocketExist(): boolean {
     return !!this._sdk.socket;
   }
 
-  hangup({ sessionId, resetPendingDisp = false }: EvClientHangUpParams) {
+  @delegate('mainClient')
+  async hangup({ sessionId, resetPendingDisp = false }: EvClientHangUpParams) {
     return this._sdk.hangup(sessionId, resetPendingDisp);
   }
 
-  logoutAgent(agentId: string): Promise<EvLogoutAgentResponse> {
+  @delegate('mainClient')
+  async logoutAgent(agentId: string): Promise<EvLogoutAgentResponse> {
     return new Promise<EvLogoutAgentResponse>((resolve) => {
       this._sdk.logoutAgent(agentId, (result: EvLogoutAgentResponse) => {
         resolve(result);
@@ -425,7 +439,8 @@ class EvClient extends RcModule {
     });
   }
 
-  manualOutdial({
+  @delegate('mainClient')
+  async manualOutdial({
     destination,
     callerId,
     ringTime,
@@ -441,25 +456,30 @@ class EvClient extends RcModule {
     );
   }
 
-  manualOutdialCancel(uii: string) {
-    this._sdk.manualOutdialCancel(uii);
+  @delegate('mainClient')
+  async manualOutdialCancel(uii: string) {
+    await this._sdk.manualOutdialCancel(uii);
   }
 
-  offhookInit() {
+  @delegate('mainClient')
+  async offhookInit() {
     // we using EvCallbackTypes.OFFHOOK_INIT to catch data, do not pass callback,
     // that will make the message not come back
-    this._sdk.offhookInit();
+    await this._sdk.offhookInit();
   }
 
-  offhookTerm() {
-    this._sdk.offhookTerm();
+  @delegate('mainClient')
+  async offhookTerm() {
+    await this._sdk.offhookTerm();
   }
 
-  hold(holdState: boolean) {
-    this._sdk.hold(holdState);
+  @delegate('mainClient')
+  async hold(holdState: boolean) {
+    await this._sdk.hold(holdState);
   }
 
-  pauseRecord(isRecord: boolean): Promise<PauseRecord> {
+  @delegate('mainClient')
+  async pauseRecord(isRecord: boolean): Promise<PauseRecord> {
     return new Promise<PauseRecord>((resolve, reject) => {
       return this._sdk.pauseRecord(
         isRecord,
@@ -481,7 +501,8 @@ class EvClient extends RcModule {
   /**
    * toggle call recording on/off base on true|false boolean
    */
-  record(state: boolean): Promise<RecordResponse> {
+  @delegate('mainClient')
+  async record(state: boolean): Promise<RecordResponse> {
     return new Promise<RecordResponse>((resolve, reject) => {
       return this._sdk.record(state, (response: RecordResponse) => {
         if (response.status === 'OK') {
@@ -493,11 +514,13 @@ class EvClient extends RcModule {
     });
   }
 
-  holdSession({ state, sessionId }: EvClientHoldSessionParams) {
-    this._sdk.holdSession(state, sessionId);
+  @delegate('mainClient')
+  async holdSession({ state, sessionId }: EvClientHoldSessionParams) {
+    await this._sdk.holdSession(state, sessionId);
   }
 
-  coldTransferCall({
+  @delegate('mainClient')
+  async coldTransferCall({
     dialDest,
     callerId = '',
     sipHeaders = [],
@@ -518,7 +541,8 @@ class EvClient extends RcModule {
     });
   }
 
-  warmTransferCall({
+  @delegate('mainClient')
+  async warmTransferCall({
     dialDest,
     callerId = '',
     sipHeaders = [],
@@ -539,7 +563,8 @@ class EvClient extends RcModule {
     });
   }
 
-  coldTransferIntlCall({
+  @delegate('mainClient')
+  async coldTransferIntlCall({
     dialDest,
     callerId = '',
     sipHeaders = [],
@@ -562,7 +587,8 @@ class EvClient extends RcModule {
     });
   }
 
-  warmTransferIntlCall({
+  @delegate('mainClient')
+  async warmTransferIntlCall({
     dialDest,
     callerId = '',
     sipHeaders = [],
@@ -585,11 +611,13 @@ class EvClient extends RcModule {
     });
   }
 
-  cancelWarmTransferCall(dialDest: string) {
-    this._sdk.warmXferCancel(dialDest);
+  @delegate('mainClient')
+  async cancelWarmTransferCall(dialDest: string) {
+    await this._sdk.warmXferCancel(dialDest);
   }
 
-  requeueCall({
+  @delegate('mainClient')
+  async requeueCall({
     queueId,
     skillId = '',
     maintain = false,
@@ -610,7 +638,8 @@ class EvClient extends RcModule {
     });
   }
 
-  fetchDirectAgentList(): Promise<EvDirectAgentListResponse> {
+  @delegate('mainClient')
+  async fetchDirectAgentList(): Promise<EvDirectAgentListResponse> {
     return new Promise<EvDirectAgentListResponse>((resolve) => {
       this._sdk.directAgentXferList((data: EvDirectAgentListResponse) => {
         resolve(data);
@@ -648,27 +677,33 @@ class EvClient extends RcModule {
     });
   }
 
-  rejectDirectAgentTransferCall(uii: string) {
-    this._sdk.rejectDirectAgentXfer(this.decodeUii(uii));
+  @delegate('mainClient')
+  async rejectDirectAgentTransferCall(uii: string) {
+    await this._sdk.rejectDirectAgentXfer(this.decodeUii(uii));
   }
 
-  coldDirectAgentTransfer(targetAgentId: string) {
-    this._sdk.coldDirectAgentXfer(targetAgentId);
+  @delegate('mainClient')
+  async coldDirectAgentTransfer(targetAgentId: string) {
+    await this._sdk.coldDirectAgentXfer(targetAgentId);
   }
 
-  warmDirectAgentTransfer(targetAgentId: string) {
-    this._sdk.warmDirectAgentXfer(targetAgentId);
+  @delegate('mainClient')
+  async warmDirectAgentTransfer(targetAgentId: string) {
+    await this._sdk.warmDirectAgentXfer(targetAgentId);
   }
 
-  sendVoicemailDirectAgentTransfer(targetAgentId: string) {
-    this._sdk.voicemailDirectAgentXfer(targetAgentId);
+  @delegate('mainClient')
+  async sendVoicemailDirectAgentTransfer(targetAgentId: string) {
+    await this._sdk.voicemailDirectAgentXfer(targetAgentId);
   }
 
-  cancelDirectAgentTransfer(targetAgentId: string) {
-    this._sdk.cancelDirectAgentXfer(targetAgentId);
+  @delegate('mainClient')
+  async cancelDirectAgentTransfer(targetAgentId: string) {
+    await this._sdk.cancelDirectAgentXfer(targetAgentId);
   }
 
-  setAgentState(agentState: string, agentAuxState: string) {
+  @delegate('mainClient')
+  async setAgentState(agentState: string, agentAuxState: string) {
     return this._sdk.setAgentState(agentState, agentAuxState);
   }
 
@@ -690,6 +725,7 @@ class EvClient extends RcModule {
     });
   }
 
+  @delegate('mainClient')
   async multiLoginRequest(): Promise<void> {
     // temp solution, and wait for ev backend enhancement.
     try {
@@ -702,41 +738,50 @@ class EvClient extends RcModule {
   /**
    * WebRTC related methods
    */
-  sipInit() {
-    this._sdk.sipInit();
+  @delegate('mainClient')
+  async sipInit() {
+    await this._sdk.sipInit();
   }
 
-  sipAnswer() {
-    this._sdk.sipAnswer();
+  @delegate('mainClient')
+  async sipAnswer() {
+    await this._sdk.sipAnswer();
   }
 
-  sipRegister() {
-    this._sdk.sipRegister();
+  @delegate('mainClient')
+  async sipRegister() {
+    await this._sdk.sipRegister();
   }
 
-  sipTerminate() {
-    this._sdk.sipTerminate();
+  @delegate('mainClient')
+  async sipTerminate() {
+    await this._sdk.sipTerminate();
   }
 
-  sipHangUp() {
-    this._sdk.sipHangUp();
+  @delegate('mainClient')
+  async sipHangUp() {
+    await this._sdk.sipHangUp();
   }
 
-  sipReject() {
-    this._sdk.sipReject();
+  @delegate('mainClient')
+  async sipReject() {
+    await this._sdk.sipReject();
   }
 
-  sipSendDTMF(dtmf: string) {
-    this._sdk.sipSendDTMF(dtmf);
+  @delegate('mainClient')
+  async sipSendDTMF(dtmf: string) {
+    await this._sdk.sipSendDTMF(dtmf);
   }
 
-  sipToggleMute(state: boolean) {
-    this._sdk.sipToggleMute(state);
+  @delegate('mainClient')
+  async sipToggleMute(state: boolean) {
+    await this._sdk.sipToggleMute(state);
   }
 
   /**
    * AgentScript related methods
    */
+  @delegate('mainClient')
   getScript(scriptId: string, version: string): Promise<EvScriptResponse> {
     return new Promise<EvScriptResponse>((resolve) => {
       this._sdk.getScript(scriptId, version, (res: EvScriptResponse) => {
@@ -747,6 +792,7 @@ class EvClient extends RcModule {
     });
   }
 
+  @delegate('mainClient')
   async saveScriptResult(
     uii: string,
     scriptId: string,
@@ -759,6 +805,7 @@ class EvClient extends RcModule {
   /**
    * GET - /voice/api/v1/agent/:accountId/knowledgeBaseGroups
    */
+  @delegate('mainClient')
   async getKnowledgeBaseGroups(
     knowledgeBaseGroupIds: number[],
   ): Promise<any | null> {
@@ -784,7 +831,7 @@ class EvClient extends RcModule {
         return JSON.parse(response);
       }
     } catch (error) {
-      console.log('getKnowledgeBaseGroups fail');
+      this.logger.error('getKnowledgeBaseGroups fail', error);
     }
     return null;
   }
@@ -792,6 +839,7 @@ class EvClient extends RcModule {
   /**
    * Initialize SIP and register
    */
+  @delegate('mainClient')
   sipInitAndRegister({
     agentId,
     authToken,
@@ -799,6 +847,7 @@ class EvClient extends RcModule {
     agentId: string;
     authToken: string;
   }): Promise<boolean> {
+    this.logger.info('evClient sipInitAndRegister~~');
     const { isSso: ssoLogin } = this._sdk.getApplicationSettings();
     const { dialDest } = this._sdk.getAgentSettings();
     return this._sdk.sipInitAndRegister({
@@ -814,7 +863,8 @@ class EvClient extends RcModule {
   /**
    * Get preview dial leads
    */
-  getPreviewDial(): Promise<any> {
+  @delegate('mainClient')
+  async getPreviewDial(): Promise<any> {
     return new Promise((resolve) => {
       this._sdk.previewFetch([], (res: any) => {
         resolve(res);
@@ -825,14 +875,16 @@ class EvClient extends RcModule {
   /**
    * Dial a preview lead
    */
-  previewDial(requestId: string, leadPhone: string, leadPhoneE164: string) {
-    this._sdk.previewDial(requestId, leadPhone, leadPhoneE164);
+  @delegate('mainClient')
+  async previewDial(requestId: string, leadPhone: string, leadPhoneE164: string) {
+    await this._sdk.previewDial(requestId, leadPhone, leadPhoneE164);
   }
 
   /**
    * Manual pass disposition
    */
-  manualPass({
+  @delegate('mainClient')
+  async manualPass({
     dispId,
     notes,
     callback,
@@ -849,7 +901,7 @@ class EvClient extends RcModule {
     requestId: string;
     externId: string;
   }) {
-    this._sdk.dispositionManualPass(
+    await this._sdk.dispositionManualPass(
       dispId,
       notes,
       callback,
@@ -863,7 +915,8 @@ class EvClient extends RcModule {
   /**
    * Get campaign dispositions
    */
-  getCampaignDispositions(campaignId: string): Promise<any> {
+  @delegate('mainClient')
+  async getCampaignDispositions(campaignId: string): Promise<any> {
     return new Promise((resolve) => {
       this._sdk.getCampaignDispositions(campaignId, (res: any) => {
         resolve(res);

@@ -69,7 +69,6 @@ export const createApp = async (
     analyticsKey,
   });
 
-  console.log('createApp', appConfig);
   const app = await createSharedApp(appConfig);
 
   return app;

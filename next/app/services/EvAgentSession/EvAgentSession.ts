@@ -106,7 +106,7 @@ class EvAgentSession extends RcModule {
       this._resetAllState();
     });
     if (this.portManager?.shared) {
-      this.portManager.onClient(() => {
+      this.portManager.onMainTab(() => {
         this._initialize();
       });
     } else {
@@ -136,15 +136,6 @@ class EvAgentSession extends RcModule {
         this.redirect.goToDialer();
       }
     });
-    watch(
-      this,
-      () => this.configSuccess,
-      (configSuccess) => {
-        if (configSuccess) {
-          this._emitConfigSuccess();
-        }
-      },
-    );
   }
 
   /**
@@ -628,6 +619,7 @@ class EvAgentSession extends RcModule {
       this._emitTriggerConfig();
       await this.setConfigSuccess(true);
     }
+    this._emitConfigSuccess();
   }
 
   /**
@@ -641,6 +633,7 @@ class EvAgentSession extends RcModule {
     };
     await this.evAuth.setAgent(agent);
     await this.setConfigSuccess(true);
+    this._emitConfigSuccess();
   }
 
   /**
@@ -844,6 +837,7 @@ class EvAgentSession extends RcModule {
   }
 
   private _emitConfigSuccess() {
+    this.logger.info('emitConfigSuccess~~');
     this._eventEmitter.emit(agentSessionEvents.CONFIG_SUCCESS);
   }
 

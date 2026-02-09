@@ -175,9 +175,7 @@ class SessionConfigView extends RcViewModule {
       this._tabManager!.send(tabManagerEvents.RE_CHOOSE_ACCOUNT);
     }
     // Close existing socket connection
-    if (this._evClient.ifSocketExist) {
-      this._evClient.closeSocket();
-    }
+    await this._evClient.closeSocket();
     // Clear auth state
     await this._evAuth.clearAgentId();
     await this._evAuth.setNotAuth();

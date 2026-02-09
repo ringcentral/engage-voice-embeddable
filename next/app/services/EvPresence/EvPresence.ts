@@ -60,7 +60,7 @@ class EvPresence extends RcModule {
     super();
     this.storagePlugin.enable(this);
     if (this.portManager.shared) {
-      this.portManager.onClient(() => {
+      this.portManager.onMainTab(() => {
         this.initialize();
       });
     } else {
