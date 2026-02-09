@@ -27,6 +27,8 @@ import { sortByName } from '../../../lib/sortByName';
 import { EvClient } from '../EvClient';
 import { EvSubscription } from '../EvSubscription';
 import { OAuth } from '../OAuth';
+import { Analytics } from '../Analytics';
+
 import type {
   EvAuthOptions,
   EvAuthState,
@@ -64,6 +66,7 @@ class EvAuth extends RcModule {
     private block: BlockPlugin,
     private storage: StoragePlugin,
     private portManager: PortManager,
+    private analytics: Analytics,
     @optional() private oAuth?: OAuth,
     @optional('EvAuthOptions') private evAuthOptions?: EvAuthOptions,
   ) {
@@ -281,6 +284,23 @@ class EvAuth extends RcModule {
         });
         this._logoutByOtherTab = false;
         await this.newReconnect();
+      }
+    });
+    this.onceLoginSuccess(() => {
+      try {
+        const userDetails = localStorage.getItem('engage-auth:fullUserDetails');
+        if (!userDetails) {
+          return;
+        }
+        const userDetailsJson = JSON.parse(userDetails);
+        const userId = `${userDetailsJson.rcUserId}`;
+        const accountId = userDetailsJson.rcAccountId;
+        this.analytics.identify({
+          userId,
+          accountId,
+        });
+      } catch (e) {
+        console.error('Error identifying user', e);
       }
     });
     // Auto-login when RC auth is complete but EV auth hasn't happened yet

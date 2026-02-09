@@ -604,7 +604,7 @@ class EvAgentSession extends RcModule {
     const connectResult = await this._connectEvServer(config);
     let result = connectResult.result;
     const existingLoginFound = connectResult.existingLoginFound;
-    this.logger.info('existingLoginFound~~', existingLoginFound);
+    this.logger.info('configureAgent existingLoginFound~~', existingLoginFound);
     // Session timeout - this will occur when stay in session config page for long time
     if (result.data.status !== 'SUCCESS') {
       this._navigateToSessionConfigPage();
@@ -802,7 +802,7 @@ class EvAgentSession extends RcModule {
     const { status } = result.data;
     this.logger.info('configureAgent status~~', status);
     const existingLoginFound = status === messageTypes.EXISTING_LOGIN_FOUND;
-    this.logger.info('existingLoginFound~~', existingLoginFound);
+    this.logger.info('_connectEvServer existingLoginFound~~', existingLoginFound);
     if (existingLoginFound) {
       // Dismiss the block spinner overlay so user can interact with the confirmation dialog
       this.block.unblockAll();

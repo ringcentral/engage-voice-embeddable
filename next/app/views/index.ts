@@ -34,3 +34,4 @@ export * from './OffhookButtonView';
 
 // Modal views
 export * from './MultiLoginView';
+export * from './EvIntegratedSoftphoneView';

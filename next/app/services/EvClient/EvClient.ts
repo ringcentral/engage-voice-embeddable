@@ -3,6 +3,7 @@ import {
   action,
   inject,
   injectable,
+  optional,
   RcModule,
   state,
   PortManager,
@@ -52,6 +53,7 @@ import type {
   EvClientHoldSessionParams,
   EvClientManualOutdialParams,
 } from './EvClient.interface';
+import { Environment } from '../Environment';
 
 type ListenerType = (typeof EvCallbackTypes)['OPEN_SOCKET' | 'CLOSE_SOCKET'];
 
@@ -90,6 +92,7 @@ class EvClient extends RcModule {
   constructor(
     protected _portManager: PortManager,
     @inject('EvClientOptions') protected evClientOptions: EvClientServiceOptions,
+    @optional() protected _environment?: Environment,
   ) {
     super();
     this._options = this.evClientOptions.options;
@@ -179,6 +182,11 @@ class EvClient extends RcModule {
       return;
     }
     this.logger.info('initSDK...');
+    const options = { ...this._options };
+    // Apply Environment module authHost override when enabled
+    if (this._environment?.enabled && this._environment.evAuthServer) {
+      options.authHost = this._environment.evAuthServer;
+    }
     this._sdk = new window.AgentSDK({
       callbacks: {
         ...this._callbacks,
@@ -188,7 +196,7 @@ class EvClient extends RcModule {
           this._eventEmitter.emit(EvCallbackTypes.ACK, res);
         },
       },
-      ...this._options,
+      ...options,
     });
   }
 
@@ -319,8 +327,19 @@ class EvClient extends RcModule {
         rcAccessToken,
         tokenType,
         async (res: RawEvAuthenticateAgentWithRcAccessTokenRes) => {
+          // Persist tokens in localStorage for Agent SDK session management
+          if (typeof window !== 'undefined' && window.localStorage) {
+            localStorage.setItem('engage-auth:tokenType', res.tokenType);
+            localStorage.setItem('engage-auth:accessToken', res.accessToken);
+            localStorage.setItem('engage-auth:refreshToken', res.refreshToken);
+          }
           // here just auth with engage access token, not need handle response data, that handle by Agent SDK.
           await this.authenticateAgentWithEngageAccessToken(res.accessToken);
+          // Apply locale from regional settings if available
+          const locale = (res as any).regionalSettings?.language;
+          if (locale) {
+            this._eventEmitter.emit('setLocale', locale);
+          }
           this.setAppStatus(evStatus.LOGINED);
           const _agents = (res || {}).agents || [];
           const agents = _agents.map((agent) => ({

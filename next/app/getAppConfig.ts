@@ -91,6 +91,7 @@ import {
   SessionConfigViewOptions,
   WorkingStateSelectView,
   OffhookButtonView,
+  EvIntegratedSoftphoneView,
 } from './views';
 
 /**
@@ -336,6 +337,7 @@ export const getAppConfig = ({
     MultiLoginView,
     WorkingStateSelectView,
     OffhookButtonView,
+    EvIntegratedSoftphoneView,
     {
       provide: 'AnalyticsOptions',
       useValue: {
