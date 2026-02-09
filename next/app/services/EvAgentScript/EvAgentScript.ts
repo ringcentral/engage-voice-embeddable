@@ -62,7 +62,7 @@ class EvAgentScript extends RcModule {
     super();
     this.storagePlugin.enable(this);
     if (this.portManager?.shared) {
-      this.portManager.onMainTab(() => {
+      this.portManager.onClient(() => {
         this.initialize();
       });
     } else {

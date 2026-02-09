@@ -29,7 +29,7 @@ class EvSettings extends RcModule {
   ) {
     super();
     if (this.portManager?.shared) {
-      this.portManager.onMainTab(() => {
+      this.portManager.onClient(() => {
         this.initialize();
       });
     } else {

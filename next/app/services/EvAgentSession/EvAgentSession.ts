@@ -107,7 +107,21 @@ class EvAgentSession extends RcModule {
     });
     if (this.portManager?.shared) {
       this.portManager.onMainTab(() => {
-        this._initialize();
+        return this._initialize();
+      });
+      this.portManager.onClient(() => {
+        this.onConfigSuccess(() => {
+          // Set dialout status to idle if no calls
+          if (this.evPresence.calls.length === 0) {
+            this.evPresence.setDialoutStatus(dialoutStatuses.idle);
+          }
+          if (this.isAgentUpdating) {
+            this.isAgentUpdating = false;
+          } else {
+            this.logger.info('!!!!to Dialer');
+            this.redirect.goToDialer();
+          }
+        });
       });
     } else {
       this._initialize();
@@ -122,26 +136,10 @@ class EvAgentSession extends RcModule {
     return this.multiLoginView.showConfirm();
   }
 
-  private _initialize(): void {
-    this._init();
-    this.onConfigSuccess(() => {
-      // Set dialout status to idle if no calls
-      if (this.evPresence.calls.length === 0) {
-        this.evPresence.setDialoutStatus(dialoutStatuses.idle);
-      }
-      if (this.isAgentUpdating) {
-        this.isAgentUpdating = false;
-      } else {
-        this.logger.info('!!!!to Dialer');
-        this.redirect.goToDialer();
-      }
-    });
-  }
-
   /**
    * Initialize agent session on login success
    */
-  private async _init(): Promise<void> {
+  private async _initialize(): Promise<void> {
     if (this._isLogin) {
       await this.initAgentSession();
     }
