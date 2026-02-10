@@ -13,34 +13,35 @@ import i18n from './i18n';
 /**
  * ConnectivityPanel - Displays connectivity status banner
  * Supports base modes (offline, voipOnly, survival, webphoneUnavailable, connecting)
- * plus EV-specific modes (socketDisconnected, sipUnregistered)
+ * plus EV-specific modes (socketDisconnected, sipUnstableConnection, sipConnecting)
+ *
+ * Uses error severity (red) for error states and info severity (blue) for
+ * informational states like first-time SIP connecting.
  */
 export const ConnectivityPanel: FunctionComponent<EvConnectivityViewProps> = ({
   mode,
+  severity,
   loading,
   onClick,
   retry,
-  sipRegistering,
   ...rest
 }) => {
   const { t } = useLocale(i18n);
   if (!mode) return null;
-
-  const isLoading = loading || sipRegistering;
-
+  const progressColor = severity === 'info' ? 'primary' : 'danger';
   return (
     <Announcement
-      severity="error"
+      severity={severity}
       className="rounded-none"
       classes={{
         body: 'gap-2',
       }}
       data-sign="ConnectivityBadge"
       action={
-        isLoading ? (
+        loading ? (
           <CircularProgressIndicator
             title={t('connecting')}
-            color="danger"
+            color={progressColor}
             size="small"
           />
         ) : retry ? (

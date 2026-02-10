@@ -113,6 +113,7 @@ export interface EvClientCallMapping {
   sipSwitchRegistrarNotification: any;
   sipUnmuteResponse: any;
   sipUnregisteredNotification: any;
+  sipUnstableConnectionNotification: any;
 }
 
 export type EvClientCallBackValueType = keyof EvClientCallMapping;

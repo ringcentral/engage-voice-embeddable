@@ -19,7 +19,12 @@ import { ConnectivityPanel } from './ConnectivityPanel';
 
 /**
  * ConnectivityView - Extended connectivity view for Engage Voice
- * Shows network status, EvClient socket status, and SIP registration status
+ * Shows network status, EvClient socket status, and SIP connection status
+ *
+ * Priority: base network mode > socket disconnected > SIP unstable > SIP connecting
+ *
+ * - sipUnstableConnection: was connected, then lost (error severity, red)
+ * - sipConnecting: first-time SIP registration after session setup (info severity, blue)
  */
 @injectable({
   name: 'ConnectivityView',
@@ -36,12 +41,12 @@ export class ConnectivityView extends BaseConnectivityView {
 
   /**
    * Get UI props including EV-specific connectivity statuses
-   * Priority: base mode > socket disconnected > SIP unregistered
+   * Priority: base mode > socket disconnected > SIP unstable > SIP connecting
    */
   override getUIProps(): UIProps<EvConnectivityViewProps> {
     const baseProps = super.getUIProps();
     if (baseProps.mode) {
-      return { ...baseProps, sipRegistering: false };
+      return { ...baseProps, severity: 'error' };
     }
     const isSocketDisconnected =
       this._evClient.appStatus === evStatus.CLOSED ||
@@ -49,31 +54,30 @@ export class ConnectivityView extends BaseConnectivityView {
     if (isSocketDisconnected) {
       return {
         mode: 'socketDisconnected',
+        severity: 'error',
         loading: false,
         retry: true,
-        sipRegistering: false,
       };
     }
     if (this._evIntegratedSoftphone?.isIntegratedSoftphone) {
-      const { sipState } = this._evIntegratedSoftphone;
-      if (sipState === 'idle') {
+      if (this._evIntegratedSoftphone.sipUnstableConnection) {
         return {
-          mode: 'sipUnregistered',
-          loading: false,
-          retry: false,
-          sipRegistering: false,
-        };
-      }
-      if (sipState === 'registering') {
-        return {
-          mode: 'sipUnregistered',
+          mode: 'sipUnstableConnection',
+          severity: 'error',
           loading: true,
           retry: false,
-          sipRegistering: true,
+        };
+      }
+      if (this._evIntegratedSoftphone.sipRegistering) {
+        return {
+          mode: 'sipConnecting',
+          severity: 'info',
+          loading: true,
+          retry: false,
         };
       }
     }
-    return { ...baseProps, sipRegistering: false };
+    return { ...baseProps, severity: 'error' };
   }
 
   /**

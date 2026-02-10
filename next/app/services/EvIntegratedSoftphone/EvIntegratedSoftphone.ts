@@ -85,6 +85,9 @@ class EvIntegratedSoftphone extends RcModule {
   @state
   sipRegistering = false;
 
+  @state
+  sipUnstableConnection = false;
+
   get sipState(): SipState {
     if (this.sipRegistering) {
       return 'registering';
@@ -140,6 +143,16 @@ class EvIntegratedSoftphone extends RcModule {
   }
 
   @action
+  _setSipUnstableConnection(unstable: boolean) {
+    this.sipUnstableConnection = unstable;
+  }
+
+  @delegate('server')
+  async setSipUnstableConnection(unstable: boolean) {
+    this._setSipUnstableConnection(unstable);
+  }
+
+  @action
   _resetController() {
     this.muteActive = false;
   }
@@ -154,6 +167,7 @@ class EvIntegratedSoftphone extends RcModule {
     this.audioPermission = false;
     this.sipRegistering = false;
     this.sipRegisterSuccess = false;
+    this.sipUnstableConnection = false;
   }
 
   @delegate('server')
@@ -222,6 +236,7 @@ class EvIntegratedSoftphone extends RcModule {
       this._isCloseWhenCallConnected = false;
       this.setSipRegisterSuccess(true);
       this.setSipRegistering(false);
+      this.setSipUnstableConnection(false);
       this._emitRegistered();
     });
     this.evSubscription.subscribe(EvCallbackTypes.SIP_UNREGISTERED, () => {
@@ -235,6 +250,9 @@ class EvIntegratedSoftphone extends RcModule {
         await this._resetAllState();
       },
     );
+    this.evSubscription.subscribe(EvCallbackTypes.SIP_UNSTABLE_CONNECTION, () => {
+      this.setSipUnstableConnection(true);
+    });
     this.evSubscription.subscribe(
       EvCallbackTypes.SIP_RINGING,
       (ringingCall?: EvSipRingingData) => {

@@ -6,7 +6,13 @@ import type { ConnectivityType } from '@ringcentral-integration/micro-auth/src/a
 export type EvConnectivityType =
   | ConnectivityType
   | 'socketDisconnected'
-  | 'sipUnregistered';
+  | 'sipUnstableConnection'
+  | 'sipConnecting';
+
+/**
+ * Announcement severity level
+ */
+export type ConnectivitySeverity = 'error' | 'info';
 
 /**
  * Props for the EvConnectivityPanel component
@@ -14,8 +20,8 @@ export type EvConnectivityType =
 export interface EvConnectivityViewProps {
   className?: string;
   mode: EvConnectivityType | null;
+  severity: ConnectivitySeverity;
   loading: boolean;
   retry: boolean;
-  sipRegistering: boolean;
   onClick: () => void;
 }

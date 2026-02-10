@@ -88,4 +88,5 @@ export const EvCallbackTypes = {
   SIP_SWITCH_REGISTRAR: 'sipSwitchRegistrarNotification',
   SIP_UNMUTE: 'sipUnmuteResponse',
   SIP_UNREGISTERED: 'sipUnregisteredNotification',
+  SIP_UNSTABLE_CONNECTION: 'sipUnstableConnectionNotification',
 } as const;
