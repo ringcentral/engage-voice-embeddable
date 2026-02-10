@@ -38,6 +38,7 @@ import { RequeueCallGroupItemView } from './views/RequeueCallGroupItemView';
 import { ActiveCallListView } from './views/ActiveCallListView';
 import { CallHistoryDetailView } from './views/CallHistoryDetailView';
 import { AgentView } from './views/AgentView';
+import { ConnectivityView } from './views/ConnectivityView';
 
 import type { AppViewOptions } from '../interfaces';
 
@@ -194,6 +195,7 @@ class AppView extends RcViewModule {
     private _requeueCallGroupItemView: RequeueCallGroupItemView,
     private _activeCallListView: ActiveCallListView,
     private _callHistoryDetailView: CallHistoryDetailView,
+    private _connectivityView: ConnectivityView,
     @optional('AppViewOptions')
     private _appViewOptions?: AppViewOptions,
   ) {
@@ -231,6 +233,7 @@ class AppView extends RcViewModule {
         header={
           <div className="flex-none">
             <AppAnnouncementRender>
+              <this._connectivityView.component />
               {this._appViewOptions?.headers}
             </AppAnnouncementRender>
           </div>

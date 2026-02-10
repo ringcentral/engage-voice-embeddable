@@ -34,6 +34,8 @@ import {
   AuthOptions,
   OAuthOptions,
   OAuth,
+  ConnectivityMonitor,
+  ConnectivityManager,
 } from '@ringcentral-integration/micro-auth/src/app/services';
 
 import { AppView } from './AppView';
@@ -92,6 +94,7 @@ import {
   WorkingStateSelectView,
   OffhookButtonView,
   EvIntegratedSoftphoneView,
+  ConnectivityView,
 } from './views';
 
 /**
@@ -233,7 +236,9 @@ export const getAppConfig = ({
       useValue: {
         disableClientRehydrated: false,
       } satisfies IStorageOptions,
-    }
+    },
+    ConnectivityMonitor,
+    ConnectivityManager,
   ];
 
   // Engage Voice services
@@ -311,6 +316,7 @@ export const getAppConfig = ({
     },
     HeaderView,
     ModalView,
+    ConnectivityView,
   ];
 
   // Engage Voice views
