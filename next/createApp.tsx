@@ -41,7 +41,6 @@ export const createApp = async (
   options?: Parameters<typeof createSharedApp>[0]['share'],
   additionalModules: Parameters<typeof createSharedApp>[0]['modules'] = [],
 ) => {
-  console.log('process.env.APP_CONFIG', process.env.APP_CONFIG);
   const config = process.env.APP_CONFIG;
   const {
     prefix,

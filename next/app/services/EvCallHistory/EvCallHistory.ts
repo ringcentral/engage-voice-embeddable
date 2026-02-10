@@ -9,11 +9,14 @@ import {
   RcModule,
   state,
   watch,
+  PortManager,
 } from '@ringcentral-integration/next-core';
 
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber';
 import { contactMatchIdentifyEncode } from '../../../lib/contactMatchIdentify';
 import { makeCallsUniqueIdentifies } from '../../../lib/callUniqueIdentifies';
+import { directTransferNotificationTypes } from '../../../enums/directTransferNotificationTypes';
+import { EvCallbackTypes } from '../EvClient/enums/callbackTypes';
 import { EvPresence } from '../EvPresence';
 import { EvSubscription } from '../EvSubscription';
 import { EvAgentSession } from '../EvAgentSession';
@@ -43,10 +46,19 @@ class EvCallHistory extends RcModule {
     private evAgentSession: EvAgentSession,
     private evCallDisposition: EvCallDisposition,
     private locale: Locale,
+    private portManager: PortManager,
     @optional('EvCallHistoryOptions')
     private evCallHistoryOptions?: EvCallHistoryOptions,
   ) {
     super();
+
+    if (this.portManager?.shared) {
+      this.portManager.onClient(() => {
+        this.initialize();
+      });
+    } else {
+      this.initialize();
+    }
   }
 
   @state
@@ -79,7 +91,7 @@ class EvCallHistory extends RcModule {
   }
 
   get rawCalls() {
-    return this.evPresence.callLogs;
+    return this.evPresence.callLogs ?? [];
   }
 
   get callLogsIds(): string[] {
@@ -226,16 +238,24 @@ class EvCallHistory extends RcModule {
     // Placeholder for any timestamp tracking logic
   }
 
-  override onInitOnce() {
-    watch(
-      this,
-      () => this.evAgentSession.configSuccess,
-      (configSuccess) => {
-        if (configSuccess) {
-          // Trigger any necessary call history updates
+  override initialize() {
+    this.evSubscription.subscribe(
+      EvCallbackTypes.DIRECT_AGENT_TRANSFER_NOTIF,
+      (data: { status: string; ani?: string }) => {
+        if (data.status === directTransferNotificationTypes.VOICEMAIL) {
+          // TODO: add `data` for list and alert message about 'Direct Transfer: data.ani, Click to view call detail.'
+          this.logger.info('Direct transfer voicemail notification', data);
         }
       },
     );
+    this.evAgentSession.onConfigSuccess(async () => {
+      if (
+        !this.evPresence.callsLimited &&
+        !this.evPresence.calls.length
+      ) {
+        await this.evPresence.limitCalls();
+      }
+    });
   }
 }
 

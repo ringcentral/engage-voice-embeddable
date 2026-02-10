@@ -74,14 +74,14 @@ class EvSettings extends RcModule {
    * Toggle offhook state - delegates state management to EvPresence
    * and sends offhook commands via EvClient
    */
-  offHook(): void {
-    this.evPresence.setOffhooking(true);
+  async offHook(): Promise<void> {
+    await this.evPresence.setOffhooking(true);
     if (this.isOffhook) {
-      this.evPresence.setIsManualOffhook(false);
-      this.evClient.offhookTerm();
+      await this.evPresence.setIsManualOffhook(false);
+      await this.evClient.offhookTerm();
     } else {
-      this.evPresence.setIsManualOffhook(true);
-      this.evClient.offhookInit();
+      await this.evPresence.setIsManualOffhook(true);
+      await this.evClient.offhookInit();
     }
   }
 }

@@ -357,7 +357,7 @@ class EvCall extends RcModule {
    * Initiate an outbound call
    */
   async dialout(phoneNumber: string): Promise<void> {
-    this.evPresence.setCurrentCallUii('');
+    await this.evPresence.setCurrentCallUii('');
     // Handle integrated softphone
     if (this.evAgentSession.isIntegratedSoftphone) {
       try {
@@ -400,7 +400,7 @@ class EvCall extends RcModule {
     leadPhone: string,
     leadPhoneE164: string,
   ): Promise<void> {
-    this.evPresence.setCurrentCallUii('');
+    await this.evPresence.setCurrentCallUii('');
     // Handle integrated softphone
     if (this.evAgentSession.isIntegratedSoftphone) {
       try {

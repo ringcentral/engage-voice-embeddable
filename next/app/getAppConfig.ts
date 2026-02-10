@@ -20,6 +20,8 @@ import {
   Brand,
   Locale,
   Toast,
+  Beforeunload,
+  BeforeunloadOptions,
 } from '@ringcentral-integration/micro-core/src/app/services';
 import {
   SpringAppRootView,
@@ -186,6 +188,13 @@ export const getAppConfig = ({
     Brand,
     Locale,
     Toast,
+    Beforeunload,
+    {
+      provide: 'BeforeunloadOptions',
+      useValue: {
+        originWindow: typeof window !== 'undefined' ? window : globalThis,
+      } satisfies BeforeunloadOptions,
+    },
     {
       provide: RouterOptions,
       useValue: {

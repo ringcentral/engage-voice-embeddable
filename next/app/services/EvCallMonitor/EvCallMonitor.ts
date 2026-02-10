@@ -220,8 +220,8 @@ class EvCallMonitor extends RcModule {
   /**
    * Limit calls in data source
    */
-  limitCalls(): void {
-    this.evCallDataSource.limitCalls();
+  async limitCalls() {
+    await this.evCallDataSource.limitCalls();
   }
 
   /**

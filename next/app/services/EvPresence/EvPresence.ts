@@ -9,9 +9,10 @@ import {
   storage,
   StoragePlugin,
   PortManager,
+  delegate,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
-
+import { Beforeunload } from '@ringcentral-integration/micro-core/src/app/services';
 import type { DialoutStatusesType } from '../../../enums';
 import { callStatus, dialoutStatuses, messageTypes } from '../../../enums';
 import { t } from './i18n';
@@ -28,31 +29,34 @@ import type {
 } from '../EvClient/interfaces';
 import { EvClient } from '../EvClient';
 import { EvSubscription } from '../EvSubscription';
+import { EvCallDataSource } from '../EvCallDataSource';
 import type { EvPresenceOptions, EvAgentRecording } from './EvPresence.interface';
 
 /**
  * EvPresence module - Call presence and offhook state management
- * Handles call tracking, offhook state, dialout status, and call events
+ * Handles call tracking, offhook state, dialout status, and call events.
+ * Delegates call data storage and mutations to EvCallDataSource.
  */
 @injectable({
   name: 'EvPresence',
 })
 class EvPresence extends RcModule {
-  beforeunloadHandler = () => false;
+  beforeunloadHandler = () => {
+    if (this.portManager.isMainTab) {
+      return false;
+    }
+    return true;
+  };
   evPresenceEvents = new EventEmitter();
   showOffHookInitError = true;
-
-  private _callIds: string[] = [];
-  private _otherCallIds: string[] = [];
-  private _callLogsIds: string[] = [];
-  private _callsMapping: Record<string, EvBaseCall> = {};
   private _oldCalls: EvBaseCall[] = [];
 
   constructor(
     private evClient: EvClient,
     private evSubscription: EvSubscription,
+    private evCallDataSource: EvCallDataSource,
     private toast: Toast,
-    // private beforeunload: Beforeunload,
+    private beforeunload: Beforeunload,
     private storagePlugin: StoragePlugin,
     private portManager: PortManager,
     @optional('EvPresenceOptions') private evPresenceOptions?: EvPresenceOptions,
@@ -67,6 +71,8 @@ class EvPresence extends RcModule {
       this.initialize();
     }
   }
+
+  // --- Persisted offhook / dialout state ---
 
   @storage
   @state
@@ -88,21 +94,34 @@ class EvPresence extends RcModule {
   @state
   dialoutStatus: DialoutStatusesType = dialoutStatuses.idle;
 
+  // --- Delegated call data accessors (from EvCallDataSource) ---
+
+  /** Current agent ongoing session call IDs */
   get callIds(): string[] {
-    return this._callIds;
+    return this.evCallDataSource.callIds;
   }
 
+  /** Other agent ongoing session call IDs */
   get otherCallIds(): string[] {
-    return this._otherCallIds;
+    return this.evCallDataSource.otherCallIds;
   }
 
+  /** Ended call log IDs */
   get callLogsIds(): string[] {
-    return this._callLogsIds;
+    return this.evCallDataSource.callLogsIds;
   }
 
+  /** Call data mapping (keyed by encoded UII) */
   get callsMapping(): Record<string, EvBaseCall> {
-    return this._callsMapping;
+    return this.evCallDataSource.callsMapping;
   }
+
+  /** Raw call data mapping without session info (keyed by raw UII) */
+  get rawCallsMapping(): Record<string, EvBaseCall> {
+    return this.evCallDataSource.rawCallsMapping;
+  }
+
+  // --- Computed call lists ---
 
   /**
    * Check if agent is currently on a call
@@ -111,24 +130,19 @@ class EvPresence extends RcModule {
     return this.calls.length > 0;
   }
 
-  @action
-  setCurrentCallUii(uii: string) {
-    this.currentCallUii = uii;
-  }
-
-  @computed((that: EvPresence) => [that.callIds, that.callsMapping])
+  @computed((that: EvPresence) => [that.evCallDataSource.data])
   get calls(): EvBaseCall[] {
     return this.callIds
       .map((id) => this.callsMapping[id])
       .filter((call) => !!call);
   }
 
-  @computed((that: EvPresence) => [that.otherCallIds, that.callsMapping])
+  @computed((that: EvPresence) => [that.evCallDataSource.data])
   get otherCalls(): EvBaseCall[] {
     return this.otherCallIds.map((id) => this.callsMapping[id]);
   }
 
-  @computed((that: EvPresence) => [that.callLogsIds, that.callsMapping])
+  @computed((that: EvPresence) => [that.evCallDataSource.data])
   get callLogs(): EvBaseCall[] {
     return this.callLogsIds.map((id) => this.callsMapping[id]);
   }
@@ -137,94 +151,147 @@ class EvPresence extends RcModule {
     return this.dialoutStatus === dialoutStatuses.callConnected;
   }
 
+  // --- Offhook / dialout actions ---
+
   @action
-  setDialoutStatus(status: DialoutStatusesType) {
+  _setCurrentCallUii(uii: string) {
+    this.currentCallUii = uii;
+  }
+
+  @delegate('server')
+  async setCurrentCallUii(uii: string) {
+    this._setCurrentCallUii(uii);
+  }
+
+  @action
+  _setDialoutStatus(status: DialoutStatusesType) {
     if (this.dialoutStatus !== status) {
       this.dialoutStatus = status;
     }
   }
 
-  @action
-  setOffhookInit() {
-    this.isOffhooking = false;
-    this.isOffhook = true;
-    this._checkBeforeunload();
+  @delegate('server')
+  async setDialoutStatus(status: DialoutStatusesType) {
+    this._setDialoutStatus(status);
   }
 
   @action
-  setOffhookTerm() {
+  _setOffhookInit() {
+    this.isOffhooking = false;
+    this.isOffhook = true;
+  }
+
+  @delegate('server')
+  async setOffhookInit() {
+    this._setOffhookInit();
+  }
+
+  @action
+  _setOffhookTerm() {
     this.isOffhooking = false;
     this.isOffhook = false;
     this.isManualOffhook = false;
-    this._checkBeforeunload();
+  }
+
+  @delegate('server')
+  async setOffhookTerm() {
+    this._setOffhookTerm();
   }
 
   @action
-  setIsManualOffhook(isManualOffhook: boolean) {
+  _setIsManualOffhook(isManualOffhook: boolean) {
     this.isManualOffhook = isManualOffhook;
   }
 
+  @delegate('server')
+  async setIsManualOffhook(isManualOffhook: boolean) {
+    this._setIsManualOffhook(isManualOffhook);
+  }
+
   @action
-  setOffhook(status: boolean) {
+  _setOffhook(status: boolean) {
     this.isOffhook = status;
     this._checkBeforeunload();
   }
 
+  @delegate('server')
+  async setOffhook(status: boolean) {
+    this._setOffhook(status);
+  }
+
   @action
-  setOffhooking(offhooking: boolean) {
+  _setOffhooking(offhooking: boolean) {
     this.isOffhooking = offhooking;
   }
 
-  addNewCall(call: EvBaseCall) {
-    const id = this.evClient.encodeUii(call);
-    this._callsMapping[id] = call;
-    if (!this._callIds.includes(id)) {
-      this._callIds.push(id);
-    }
+  @delegate('server')
+  async setOffhooking(offhooking: boolean) {
+    this._setOffhooking(offhooking);
   }
 
-  addNewSession(session: EvAddSessionNotification) {
-    const id = this.evClient.encodeUii(session);
-    if (this._callsMapping[id]) {
-      this._callsMapping[id] = {
-        ...this._callsMapping[id],
-        ...session,
-      };
-    }
+  // --- Delegated call data mutations (to EvCallDataSource) ---
+
+  /**
+   * Store raw call data (enriched with timestamp, gate, agentRecording).
+   * Call is added to callIds/callsMapping when ADD_SESSION arrives.
+   */
+  async addNewCall(call: EvBaseCall) {
+    await this.evCallDataSource.addNewCall(call);
   }
 
-  dropSession(dropSession: EvDropSessionNotification) {
-    const id = this.evClient.encodeUii(dropSession);
-    if (this._callsMapping[id]) {
-      delete this._callsMapping[id];
-      this._callIds = this._callIds.filter((callId) => callId !== id);
-    }
+  /**
+   * Add session, separating current agent vs other sessions.
+   * Merges raw call data with session info into callsMapping.
+   */
+  async addNewSession(session: EvAddSessionNotification) {
+    await this.evCallDataSource.addNewSession(session);
   }
 
-  removeEndedCall(endedCall: EvEndedCall) {
-    const id = this.evClient.encodeUii(endedCall);
-    if (this._callsMapping[id]) {
-      // Move to call logs
-      if (!this._callLogsIds.includes(id)) {
-        this._callLogsIds.unshift(id);
-      }
-      this._callIds = this._callIds.filter((callId) => callId !== id);
-    }
+  /**
+   * Drop a session from otherCallIds (other agents' sessions).
+   */
+  async dropSession(dropSession: EvDropSessionNotification) {
+    await this.evCallDataSource.dropSession(dropSession);
   }
 
-  setCallHoldStatus(res: EvHoldResponse) {
-    const { uii, sessionId, holdState } = res;
-    const id = this.evClient.encodeUii({ uii, sessionId });
-    if (this._callsMapping[id]) {
-      (this._callsMapping[id] as EvBaseCall & { hold?: boolean }).hold = holdState;
-    }
+  /**
+   * Remove ended call from callIds/otherCallIds, move to callLogsIds,
+   * and store endedCall data on callsMapping entry.
+   */
+  async removeEndedCall(endedCall: EvEndedCall) {
+    await this.evCallDataSource.removeEndedCall(endedCall);
   }
 
-  clearCalls() {
-    this._callIds = [];
-    this._otherCallIds = [];
-    this._callsMapping = {};
+  /**
+   * Set call hold status (isHold) on callsMapping entry.
+   */
+  async setCallHoldStatus(res: EvHoldResponse) {
+    await this.evCallDataSource.setCallHoldStatus(res);
   }
+
+  /**
+   * Clear active call IDs (callIds and otherCallIds).
+   * Preserves callsMapping for call log data.
+   */
+  async clearCalls() {
+    await this.evCallDataSource.clearCalls();
+  }
+
+  /**
+   * Check if calls are limited
+   */
+  get callsLimited(): boolean {
+    return this.evCallDataSource.callsLimited;
+  }
+
+  /**
+   * Limit the number of call logs (max 250, 7-day retention)
+   */
+  async limitCalls() {
+    await this.evCallDataSource.limitCalls();
+  }
+
+  // --- Recording settings ---
 
   getRecordingSettings(record: EvAgentRecording): string {
     let recordingSetting = '';
@@ -248,6 +315,8 @@ class EvPresence extends RcModule {
     return recordingSetting;
   }
 
+  // --- Initialization and subscriptions ---
+
   initialize() {
     this._bindSubscription();
   }
@@ -256,17 +325,19 @@ class EvPresence extends RcModule {
     this.evSubscription
       .subscribe(
         EvCallbackTypes.OFFHOOK_INIT,
-        (data: EvOffhookInitResponse) => {
+        async (data: EvOffhookInitResponse) => {
           this.evPresenceEvents.emit(EvCallbackTypes.OFFHOOK_INIT, data);
           if (data.status === 'OK') {
-            this.setOffhookInit();
+            await this.setOffhookInit();
+            this._checkBeforeunload();
           } else {
             if (this.showOffHookInitError) {
               this.toast.danger({
                 message: t(messageTypes.OFFHOOK_INIT_ERROR),
               });
             }
-            this.setOffhookTerm();
+            await this.setOffhookTerm();
+            this._checkBeforeunload();
             this.showOffHookInitError = true;
           }
         },
@@ -278,9 +349,11 @@ class EvPresence extends RcModule {
       })
       .subscribe(
         EvCallbackTypes.OFFHOOK_TERM,
-        (data: EvOffhookTermResponse) => {
+        async (data: EvOffhookTermResponse) => {
+          // Fix: also handle 'Offhook terminated' message on logout
           if (data.status === 'OK' || data.message === 'Offhook terminated') {
-            this.setOffhookTerm();
+            await this.setOffhookTerm();
+            this._checkBeforeunload();
           } else {
             this.toast.danger({
               message: t(messageTypes.OFFHOOK_TERM_ERROR),
@@ -289,56 +362,64 @@ class EvPresence extends RcModule {
           }
         },
       )
-      .subscribe(EvCallbackTypes.ADD_SESSION, (data: EvAddSessionNotification) => {
+      .subscribe(EvCallbackTypes.ADD_SESSION, async (data: EvAddSessionNotification) => {
         if (data.status === 'OK') {
-          this.addNewSession(data);
+          await this.addNewSession(data);
+          // Emit RINGING on evPresenceEvents for the public event API
           this.evPresenceEvents.emit(callStatus.RINGING, data);
+          await this._checkCallStateChange();
         } else {
           this.toast.danger({
             message: t(messageTypes.ADD_SESSION_ERROR),
           });
         }
       })
-      .subscribe(EvCallbackTypes.DROP_SESSION, (data: any) => {
+      .subscribe(EvCallbackTypes.DROP_SESSION, async (data: any) => {
         if (data.status === 'OK') {
-          this.dropSession(data);
+          await this.dropSession(data);
         } else {
           this.toast.danger({
             message: t(messageTypes.DROP_SESSION_ERROR),
           });
         }
       })
-      .subscribe(EvCallbackTypes.HOLD, (data: any) => {
+      .subscribe(EvCallbackTypes.HOLD, async (data: any) => {
         if (data.status === 'OK') {
-          this.setCallHoldStatus(data);
+          await this.setCallHoldStatus(data);
         } else {
           this.toast.danger({
             message: t(messageTypes.HOLD_ERROR),
           });
         }
       })
-      .subscribe(EvCallbackTypes.NEW_CALL, (data: EvBaseCall) => {
-        this.addNewCall(data);
-        this._checkCallStateChange();
+      .subscribe(EvCallbackTypes.NEW_CALL, async (data: EvBaseCall) => {
+        await this.addNewCall(data);
       })
-      .subscribe(EvCallbackTypes.END_CALL, (data: EvEndedCall) => {
+      .subscribe(EvCallbackTypes.END_CALL, async (data: EvEndedCall) => {
         const id = this.evClient.encodeUii(data);
         if (!this.callsMapping[id]) return;
         if (!this.isManualOffhook) {
           this.evClient.offhookTerm();
         }
-        this.removeEndedCall(data);
-        this._checkCallStateChange();
+        await this.removeEndedCall(data);
+        await this._checkCallStateChange();
       });
   }
 
+  // --- Beforeunload ---
+
   private _checkBeforeunload() {
+    if (!this.portManager.isMainTab) {
+      return;
+    }
     if (this.isOffhook) {
-      // TODO: this.beforeunload.add(this.beforeunloadHandler);
+      this.beforeunload.add(this.beforeunloadHandler);
     } else {
-      // TODO: this.beforeunload.remove(this.beforeunloadHandler);
+      this.beforeunload.remove(this.beforeunloadHandler);
     }
   }
+
+  // --- Utility methods ---
 
   /**
    * Get main call by UII
@@ -374,6 +455,8 @@ class EvPresence extends RcModule {
     return currentCallIds.map((callId) => callsMapping[callId]).filter(Boolean);
   }
 
+  // --- Event registration ---
+
   /**
    * Register callback for call ringing events
    */
@@ -399,9 +482,9 @@ class EvPresence extends RcModule {
   }
 
   /**
-   * Check and emit call state change events
+   * Check and emit call state change events (ANSWERED / ENDED)
    */
-  private _checkCallStateChange(): void {
+  private async _checkCallStateChange(): Promise<void> {
     const currentCalls = this.calls;
     if (currentCalls.length > this._oldCalls.length) {
       const currentCall = currentCalls[0];
@@ -410,7 +493,7 @@ class EvPresence extends RcModule {
         this._oldCalls = currentCalls;
         this.evPresenceEvents.emit(callStatus.ANSWERED, currentCall);
       } else {
-        this.clearCalls();
+        await this.clearCalls();
       }
     } else if (currentCalls.length < this._oldCalls.length) {
       const call = this._oldCalls[0];
@@ -420,40 +503,17 @@ class EvPresence extends RcModule {
   }
 
   /**
-   * Check if calls are limited
-   */
-  get callsLimited(): boolean {
-    return this._callLogsIds.length > 250;
-  }
-
-  /**
-   * Limit the number of call logs kept in memory
-   */
-  limitCalls(): void {
-    const MAX_CALL_LOGS = 250;
-    if (this._callLogsIds.length > MAX_CALL_LOGS) {
-      const idsToRemove = this._callLogsIds.slice(MAX_CALL_LOGS);
-      this._callLogsIds = this._callLogsIds.slice(0, MAX_CALL_LOGS);
-      idsToRemove.forEach((id) => {
-        delete this._callsMapping[id];
-      });
-    }
-  }
-
-  /**
    * Bind beforeunload handler
    */
   bindBeforeunload(): void {
-    // TODO: Implement when beforeunload module is available
-    this.logger.info('bindBeforeunload');
+    this.beforeunload.add(this.beforeunloadHandler);
   }
 
   /**
    * Remove beforeunload handler
    */
   removeBeforeunload(): void {
-    // TODO: Implement when beforeunload module is available
-    this.logger.info('removeBeforeunload');
+    this.beforeunload.remove(this.beforeunloadHandler);
   }
 }
 

@@ -90,7 +90,7 @@ class CallHistoryView extends RcViewModule {
     that.activityCallView.callId,
   ])
   get callsWithActivityUpdate(): FormattedCall[] {
-    const calls = this.evCallHistory.latestCalls;
+    const calls = this.evCallHistory.latestCalls ?? [];
     if (calls.length === 0) return calls;
     // Update first call's name from activity call contact when call ends
     const { callStatus, callId } = this.activityCallView;

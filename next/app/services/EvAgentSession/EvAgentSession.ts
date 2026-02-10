@@ -109,10 +109,10 @@ class EvAgentSession extends RcModule {
         return this._initialize();
       });
       this.portManager.onClient(() => {
-        this.onConfigSuccess(() => {
+        this.onConfigSuccess(async () => {
           // Set dialout status to idle if no calls
           if (this.evPresence.calls.length === 0) {
-            this.evPresence.setDialoutStatus(dialoutStatuses.idle);
+            await this.evPresence.setDialoutStatus(dialoutStatuses.idle);
           }
           if (this.isAgentUpdating) {
             this.isAgentUpdating = false;
@@ -568,14 +568,14 @@ class EvAgentSession extends RcModule {
     if (!this.isAgentUpdating) {
       await this.resetAllConfig();
     }
-    this._clearCalls();
+    await this._clearCalls();
   }
 
   /**
    * Clear calls from presence (safe method that checks if presence exists)
    */
-  private _clearCalls(): void {
-    this.evPresence?.clearCalls();
+  private async _clearCalls(): Promise<void> {
+    await this.evPresence?.clearCalls();
   }
 
   private _pickSkillProfile(skillProfileList: any[]) {
@@ -591,7 +591,7 @@ class EvAgentSession extends RcModule {
     needAssignFormGroupValue = false,
   }: ConfigureAgentParams = {}): Promise<void> {
     this.logger.info('configureAgent~~', triggerEvent);
-    this._clearCalls();
+    await this._clearCalls();
     const connectResult = await this._connectEvServer(config);
     let result = connectResult.result;
     const existingLoginFound = connectResult.existingLoginFound;
@@ -635,7 +635,7 @@ class EvAgentSession extends RcModule {
     try {
       await this.block.next(async () => {
         const config = this._checkFieldsResult(this.formGroup);
-        this._clearCalls();
+        await this._clearCalls();
         this.isAgentUpdating = true;
         const extensionNumberChanged =
           this.extensionNumber !== this.formGroup.extensionNumber;
@@ -900,7 +900,7 @@ class EvAgentSession extends RcModule {
     }
     // TODO: handle multiple tabs
     // Otherwise set fresh config and navigate to session config page
-    this._clearCalls();
+    await this._clearCalls();
     await this.setFreshConfig();
     await this.resetFormGroup();
     this._navigateToSessionConfigPage();

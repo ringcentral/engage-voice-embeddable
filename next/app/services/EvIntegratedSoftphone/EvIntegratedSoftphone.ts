@@ -263,14 +263,14 @@ class EvIntegratedSoftphone extends RcModule {
         }
       },
     );
-    this.evSubscription.subscribe(EvCallbackTypes.SIP_CONNECTED, () => {
-      this.evPresence.setOffhook(true);
-      this.resetController();
+    this.evSubscription.subscribe(EvCallbackTypes.SIP_CONNECTED, async () => {
+      await this.evPresence.setOffhook(true);
+      await this.resetController();
     });
-    this.evSubscription.subscribe(EvCallbackTypes.SIP_ENDED, () => {
-      this.evPresence.setOffhook(false);
-      this.evPresence.removeBeforeunload();
-      this.evPresence.setDialoutStatus(dialoutStatuses.idle);
+    this.evSubscription.subscribe(EvCallbackTypes.SIP_ENDED, async () => {
+      await this.evPresence.setOffhook(false);
+      await this.evPresence.removeBeforeunload();
+      await this.evPresence.setDialoutStatus(dialoutStatuses.idle);
     });
     this.evSubscription.subscribe(EvCallbackTypes.SIP_MUTE, () => {
       this.setMuteActive(true);
