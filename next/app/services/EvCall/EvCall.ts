@@ -131,10 +131,6 @@ class EvCall extends RcModule {
     return this.evPresence.dialoutStatus === dialoutStatuses.idle;
   }
 
-  @computed((that: EvCall) => [
-    that.activityCallId,
-    that.evPresence.callsMapping,
-  ])
   get currentCall(): EvBaseCall | null {
     const call = this.evPresence.callsMapping[this.activityCallId];
     return this.activityCallId && call ? call : null;

@@ -1,7 +1,6 @@
-import { callErrors } from '../enums';
-import { parse } from '@ringcentral-integration/phone-number';
-
-import { messageTypes } from '../enums';
+import { parse, format, formatTypes } from '@ringcentral-integration/phone-number';
+import cleanNumber from '@ringcentral-integration/phone-number/lib/cleanNumber';
+import { messageTypes, callErrors } from '../enums';
 
 import { EvTypeError } from './EvTypeError';
 
@@ -22,5 +21,10 @@ export const parseNumber = (input: string) => {
     });
   }
 
-  return parsedNumber;
+  const formattedNumber = cleanNumber(format({
+    phoneNumber: input,
+    type: formatTypes.e164,
+  }));
+
+  return formattedNumber;
 };
