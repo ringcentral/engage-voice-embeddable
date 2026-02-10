@@ -9,6 +9,7 @@ import type {
 } from '@ringcentral-integration/micro-core/src/app/views/HeaderNavViewSpring/HeaderNav.view.interface';
 import { defaultTabMap } from '@ringcentral-integration/micro-core/src/app/views/HeaderNavViewSpring/utils/tabs';
 import { Locale } from '@ringcentral-integration/micro-core/src/app/services';
+import { EvAgentSession } from '../../services/EvAgentSession';
 import { t } from './i18n';
 
 @injectable({
@@ -18,6 +19,7 @@ export class HeaderNavViewSpring extends HeaderNavViewSpringBase {
   constructor(
     protected _locale: Locale,
     protected _router: RouterPlugin,
+    protected _evAgentSession: EvAgentSession,
     @optional('HeaderNavViewOptions')
     protected _headerNavViewOptions?: HeaderNavViewSpringOptions,
   ) {
@@ -36,6 +38,10 @@ export class HeaderNavViewSpring extends HeaderNavViewSpringBase {
     return this._router.currentPath?.includes('/agent');
   }
 
+  private get isPreviewDialMode(): boolean {
+    return this._evAgentSession.currentDialMode === 'PREVIEW';
+  }
+
   @computed
   get agentTab(): NavButtonProps {
     return {
@@ -44,7 +50,7 @@ export class HeaderNavViewSpring extends HeaderNavViewSpringBase {
       tooltip: (
         <div>
           <div>{t('dialer')}</div>
-          <div>{t('leads')}</div>
+          {this.isPreviewDialMode && <div>{t('leads')}</div>}
           <div>{t('history')}</div>
         </div>
       ),

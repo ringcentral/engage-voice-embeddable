@@ -23,6 +23,7 @@ import { LeadsView } from '../LeadsView';
 import { CallHistoryView } from '../CallHistoryView';
 import { WorkingStateSelectView } from '../WorkingStateSelectView';
 import { OffhookButtonView } from '../OffhookButtonView';
+import { EvAgentSession } from '../../services/EvAgentSession';
 
 import type {
   AgentViewOptions,
@@ -52,6 +53,7 @@ class AgentView extends RcViewModule {
     protected _callHistoryView: CallHistoryView,
     protected _workingStateSelectView: WorkingStateSelectView,
     protected _offhookButtonView: OffhookButtonView,
+    protected _evAgentSession: EvAgentSession,
     @optional('AgentViewOptions')
     protected _agentViewOptions?: AgentViewOptions,
   ) {
@@ -59,24 +61,32 @@ class AgentView extends RcViewModule {
   }
 
   @computed
+  get isPreviewDialMode(): boolean {
+    return this._evAgentSession.currentDialMode === 'PREVIEW';
+  }
+
+  @computed
   get tabs(): SyncTabProps['tabs'] {
-    return [
+    const tabs: SyncTabProps['tabs'] = [
       {
         id: 'dialer',
         label: i18n.getString('dialer'),
         component: <this._dialerView.component />,
       },
-      {
+    ];
+    if (this.isPreviewDialMode) {
+      tabs.push({
         id: 'leads',
         label: i18n.getString('leads'),
         component: <this._leadsView.component />,
-      },
-      {
-        id: 'history',
-        label: i18n.getString('history'),
-        component: <this._callHistoryView.component />,
-      },
-    ];
+      });
+    }
+    tabs.push({
+      id: 'history',
+      label: i18n.getString('history'),
+      component: <this._callHistoryView.component />,
+    });
+    return tabs;
   }
 
   get defaultTab(): string {
