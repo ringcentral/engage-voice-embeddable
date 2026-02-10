@@ -10,7 +10,6 @@ import {
   state,
   storage,
   StoragePlugin,
-  watch,
   PortManager,
   delegate,
 } from '@ringcentral-integration/next-core';
@@ -98,7 +97,7 @@ class EvAgentSession extends RcModule {
     this.storagePlugin.enable(this);
     // Login success event should be registered in constructor to capture event before onInitOnce
     this.evAuth.onceLoginSuccess(() => {
-      this.logger.info('----------onLoginSuccess in EvAgentSession');
+      this.logger.info('----------onceLoginSuccess');
       this._isLogin = true;
     });
     // Logout event should be in constructor, when logout that will not call init
@@ -143,17 +142,11 @@ class EvAgentSession extends RcModule {
     if (this._isLogin) {
       await this.initAgentSession();
     }
-    // Watch login success state - must be after onInitOnce because storage may not be ready
-    watch(
-      this,
-      () => this.isOnLoginSuccess,
-      async (isOnLoginSuccess) => {
-        if (isOnLoginSuccess) {
-          this.logger.info('----------onLoginSuccess2');
-          await this.initAgentSession();
-        }
-      },
-    );
+    // Listen for subsequent login success events (reconnections, re-logins)
+    this.evAuth.onLoginSuccess(async () => {
+      this.logger.info('----------onLoginSuccess event');
+      await this.initAgentSession();
+    });
   }
 
   /**
@@ -604,6 +597,7 @@ class EvAgentSession extends RcModule {
     const existingLoginFound = connectResult.existingLoginFound;
     this.logger.info('configureAgent existingLoginFound~~', existingLoginFound);
     // Session timeout - this will occur when stay in session config page for long time
+    this.logger.info('configureAgent result.data.status~~', result.data.status);
     if (result.data.status !== 'SUCCESS') {
       this._navigateToSessionConfigPage();
       await this.evAuth.newReconnect(false);

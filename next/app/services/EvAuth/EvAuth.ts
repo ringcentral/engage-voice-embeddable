@@ -55,8 +55,6 @@ class EvAuth extends RcModule {
 
   public canUserLogoutFn: () => Promise<boolean> = async () => true;
 
-  private _logoutByOtherTab = false;
-
   constructor(
     private evClient: EvClient,
     private auth: Auth,
@@ -94,6 +92,9 @@ class EvAuth extends RcModule {
 
   @state
   loginStatus: string | null = null;
+
+  @state
+  isSocketReconnecting = false;
 
   @action
   _setAgentId(agentId: string) {
@@ -278,13 +279,10 @@ class EvAuth extends RcModule {
     });
     this.evSubscription.subscribe(EvCallbackTypes.LOGOUT, async () => {
       this._emitLogoutBefore();
-      if (!this._logoutByOtherTab) {
-        this.toast.info({
-          message: t(messageTypes.FORCE_LOGOUT),
-        });
-        this._logoutByOtherTab = false;
-        await this.newReconnect();
-      }
+      this.toast.info({
+        message: t(messageTypes.FORCE_LOGOUT),
+      });
+      await this.newReconnect();
     });
     this.onceLoginSuccess(() => {
       try {
@@ -321,8 +319,6 @@ class EvAuth extends RcModule {
           !jwtOwnerChanged
         ) {
           this.connecting = true;
-          // When login make sure the logoutByOtherTab is false
-          this._logoutByOtherTab = false;
           await this.block.next(async () => {
             if (this.agentId) {
               await this.loginAgent();
@@ -369,11 +365,26 @@ class EvAuth extends RcModule {
     this._eventEmitter.on(loginStatus.LOGOUT_BEFORE, callback);
   }
 
+  @action
+  _setSocketReconnecting(value: boolean) {
+    this.isSocketReconnecting = value;
+  }
+
+  @delegate('server')
+  async setSocketReconnecting(value: boolean): Promise<void> {
+    this._setSocketReconnecting(value);
+  }
+
   @delegate('mainClient')
   async newReconnect(isBlock = true) {
-    await this.evClient.closeSocket();
-    const fn = this.loginAgent;
-    return isBlock ? this.block.next(fn) : fn();
+    this.setSocketReconnecting(true);
+    try {
+      await this.evClient.closeSocket();
+      const fn = () => this.loginAgent();
+      return isBlock ? this.block.next(fn) : fn();
+    } finally {
+      this.setSocketReconnecting(false);
+    }
   }
 
   @delegate('mainClient')
@@ -500,6 +511,10 @@ class EvAuth extends RcModule {
 
   onceLoginSuccess(callback: () => void) {
     this._eventEmitter.once(loginStatus.LOGIN_SUCCESS, callback);
+  }
+
+  onLoginSuccess(callback: () => void) {
+    this._eventEmitter.on(loginStatus.LOGIN_SUCCESS, callback);
   }
 
   onAuthSuccess(callback: () => void) {

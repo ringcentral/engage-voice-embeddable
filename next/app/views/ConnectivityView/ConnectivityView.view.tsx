@@ -21,10 +21,12 @@ import { ConnectivityPanel } from './ConnectivityPanel';
  * ConnectivityView - Extended connectivity view for Engage Voice
  * Shows network status, EvClient socket status, and SIP connection status
  *
- * Priority: base network mode > socket disconnected > SIP unstable > SIP connecting
+ * Priority: base network mode > socket reconnecting > socket disconnected > SIP unstable > SIP connecting
  *
- * - sipUnstableConnection: was connected, then lost (error severity, red)
- * - sipConnecting: first-time SIP registration after session setup (info severity, blue)
+ * - socketDisconnected: socket closed/failed (error, shows Refresh button)
+ * - socket reconnecting: newReconnect in progress (error, shows spinner)
+ * - sipUnstableConnection: was connected, then lost (error, shows spinner)
+ * - sipConnecting: first-time SIP registration after session (info, shows spinner)
  */
 @injectable({
   name: 'ConnectivityView',
@@ -41,12 +43,20 @@ export class ConnectivityView extends BaseConnectivityView {
 
   /**
    * Get UI props including EV-specific connectivity statuses
-   * Priority: base mode > socket disconnected > SIP unstable > SIP connecting
+   * Priority: base mode > socket reconnecting > socket disconnected > SIP unstable > SIP connecting
    */
   override getUIProps(): UIProps<EvConnectivityViewProps> {
     const baseProps = super.getUIProps();
     if (baseProps.mode) {
       return { ...baseProps, severity: 'error' };
+    }
+    if (this._evAuth.isSocketReconnecting) {
+      return {
+        mode: 'socketDisconnected',
+        severity: 'error',
+        loading: true,
+        retry: false,
+      };
     }
     const isSocketDisconnected =
       this._evClient.appStatus === evStatus.CLOSED ||
@@ -89,9 +99,7 @@ export class ConnectivityView extends BaseConnectivityView {
       onClick: () => {
         const { mode } = this.getUIProps();
         if (mode === 'socketDisconnected') {
-          this._evAuth.openSocketWithSelectedAgentId({
-            retryOpenSocket: true,
-          });
+          this._evAuth.newReconnect();
           return;
         }
         baseFunctions.onClick();
