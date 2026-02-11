@@ -71,7 +71,7 @@ class EvAuth extends RcModule {
     super();
     this.storage.enable(this);
     if (this.portManager?.shared) {
-      this.portManager.onMainTab(() => {
+      this.portManager.onServer(() => {
         this.initialize();
       });
     } else {
@@ -123,13 +123,8 @@ class EvAuth extends RcModule {
   }
 
   @action
-  _setAgent(agent: EvAgentData | null) {
+  setAgent(agent: EvAgentData | null) {
     this.agent = agent;
-  }
-
-  @delegate('server')
-  async setAgent(agent: EvAgentData | null): Promise<void> {
-    this._setAgent(agent);
   }
 
   @action
@@ -284,22 +279,12 @@ class EvAuth extends RcModule {
       });
       await this.newReconnect();
     });
+    this.evSubscription.subscribe(EvCallbackTypes.LOGIN_PHASE_1, (...args: any[]) => {
+      this.logger.info('evSubscription.subscribe LOGIN_PHASE_1~~');
+      this._eventEmitter.emit(EvCallbackTypes.LOGIN_PHASE_1, ...args);
+    })
     this.onceLoginSuccess(() => {
-      try {
-        const userDetails = localStorage.getItem('engage-auth:fullUserDetails');
-        if (!userDetails) {
-          return;
-        }
-        const userDetailsJson = JSON.parse(userDetails);
-        const userId = `${userDetailsJson.rcUserId}`;
-        const accountId = userDetailsJson.rcAccountId;
-        this.analytics.identify({
-          userId,
-          accountId,
-        });
-      } catch (e) {
-        console.error('Error identifying user', e);
-      }
+      this.identifyAnalyticsUser();
     });
     // Auto-login when RC auth is complete but EV auth hasn't happened yet
     watch(
@@ -311,6 +296,7 @@ class EvAuth extends RcModule {
         this.oAuth?.jwtOwnerChanged,
       ] as const,
       async ([loggedIn, currentLoginStatus, isConnecting, jwtOwnerChanged]) => {
+        this.logger.info('auto-login~~', loggedIn, currentLoginStatus, isConnecting, jwtOwnerChanged);
         if (
           loggedIn &&
           currentLoginStatus !== loginStatus.AUTH_SUCCESS &&
@@ -319,7 +305,9 @@ class EvAuth extends RcModule {
           !jwtOwnerChanged
         ) {
           this.connecting = true;
+          this.logger.info('auto-login block~~');
           await this.block.next(async () => {
+            this.logger.info('auto-login block next~~, agentId', this.agentId);
             if (this.agentId) {
               await this.loginAgent();
             } else {
@@ -341,7 +329,26 @@ class EvAuth extends RcModule {
     return this.evSubscription.once(EvCallbackTypes.LOGOUT, cb);
   }
 
-  @delegate('mainClient')
+  @delegate('clients')
+  async identifyAnalyticsUser() {
+    try {
+      const userDetails = localStorage.getItem('engage-auth:fullUserDetails');
+      if (!userDetails) {
+        return;
+      }
+      const userDetailsJson = JSON.parse(userDetails);
+      const userId = `${userDetailsJson.rcUserId}`;
+      const accountId = userDetailsJson.rcAccountId;
+      this.analytics.identify({
+        userId,
+        accountId,
+      });
+    } catch (e) {
+      console.error('Error identifying user', e);
+    }
+  }
+
+  @delegate('server')
   async logout(): Promise<void> {
     if (!(await this.canUserLogoutFn())) {
       return;
@@ -356,7 +363,6 @@ class EvAuth extends RcModule {
     await this.setConnectionData({ connected: false, agent: null });
   }
 
-  @delegate('mainClient')
   async logoutAgent(agentId: string = this.agentId) {
     return this.evClient.logoutAgent(agentId);
   }
@@ -375,7 +381,7 @@ class EvAuth extends RcModule {
     this._setSocketReconnecting(value);
   }
 
-  @delegate('mainClient')
+  @delegate('server')
   async newReconnect(isBlock = true) {
     this.setSocketReconnecting(true);
     try {
@@ -387,7 +393,7 @@ class EvAuth extends RcModule {
     }
   }
 
-  @delegate('mainClient')
+  @delegate('server')
   async authenticateWithToken({
     rcAccessToken = this.auth.accessToken,
     tokenType = 'Bearer',
@@ -395,12 +401,13 @@ class EvAuth extends RcModule {
   }: AuthenticateWithTokenParams = {}) {
     this.logger.info('authenticateWithToken', shouldEmitAuthSuccess);
     try {
-      this.evClient.initSDK();
+      // await this.evClient.initSDK();
       const authenticateResponse =
         await this.evClient.getAndHandleAuthenticateResponse(
           rcAccessToken,
           tokenType,
         );
+      console.log('authenticateResponse~~');
       const agent = { ...this.agent, authenticateResponse } as EvAgentData;
       await this.setAgent(agent);
       await this.setAuthSuccess();
@@ -409,6 +416,7 @@ class EvAuth extends RcModule {
       }
       return authenticateResponse;
     } catch (error: any) {
+      this.logger.error('authenticateWithToken error~~', error, error.type);
       switch (error.type) {
         case messageTypes.NO_AGENT:
           this.toast.warning({
@@ -430,7 +438,7 @@ class EvAuth extends RcModule {
     }
   }
 
-  @delegate('mainClient')
+  @delegate('server')
   async openSocketWithSelectedAgentId({
     syncOtherTabs = false,
     retryOpenSocket = false,
@@ -442,7 +450,7 @@ class EvAuth extends RcModule {
     );
     try {
       const getAgentConfig = new Promise<EvAgentConfig>((resolve) => {
-        this.evClient.on(EvCallbackTypes.LOGIN_PHASE_1, resolve);
+        this._eventEmitter.once(EvCallbackTypes.LOGIN_PHASE_1, resolve);
       });
       const selectedAgentId = this.agentId;
       if (!selectedAgentId) {
@@ -470,6 +478,7 @@ class EvAuth extends RcModule {
           type: messageTypes.OPEN_SOCKET_ERROR,
         });
       }
+      this.logger.info('openSocketWithSelectedAgentId getAgentConfig~~');
       const agentConfig = await getAgentConfig;
       const agent = { ...this.agent, agentConfig } as EvAgentData;
       await this.setConnectionData({ agent, connected: true });
@@ -499,8 +508,9 @@ class EvAuth extends RcModule {
     }
   }
 
-  @delegate('mainClient')
+  @delegate('server')
   async loginAgent(token: string = this.auth.accessToken): Promise<void> {
+    this.logger.info('loginAgent~~');
     const authenticateRes = await this.authenticateWithToken({
       rcAccessToken: token,
       shouldEmitAuthSuccess: false,

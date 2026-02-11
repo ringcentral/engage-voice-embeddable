@@ -53,7 +53,7 @@ class EvCallHistory extends RcModule {
     super();
 
     if (this.portManager?.shared) {
-      this.portManager.onClient(() => {
+      this.portManager.onServer(() => {
         this.initialize();
       });
     } else {

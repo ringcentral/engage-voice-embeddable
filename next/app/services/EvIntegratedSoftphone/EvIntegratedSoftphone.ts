@@ -63,11 +63,15 @@ class EvIntegratedSoftphone extends RcModule {
     super();
     this.storagePlugin.enable(this);
     if (this.portManager?.shared) {
-      this.portManager.onClient(() => {
+      this.portManager.onServer(() => {
         this.initialize();
+      });
+      this.portManager.onClient(() => {
+        this._initAudio();
       });
     } else {
       this.initialize();
+      this._initAudio();
     }
   }
 
@@ -176,7 +180,7 @@ class EvIntegratedSoftphone extends RcModule {
   }
 
   private async _resetAllState() {
-    if ((!this.portManager?.isMainTab)) {
+    if (!this.portManager.isServer) {
       return;
     }
     await this.resetSip();
@@ -189,7 +193,6 @@ class EvIntegratedSoftphone extends RcModule {
   }
 
   initialize() {
-    this._initAudio();
     this._bindingIntegratedSoftphone();
     this.evAuth.beforeAgentLogout(() => {
       this._resetAllState();
@@ -201,10 +204,6 @@ class EvIntegratedSoftphone extends RcModule {
     });
     this.evAgentSession.onConfigSuccess(async() => {
       this.logger.info('onConfigSuccess~~');
-      this.logger.info('isMainTab~~', this.isMainTab);
-      if (!this.isMainTab) {
-        return;
-      }
       this.logger.info('isIntegratedSoftphone~~', this.evAgentSession.isIntegratedSoftphone);
       if (this.evAgentSession.isIntegratedSoftphone) {
         this.logger.info('sipConnected~~', this._sipConnected);
@@ -284,6 +283,7 @@ class EvIntegratedSoftphone extends RcModule {
    * Request audio permission
    */
 
+  @delegate('mainClient')
   async requestAudioPermission(): Promise<boolean> {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });

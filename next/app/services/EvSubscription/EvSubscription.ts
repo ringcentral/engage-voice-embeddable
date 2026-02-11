@@ -3,7 +3,7 @@ import {
   optional,
   RcModule,
   PortManager,
-  isSharedWorker
+  delegate,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
 
@@ -14,6 +14,32 @@ import type {
 } from '../EvClient/interfaces';
 import { EvClient } from '../EvClient';
 import type { EvSubscriptionOptions } from './EvSubscription.interface';
+
+function formatSipRequest(data: any) {
+  return {
+    body: data?.body,
+    data: data?.data,
+    from: data?.from,
+    fromTag: data?.fromTag,
+    friendlyName: data?.friendlyName,
+    to: data?.to,
+    toTag: data?.toTag,
+    headers: data?.headers,
+    method: data?.method,
+    rurl: data?.url,
+    callId: data?.callId,
+    type: data?.type,
+    via: data?.via,
+    viaBranch: data?.viaBranch,
+  };
+}
+
+const SIP_REQUEST_EVENTS = [
+  EvCallbackTypes.SIP_ENDED,
+  EvCallbackTypes.SIP_MUTE,
+  EvCallbackTypes.SIP_RINGING,
+  EvCallbackTypes.SIP_UNMUTE,
+];
 
 /**
  * EvSubscription module - Event subscription system
@@ -26,6 +52,7 @@ class EvSubscription extends RcModule {
   protected eventEmitters = new EventEmitter();
   protected clientReady = false;
   private _boundEvents = new Set<EvClientCallBackValueType>();
+  private _subscribedEvents = new Set<EvClientCallBackValueType>();
 
   constructor(
     protected evClient: EvClient,
@@ -34,7 +61,7 @@ class EvSubscription extends RcModule {
   ) {
     super();
     if (this.portManager?.shared) {
-      this.portManager.onClient(() => {
+      this.portManager.onMainTab(() => {
         this.initialize();
       });
     } else {
@@ -43,9 +70,10 @@ class EvSubscription extends RcModule {
   }
 
   initialize() {
-    this.evClient.addListener(EvCallbackTypes.OPEN_SOCKET, () => {
+    this.evClient.addListener(EvCallbackTypes.OPEN_SOCKET, async () => {
       this.clientReady = true;
-      this._bindUnboundEvents();
+      const events = Array.from(this._subscribedEvents);
+      await this._bindEventsToClient(events as string[]);
     });
     this.evClient.addListener(EvCallbackTypes.CLOSE_SOCKET, () => {
       this.clientReady = false;
@@ -56,30 +84,44 @@ class EvSubscription extends RcModule {
    * Bind a single event type to evClient, forwarding to local eventEmitters
    */
   private _bindEventToClient(event: EvClientCallBackValueType) {
+    this._subscribedEvents.add(event);
     if (this._boundEvents.has(event)) return;
-    this.evClient.on(event, (...args: any[]) => {
-      this.eventEmitters.emit(event, ...args);
-    });
-    this._boundEvents.add(event);
+    if (this.portManager.isMainTab && this.clientReady) {
+      this.evClient.on(event, (...args: any[]) => {
+        if (SIP_REQUEST_EVENTS.includes(event)) {
+          const data = args[0]?.data;
+          console.log(data);
+          this.emit(event, {
+            message: args[0]?.message,
+            data: data ? {
+              request: data.request ? formatSipRequest(data.request) : undefined,
+            } : undefined,
+          });
+          return;
+        }
+        this.emit(event, ...args);
+      });
+      this._boundEvents.add(event);
+    }
   }
 
-  /**
-   * Bind all registered events that EvSubscription hasn't bound yet
-   */
-  private _bindUnboundEvents() {
-    for (const event of this.eventEmitters.eventNames()) {
+  @delegate('mainClient')
+  private async _bindEventsToClient(events: string[]) {
+    for (const event of events) {
       this._bindEventToClient(event as EvClientCallBackValueType);
     }
   }
 
   /**
    * Emit an event with a value
+   * We transfer the event from main client to server. Other services should handle the event in server.
    */
-  emit<T extends EvClientCallBackValueType, K extends EvClientCallMapping[T]>(
+  @delegate('server')
+  async emit<T extends EvClientCallBackValueType, K extends EvClientCallMapping[T]>(
     event: T,
-    value: K,
+    ...args: K[]
   ) {
-    this.eventEmitters.emit(event, value);
+    this.eventEmitters.emit(event, ...args);
   }
 
   /**
@@ -89,14 +131,8 @@ class EvSubscription extends RcModule {
     T extends EvClientCallBackValueType,
     K extends EvClientCallMapping[T],
   >(event: T, listener: (data?: K) => any): this {
-    // TODO: Handle shared worker mode
-    if (isSharedWorker) {
-      return this;
-    }
     this.eventEmitters.on(event, listener);
-    if (this.clientReady) {
-      this._bindEventToClient(event);
-    }
+    this._bindEventsToClient([event]);
     return this;
   }
 

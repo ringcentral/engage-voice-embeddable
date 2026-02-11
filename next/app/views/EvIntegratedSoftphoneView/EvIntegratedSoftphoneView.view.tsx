@@ -7,6 +7,7 @@ import {
   injectable,
   portal,
   RcViewModule,
+  PortManager,
 } from '@ringcentral-integration/next-core';
 import type { PortalInstance } from '@ringcentral-integration/next-core';
 import { Button } from '@ringcentral/spring-ui';
@@ -46,9 +47,16 @@ class EvIntegratedSoftphoneView extends RcViewModule {
     private evSubscription: EvSubscription,
     private evPresence: EvPresence,
     private evClient: EvClient,
+    private portManager: PortManager,
   ) {
     super();
-    this._bindSipModalEvents();
+    if (this.portManager?.shared) {
+      this.portManager.onServer(() => {
+        this._bindSipModalEvents();
+      });
+    } else {
+      this._bindSipModalEvents();
+    }
   }
 
   /**
@@ -173,17 +181,20 @@ class EvIntegratedSoftphoneView extends RcViewModule {
    */
   private _bindSipModalEvents() {
     // On ringing: show modal if auto-answer is not handling it
-    this.evIntegratedSoftphone.onRinging((ringingCall?: EvSipRingingData) => {
+    this.evIntegratedSoftphone.onRinging(async (ringingCall?: EvSipRingingData) => {
       if (this.evIntegratedSoftphone.autoAnswerCheckFn?.()) {
         return;
       }
-      const displayName = ringingCall?.data?.request?.from?.displayName ?? '';
-      const queueName = this.evClient.currentCall?.queue?.name ?? '';
+      console.log('SIP_RINGING~~', ringingCall);
+      const displayName = ringingCall?.data?.request?.from?._displayName ?? '';
+      // TODO: only work when in main tab
+      const currentCall = await this.evClient.getCurrentCall();
+      const queueName = currentCall?.queue?.name ?? '';
       const { dialoutStatus, isOffhooking, isManualOffhook } = this.evPresence;
       const isInbound =
         dialoutStatus !== 'dialing' &&
         !(isManualOffhook && isOffhooking) &&
-        this.evClient.currentCall?.callType === 'INBOUND';
+        currentCall?.callType === 'INBOUND';
       this.showRingingModal({ displayName, queueName, isInbound });
     });
     // On SIP ended: close ringing modal if still open

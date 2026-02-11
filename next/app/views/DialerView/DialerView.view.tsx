@@ -7,6 +7,8 @@ import {
   storage,
   StoragePlugin,
   useConnector,
+  delegate,
+  PortManager,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import { DialTextField, Button, IconButton, Link } from '@ringcentral/spring-ui';
@@ -36,10 +38,18 @@ class DialerView extends RcViewModule {
     private evClient: EvClient,
     private redirect: Redirect,
     private storagePlugin: StoragePlugin,
+    private portManager: PortManager,
     @optional('DialerViewOptions') private dialerViewOptions?: DialerViewOptions,
   ) {
     super();
     this.storagePlugin.enable(this);
+    if (this.portManager?.shared) {
+      this.portManager.onServer(() => {
+        this.initialize();
+      });
+    } else {
+      this.initialize();
+    }
   }
 
   @storage
@@ -80,7 +90,7 @@ class DialerView extends RcViewModule {
     this.latestDialoutNumber = '';
   }
 
-  override onInitOnce(): void {
+  initialize(): void {
     this.evAuth.beforeAgentLogout(() => {
       this.reset();
     });
@@ -89,6 +99,7 @@ class DialerView extends RcViewModule {
   /**
    * Initiate an outbound call with redial support
    */
+  // TODO: on server
   async dialout(): Promise<void> {
     if (this.toNumber) {
       this.setLatestDialoutNumber();
@@ -104,10 +115,11 @@ class DialerView extends RcViewModule {
   /**
    * Cancel the current outbound call
    */
-  hangup(): void {
-    this.evCall.outdialCancel();
+  @delegate('server')
+  async hangup(): Promise<void> {
+    await this.evCall.outdialCancel();
     if (!this.evSettings.isManualOffhook) {
-      this.evClient.offhookTerm();
+      await this.evClient.offhookTerm();
     }
   }
 

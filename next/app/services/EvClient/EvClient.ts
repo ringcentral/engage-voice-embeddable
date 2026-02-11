@@ -154,6 +154,11 @@ class EvClient extends RcModule {
     return this._sdk.getCurrentCall();
   }
 
+  @delegate('mainClient')
+  async getCurrentCall(): Promise<EvBaseCall | void> {
+    return this._sdk.getCurrentCall();
+  }
+
   @action
   setAppStatus(status: string) {
     this.appStatus = status;
@@ -179,6 +184,10 @@ class EvClient extends RcModule {
 
   initSDK() {
     if (typeof window === 'undefined' || !window.AgentSDK) {
+      return;
+    }
+    if (this._sdk) {
+      this.logger.info('initSDK already initialized');
       return;
     }
     this.logger.info('initSDK...');

@@ -4,6 +4,7 @@ import {
   optional,
   RcModule,
   PortManager,
+  delegate,
 } from '@ringcentral-integration/next-core';
 
 import { EvClient } from '../EvClient';
@@ -29,7 +30,7 @@ class EvSettings extends RcModule {
   ) {
     super();
     if (this.portManager?.shared) {
-      this.portManager.onClient(() => {
+      this.portManager.onServer(() => {
         this.initialize();
       });
     } else {
@@ -74,6 +75,7 @@ class EvSettings extends RcModule {
    * Toggle offhook state - delegates state management to EvPresence
    * and sends offhook commands via EvClient
    */
+  @delegate('server')
   async offHook(): Promise<void> {
     await this.evPresence.setOffhooking(true);
     if (this.isOffhook) {

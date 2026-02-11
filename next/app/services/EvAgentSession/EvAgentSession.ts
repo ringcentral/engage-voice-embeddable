@@ -96,31 +96,10 @@ class EvAgentSession extends RcModule {
     super();
     this.storagePlugin.enable(this);
     // Login success event should be registered in constructor to capture event before onInitOnce
-    this.evAuth.onceLoginSuccess(() => {
-      this.logger.info('----------onceLoginSuccess');
-      this._isLogin = true;
-    });
-    // Logout event should be in constructor, when logout that will not call init
-    this.evAuth.beforeAgentLogout(() => {
-      this._resetAllState();
-    });
+    
     if (this.portManager?.shared) {
-      this.portManager.onMainTab(() => {
-        return this._initialize();
-      });
-      this.portManager.onClient(() => {
-        this.onConfigSuccess(async () => {
-          // Set dialout status to idle if no calls
-          if (this.evPresence.calls.length === 0) {
-            await this.evPresence.setDialoutStatus(dialoutStatuses.idle);
-          }
-          if (this.isAgentUpdating) {
-            this.isAgentUpdating = false;
-          } else {
-            this.logger.info('!!!!to Dialer');
-            this.redirect.goToDialer();
-          }
-        });
+      this.portManager.onServer(() => {
+        this._initialize();
       });
     } else {
       this._initialize();
@@ -139,6 +118,26 @@ class EvAgentSession extends RcModule {
    * Initialize agent session on login success
    */
   private async _initialize(): Promise<void> {
+    this.evAuth.onceLoginSuccess(() => {
+      this.logger.info('----------onceLoginSuccess');
+      this._isLogin = true;
+    });
+    // Logout event should be in constructor, when logout that will not call init
+    this.evAuth.beforeAgentLogout(() => {
+      this._resetAllState();
+    });
+    this.onConfigSuccess(async () => {
+      // Set dialout status to idle if no calls
+      if (this.evPresence.calls.length === 0) {
+        await this.evPresence.setDialoutStatus(dialoutStatuses.idle);
+      }
+      if (this.isAgentUpdating) {
+        this.isAgentUpdating = false;
+      } else {
+        this.logger.info('!!!!to Dialer');
+        this.redirect.goToDialer();
+      }
+    });
     if (this._isLogin) {
       await this.initAgentSession();
     }
@@ -175,10 +174,6 @@ class EvAgentSession extends RcModule {
   @storage
   @state
   extensionNumber = '';
-
-  @storage
-  @state
-  takingCall = true;
 
   @storage
   @state
@@ -380,7 +375,6 @@ class EvAgentSession extends RcModule {
     this.selectedSkillProfileId = NONE;
     this.loginType = DEFAULT_LOGIN_TYPE;
     this.extensionNumber = '';
-    this.takingCall = true;
     this.autoAnswer = false;
     this.configSuccess = false;
     this.configured = false;
@@ -390,16 +384,6 @@ class EvAgentSession extends RcModule {
   @delegate('server')
   async resetAllConfig(): Promise<void> {
     this._resetAllConfig();
-  }
-
-  @action
-  _setDialGroupId(groupId: string) {
-    this.dialGroupId = groupId;
-  }
-
-  @delegate('server')
-  async setDialGroupId(groupId: string): Promise<void> {
-    this._setDialGroupId(groupId);
   }
 
   @action
@@ -425,16 +409,6 @@ class EvAgentSession extends RcModule {
   }
 
   @action
-  _setLoginType(type: LoginTypes) {
-    this.loginType = type;
-  }
-
-  @delegate('server')
-  async setLoginType(type: LoginTypes): Promise<void> {
-    this._setLoginType(type);
-  }
-
-  @action
   _setSkillProfileId(skillProfileId: string) {
     this.selectedSkillProfileId = skillProfileId;
   }
@@ -452,36 +426,6 @@ class EvAgentSession extends RcModule {
   @delegate('server')
   async setInboundQueueIds(ids: string[]): Promise<void> {
     this._setInboundQueueIds(ids);
-  }
-
-  @action
-  _setExtensionNumber(extensionNumber: string) {
-    this.extensionNumber = extensionNumber;
-  }
-
-  @delegate('server')
-  async setExtensionNumber(extensionNumber: string): Promise<void> {
-    this._setExtensionNumber(extensionNumber);
-  }
-
-  @action
-  _setTakingCall(takingCall: boolean) {
-    this.takingCall = takingCall;
-  }
-
-  @delegate('server')
-  async setTakingCall(takingCall: boolean): Promise<void> {
-    this._setTakingCall(takingCall);
-  }
-
-  @action
-  _setAutoAnswer(autoAnswer: boolean) {
-    this.autoAnswer = autoAnswer;
-  }
-
-  @delegate('server')
-  async setAutoAnswer(autoAnswer: boolean): Promise<void> {
-    this._setAutoAnswer(autoAnswer);
   }
 
   @action
@@ -533,7 +477,6 @@ class EvAgentSession extends RcModule {
   private _setFreshConfig() {
     this.loginType = DEFAULT_LOGIN_TYPE;
     this.extensionNumber = '';
-    this.takingCall = true;
     this.autoAnswer = this.defaultAutoAnswerOn;
     this.configSuccess = false;
     this.configured = false;
@@ -585,6 +528,7 @@ class EvAgentSession extends RcModule {
   /**
    * Configure agent session
    */
+  @delegate('server')
   async configureAgent({
     config = this._checkFieldsResult(this.formGroup),
     triggerEvent = true,
@@ -617,6 +561,7 @@ class EvAgentSession extends RcModule {
   /**
    * Update agent configs from server
    */
+  @delegate('server')
   async updateAgentConfigs(): Promise<void> {
     const agentConfig = await this.evClient.getAgentConfig();
     const agent = {
@@ -631,6 +576,7 @@ class EvAgentSession extends RcModule {
   /**
    * Update agent session settings
    */
+  @delegate('server')
   async updateAgent(voiceConnectionChanged: boolean): Promise<void> {
     try {
       await this.block.next(async () => {
@@ -665,6 +611,7 @@ class EvAgentSession extends RcModule {
   /**
    * Re-login agent with optional alert message
    */
+  @delegate('server')
   async reLoginAgent({
     isBlock,
     alertMessage,
