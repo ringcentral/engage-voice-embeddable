@@ -19,6 +19,7 @@ export type EvSipRingingData = {
     request: {
       from: {
         displayName: string;
+        _displayName: string;
       };
       friendlyName: string;
     };

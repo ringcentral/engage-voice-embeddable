@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   action,
   computed,
@@ -10,9 +10,15 @@ import {
   storage,
   StoragePlugin,
   useConnector,
+  watch,
+  PortManager,
+  type UIProps,
+  type UIFunctions,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
+import { Button, IconButton, Tooltip, Icon } from '@ringcentral/spring-ui';
+import { TranscriptionMd, CheckMd } from '@ringcentral/spring-icon';
 
 import { EvPresence } from '../../services/EvPresence';
 import { EvCall } from '../../services/EvCall';
@@ -26,8 +32,26 @@ import { EvTransferCall } from '../../services/EvTransferCall';
 import { EvRequeueCall } from '../../services/EvRequeueCall';
 import { EvAgentScript } from '../../services/EvAgentScript';
 import { EvAuth } from '../../services/EvAuth';
+import { ThirdPartyService } from '../../services/ThirdPartyService';
 import { dialoutStatuses, transferTypes } from '../../../enums';
-import type { EvBaseCall } from '../../services/EvClient/interfaces';
+import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
+import type { EvCallData } from '../../services/EvCallDataSource/EvCallDataSource.interface';
+import type { EvCallDispositionData } from '../../services/EvCallDisposition/EvCallDisposition.interface';
+
+import { CallInfoHeader } from '../../components/CallInfoHeader';
+import type { CallInfoItem } from '../../components/CallInfoHeader';
+import { EvCallControlButtons } from '../../components/EvCallControlButtons';
+import { TransferMenu } from '../../components/TransferMenu';
+import type { TransferOption } from '../../components/TransferMenu';
+import { IvrAlertPanel } from '../../components/IvrAlertPanel';
+import { DialpadPanel } from '../../components/DialpadPanel';
+import { DispositionForm } from '../../components/DispositionForm';
+import { RecordCountdown } from '../../components/RecordCountdown';
+import type {
+  ActivityCallViewProps,
+  ActivityCallViewUIProps,
+  ActivityCallViewUIFunctions,
+} from './ActivityCallView.interface';
 import i18n, { t as translate } from './i18n';
 
 /**
@@ -64,6 +88,62 @@ interface DispositionItem {
 }
 
 /**
+ * Call info map for building callInfos
+ */
+const CALL_INFO_MAP: { attr: string; name: string; formatTime?: boolean }[] = [
+  { attr: 'dnis', name: 'DNIS' },
+  { attr: 'uii', name: 'Call ID' },
+  { attr: 'termParty', name: 'Term Party' },
+  { attr: 'termReason', name: 'Term Reason' },
+  { attr: 'timestamp', name: 'Call Time', formatTime: true },
+];
+
+/**
+ * Format a timestamp to a readable date string
+ */
+const formatTimestamp = (value: string): string => {
+  try {
+    const date = new Date(value);
+    if (isNaN(date.getTime())) return value;
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+  } catch {
+    return value;
+  }
+};
+
+/**
+ * Build call info items from call data
+ */
+const getCallInfos = (call: any): CallInfoItem[] => {
+  if (!call) return [];
+  return CALL_INFO_MAP.reduce<CallInfoItem[]>((list, { attr, name, formatTime }) => {
+    let value: string | undefined;
+    if (call[attr]) {
+      value = String(call[attr]);
+    }
+    if (!value && call.endedCall?.[attr]) {
+      value = String(call.endedCall[attr]);
+    }
+    if (value !== undefined) {
+      list.push({
+        attr,
+        name,
+        content: formatTime ? formatTimestamp(value) : value,
+      });
+    }
+    return list;
+  }, []);
+};
+
+/**
  * ActivityCallView module - Call activity log and keypad
  * Displays current call information, call log form, and keypad
  */
@@ -71,6 +151,9 @@ interface DispositionItem {
   name: 'ActivityCallView',
 })
 class ActivityCallView extends RcViewModule {
+  /** Whether the call was picked up directly (not ringing) */
+  pickUpDirectly = true;
+
   constructor(
     private evPresence: EvPresence,
     private evCall: EvCall,
@@ -84,14 +167,23 @@ class ActivityCallView extends RcViewModule {
     private evRequeueCall: EvRequeueCall,
     private evAgentScript: EvAgentScript,
     private evAuth: EvAuth,
+    private thirdPartyService: ThirdPartyService,
     private router: RouterPlugin,
     private toast: Toast,
     private storagePlugin: StoragePlugin,
+    private portManager: PortManager,
     @optional('ActivityCallViewOptions')
     private activityCallViewOptions?: ActivityCallViewOptions,
   ) {
     super();
     this.storagePlugin.enable(this);
+    if (this.portManager?.shared) {
+      this.portManager.onServer(() => {
+        this.initialize();
+      });
+    } else {
+      this.initialize();
+    }
   }
 
   @storage
@@ -119,6 +211,10 @@ class ActivityCallView extends RcViewModule {
     notes: false,
   };
 
+  @storage
+  @state
+  scrollTo: string | null = null;
+
   @action
   setKeypadOpen(isOpen: boolean) {
     this.isKeypadOpen = isOpen;
@@ -145,12 +241,43 @@ class ActivityCallView extends RcViewModule {
   }
 
   @action
-  resetState() {
+  setScrollTo(id: string | null) {
+    this.scrollTo = id;
+  }
+
+  @action
+  resetKeypadStatus() {
+    this.keypadValue = '';
+    this.isKeypadOpen = false;
+  }
+
+  @action
+  reset() {
     this.isKeypadOpen = false;
     this.keypadValue = '';
     this.saveStatus = SaveStatus.SUBMIT;
     this.validated = { dispositionId: true, notes: true };
     this.required = { notes: false };
+    this.scrollTo = null;
+  }
+
+  /**
+   * Lifecycle: set default recording state on call ringing
+   */
+  initialize() {
+    this.resetKeypadStatus();
+    this.evCallMonitor.onCallRinging(() => {
+      const stopWatching = watch(
+        this,
+        () => this.currentMainCall,
+        (currentMainCall: any) => {
+          if (currentMainCall) {
+            this.evActiveCallControl.setIsRecording(this.isDefaultRecord);
+          }
+          stopWatching();
+        },
+      );
+    });
   }
 
   /**
@@ -201,6 +328,13 @@ class ActivityCallView extends RcViewModule {
   }
 
   /**
+   * Check if this is an incoming (ringing) call
+   */
+  get isInComingCall(): boolean {
+    return this.evCall.isInbound && !this.pickUpDirectly;
+  }
+
+  /**
    * Get call status
    */
   @computed((that: ActivityCallView) => [
@@ -211,24 +345,71 @@ class ActivityCallView extends RcViewModule {
     if (this.currentCall?.endedCall) {
       return 'callEnd';
     }
-    if (this.currentMainCall?.isHold || this.currentMainCall?.hold) {
+    const mainCall = this.currentMainCall as EvCallData | null;
+    if (mainCall?.isHold || mainCall?.hold) {
       return 'onHold';
     }
     return 'active';
   }
 
   /**
-   * Check if on hold
+   * Get the active call list (for multi-call scenarios)
    */
-  get isOnHold(): boolean {
-    return this.callStatus === 'onHold';
+  @computed((that: ActivityCallView) => [
+    that.callId,
+    that.evCallMonitor.callIds,
+    that.evCallMonitor.otherCallIds,
+    that.evCallMonitor.callsMapping,
+  ])
+  get callList(): any[] {
+    const { callIds, otherCallIds, callsMapping } = this.evCallMonitor;
+    return this.evCallMonitor.getActiveCallList(
+      callIds,
+      otherCallIds,
+      callsMapping,
+      this.callId,
+    );
   }
 
   /**
-   * Check if transfer is allowed
+   * Check if there are multiple active calls
+   */
+  @computed((that: ActivityCallView) => [that.callList])
+  get isMultipleCalls(): boolean {
+    return this.callList.length > 2;
+  }
+
+  /**
+   * Check if on hold (multi-call aware)
+   */
+  @computed((that: ActivityCallView) => [
+    that.isMultipleCalls,
+    that.callList,
+    that.currentMainCall,
+  ])
+  get isOnHold(): boolean {
+    if (this.isMultipleCalls) {
+      return !!this.callList.find(
+        (call: any) =>
+          !(call.session?.agentId === this.evAuth.agentId) && !!call.isHold,
+      );
+    }
+    return !!(this.currentMainCall as any)?.isHold || !!this.currentMainCall?.hold;
+  }
+
+  /**
+   * Whether transfer calls are allowed
+   */
+  get allowTransferCall(): boolean {
+    const call = this.currentCall;
+    return !!(call?.allowTransfer && !call?.endedCall);
+  }
+
+  /**
+   * Check if transfer is allowed (transfer or requeue)
    */
   get allowTransfer(): boolean {
-    return this.evTransferCall.allowTransferCall || this.evRequeueCall.allowRequeueCall;
+    return this.allowTransferCall || this.evRequeueCall.allowRequeueCall;
   }
 
   /**
@@ -276,14 +457,46 @@ class ActivityCallView extends RcViewModule {
   /**
    * Get call control permissions
    */
+  @computed((that: ActivityCallView) => [
+    that.currentCall,
+    that.evRequeueCall.allowRequeueCall,
+    that.currentMainCall,
+    that.agentRecording,
+  ])
   get callControlPermissions() {
     return {
-      allowTransferCall: this.evTransferCall.allowTransferCall,
+      allowTransferCall: this.allowTransferCall,
       allowRequeueCall: this.evRequeueCall.allowRequeueCall,
       allowHoldCall: this.currentMainCall?.allowHold ?? true,
       allowHangupCall: this.currentMainCall?.allowHangup ?? true,
       allowRecordControl: this.agentRecording?.agentRecording ?? false,
       allowPauseRecord: typeof this.agentRecording?.pause === 'number',
+    };
+  }
+
+  /**
+   * Get basic call info for display
+   */
+  @computed((that: ActivityCallView) => [that.currentCall])
+  get basicInfo() {
+    const call = this.currentCall as any;
+    if (!call) return null;
+    const isInbound = call.callType === 'INBOUND';
+    const contactMatches: any[] = call.contactMatches || [];
+    const name = contactMatches[0]?.name;
+    const fromNumber = isInbound ? call.ani : call.dnis;
+    const toNumber = isInbound ? call.dnis : call.ani;
+    const fromMatchName = name || fromNumber;
+    const toMatchName = name || toNumber;
+    const phoneNumber = isInbound ? fromNumber : toNumber;
+    const formattedNumber = formatPhoneNumber({ phoneNumber: phoneNumber || '' });
+    return {
+      subject: isInbound ? fromMatchName : toMatchName,
+      callInfos: getCallInfos(call),
+      followInfos: [
+        formattedNumber,
+        ...(call.queue?.name ? [call.queue.name] : []),
+      ],
     };
   }
 
@@ -299,21 +512,48 @@ class ActivityCallView extends RcViewModule {
     return call.ani || '';
   }
 
+  /**
+   * Whether to show the submit/disposition step
+   */
+  get showSubmitStep(): boolean {
+    if (!this.activityCallViewOptions?.hideCallNote) {
+      return true;
+    }
+    if (this.dispositionPickList.length === 0) {
+      return false;
+    }
+    if (this.currentCall?.callType === 'INBOUND') {
+      return true;
+    }
+    return false;
+  }
+
   // Call Control Actions
 
   hangUp = async () => {
     if (this.currentCall?.session?.sessionId) {
-      this.evActiveCallControl.hangUp(this.currentCall.session.sessionId);
+      await this.evActiveCallControl.hangUp(this.currentCall.session.sessionId);
     }
     this.setSaveStatus(SaveStatus.SUBMIT);
   };
 
+  /**
+   * Hold or unhold, multi-call aware (navigates to call list if multiple)
+   */
+  handleHoldOrUnhold = (type: 'hold' | 'unhold') => {
+    if (this.isMultipleCalls) {
+      this.goToActiveCallList();
+      return;
+    }
+    this.evActiveCallControl[type]();
+  };
+
   hold = () => {
-    this.evActiveCallControl.hold();
+    this.handleHoldOrUnhold('hold');
   };
 
   unhold = () => {
-    this.evActiveCallControl.unhold();
+    this.handleHoldOrUnhold('unhold');
   };
 
   mute = () => {
@@ -364,14 +604,30 @@ class ActivityCallView extends RcViewModule {
     });
   };
 
+  onRestartTimer = async () => {
+    try {
+      await this.evActiveCallControl.pauseRecord();
+    } catch (error: any) {
+      console.error(error?.message);
+    }
+  };
+
   // Keypad Actions
 
   sendDTMF = (digit: string) => {
     this.evActiveCallControl.onKeypadClick(digit);
   };
 
-  handleKeypadClick = (digit: string) => {
-    this.setKeypadValue(this.keypadValue + digit);
+  handleKeypadChange = (value: string) => {
+    // Detect the new character added and send DTMF for it
+    if (value.length > this.keypadValue.length) {
+      const newDigit = value.charAt(value.length - 1);
+      this.sendDTMF(newDigit);
+    }
+    this.setKeypadValue(value);
+  };
+
+  handleKeypadKeyPress = (digit: string) => {
     this.sendDTMF(digit);
   };
 
@@ -384,7 +640,7 @@ class ActivityCallView extends RcViewModule {
   };
 
   goToRequeueCallPage = () => {
-    const gate = this.evCallMonitor.callsMapping[this.callId]?.gate;
+    const gate = (this.evCallMonitor.callsMapping[this.callId] as any)?.gate;
     if (gate) {
       this.evRequeueCall.setStatus({
         selectedQueueGroupId: gate.gateGroupId || '',
@@ -404,16 +660,52 @@ class ActivityCallView extends RcViewModule {
   goBack = () => {
     this.evCall.setDialoutStatus(dialoutStatuses.idle);
     this.router.push('/agent/dialer');
-    this.resetState();
+    this.reset();
     this.evCall.activityCallId = '';
+  };
+
+  /**
+   * Navigate to dialer without submitting disposition
+   */
+  gotoDialWithoutSubmit = async () => {
+    await this.doDisposeCall();
+    this.evWorkingState.setIsPendingDisposition(false);
+    this.router.push('/agent/dialer');
+  };
+
+  /**
+   * Handle transfer menu selection
+   */
+  handleTransferSelect = (option: TransferOption) => {
+    switch (option) {
+      case 'internal':
+        this.goToTransferCallPage(transferTypes.internal);
+        break;
+      case 'phoneBook':
+        this.goToTransferCallPage(transferTypes.phoneBook);
+        break;
+      case 'queue':
+        this.goToRequeueCallPage();
+        break;
+      case 'manualEntry':
+        this.goToTransferCallPage(transferTypes.manualEntry);
+        break;
+    }
+  };
+
+  // Copy action
+
+  onCopySuccess = (name: string) => {
+    this.toast.info({
+      message: `${name.toUpperCase()} copied.`,
+    });
   };
 
   // Disposition Actions
 
   onUpdateCallLog = (field: string, value: string) => {
     const callId = this.callId;
-    const currentData = this.evCallDisposition.getDisposition(callId) || {};
-
+    const currentData = this.evCallDisposition.getDisposition(callId) || { dispositionId: null, notes: '' };
     if (field === 'dispositionId') {
       const currentDisposition = this.dispositionPickList.find(
         (item) => item.dispositionId === value,
@@ -425,46 +717,69 @@ class ActivityCallView extends RcViewModule {
         notes: !noteRequired || !!currentData.notes,
       });
     }
-
-    this.evCallDisposition.setDisposition(callId, {
-      ...currentData,
+    if (field === 'notes' && this.required.notes) {
+      this.setValidated({ notes: !!value });
+    } else if (field === 'notes') {
+      this.setValidated({ notes: true });
+    }
+    const updatedData: EvCallDispositionData = {
+      dispositionId: currentData.dispositionId,
+      notes: currentData.notes,
       [field]: value,
-    });
+    };
+    this.evCallDisposition.setDisposition(callId, updatedData);
   };
+
+  /**
+   * Core dispose call logic (log and send disposition)
+   */
+  private async doDisposeCall() {
+    try {
+      const call = this.currentCall;
+      if (call) {
+        await this.thirdPartyService.logCall({
+          call: {
+            id: call.uii,
+            direction: call.callType,
+            from: { phoneNumber: call.callType === 'OUTBOUND' ? call.dnis : call.ani },
+            to: { phoneNumber: call.callType === 'OUTBOUND' ? call.ani : call.dnis },
+          },
+          task: this.evCallDisposition.getDisposition(this.callId),
+          sessionId: this.callId,
+        });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    this.evCallDisposition.disposeCall(this.callId);
+    // Save agent script if applicable
+    const call = this.currentCall;
+    if (call?.scriptId) {
+      this.evAgentScript.setCurrentCallScript(null);
+      this.evAgentScript.saveScriptResult(call);
+    }
+  }
 
   disposeCall = async () => {
     if (this.saveStatus === SaveStatus.SAVED) {
       this.goBack();
       return;
     }
-
     const callId = this.callId;
     const saveFields = this.evCallDisposition.getDisposition(callId);
-
     // Validate
     this.setValidated({
       notes: !this.required.notes || (this.required.notes && !!saveFields?.notes),
     });
-
     if (!this.validated.dispositionId || !this.validated.notes) {
       return;
     }
-
     try {
       this.setSaveStatus(SaveStatus.SAVING);
-      this.evCallDisposition.disposeCall(callId);
-
-      // Save agent script if applicable
-      const call = this.currentCall;
-      if (call?.scriptId) {
-        this.evAgentScript.setCurrentCallScript(null);
-        this.evAgentScript.saveScriptResult(call);
-      }
-
+      await this.doDisposeCall();
       this.setSaveStatus(SaveStatus.SAVED);
       this.toast.success({ message: translate('callDispositionSuccess') });
       this.evWorkingState.setIsPendingDisposition(false);
-
       setTimeout(() => this.goBack(), 1000);
     } catch (e) {
       console.error(e);
@@ -476,8 +791,81 @@ class ActivityCallView extends RcViewModule {
     }
   };
 
-  component() {
+
+  /**
+   * Get UI state props for the component
+   */
+  getUIProps(): UIProps<ActivityCallViewUIProps> {
+    const call = this.currentCall;
+    const callId = this.callId;
+    return {
+      activityCallId: this.evCall.activityCallId,
+      currentCall: call,
+      contactName: this.getContactName(call),
+      isMuted: this.evIntegratedSoftphone.muteActive,
+      isOnHold: this.isOnHold,
+      isRecording: this.evActiveCallControl.isRecording,
+      callStatus: this.callStatus,
+      saveStatus: this.saveStatus,
+      isKeypadOpen: this.isKeypadOpen,
+      keypadValue: this.keypadValue,
+      dispositionPickList: this.dispositionPickList,
+      ivrAlertData: this.ivrAlertData,
+      hasAgentScript: this.hasAgentScript,
+      callControlPermissions: this.callControlPermissions,
+      validated: this.validated,
+      required: this.required,
+      dispositionData: this.evCallDisposition.getDisposition(callId),
+      isIntegratedSoftphone: this.evAgentSession.isIntegratedSoftphone,
+      recordPauseCount: this.agentRecording?.pause,
+      timeStamp: this.evActiveCallControl.timeStamp,
+      basicInfo: this.basicInfo,
+      isMultipleCalls: this.isMultipleCalls,
+      isInComingCall: this.isInComingCall,
+      showSubmitStep: this.showSubmitStep,
+      allowTransfer: this.allowTransfer,
+      allowTransferCall: this.allowTransferCall,
+      disableInternalTransfer: !this.evTransferCall.allowInternalTransfer,
+      hideCallNote: this.activityCallViewOptions?.hideCallNote ?? false,
+      isDefaultRecord: this.isDefaultRecord,
+      isInbound: this.isInbound,
+    };
+  }
+
+  /**
+   * Get UI action functions for the component
+   */
+  getUIFunctions(): UIFunctions<ActivityCallViewUIFunctions> {
+    return {
+      onMute: () => this.mute(),
+      onUnmute: () => this.unmute(),
+      onHold: () => this.hold(),
+      onUnhold: () => this.unhold(),
+      onHangup: () => this.hangUp(),
+      onRecord: () => this.onRecord(),
+      onStopRecord: () => this.onStopRecord(),
+      onPauseRecord: () => this.onPauseRecord(),
+      onResumeRecord: () => this.onResumeRecord(),
+      onRestartTimer: () => this.onRestartTimer(),
+      onActiveCall: () => this.goToActiveCallList(),
+      onTransferSelect: (option) => this.handleTransferSelect(option),
+      onCopySuccess: (name) => this.onCopySuccess(name),
+      setKeypadOpen: (isOpen) => this.setKeypadOpen(isOpen),
+      handleKeypadChange: (value) => this.handleKeypadChange(value),
+      handleKeypadKeyPress: (digit) => this.handleKeypadKeyPress(digit),
+      onUpdateCallLog: (field, value) => this.onUpdateCallLog(field, value),
+      disposeCall: () => this.disposeCall(),
+      openAgentScript: () => this.evAgentScript.setIsDisplayAgentScript(true),
+      goToRequeueCallPage: () => this.goToRequeueCallPage(),
+      goToTransferCallPage: (type) => this.goToTransferCallPage(type),
+    };
+  }
+
+  component(_props?: ActivityCallViewProps) {
     const { t } = useLocale(i18n);
+    const { current: uiFunctions } = useRef(this.getUIFunctions());
+
+    const uiProps = useConnector(() => this.getUIProps());
 
     const {
       currentCall,
@@ -498,57 +886,80 @@ class ActivityCallView extends RcViewModule {
       dispositionData,
       isIntegratedSoftphone,
       recordPauseCount,
-    } = useConnector(() => {
-      const call = this.currentCall;
-      const callId = this.callId;
-      return {
-        currentCall: call,
-        contactName: this.getContactName(call),
-        isMuted: this.evIntegratedSoftphone.muteActive,
-        isOnHold: this.isOnHold,
-        isRecording: this.evActiveCallControl.isRecording,
-        callStatus: this.callStatus,
-        saveStatus: this.saveStatus,
-        isKeypadOpen: this.isKeypadOpen,
-        keypadValue: this.keypadValue,
-        dispositionPickList: this.dispositionPickList,
-        ivrAlertData: this.ivrAlertData,
-        hasAgentScript: this.hasAgentScript,
-        callControlPermissions: this.callControlPermissions,
-        validated: this.validated,
-        required: this.required,
-        dispositionData: this.evCallDisposition.getDisposition(callId),
-        isIntegratedSoftphone: this.evAgentSession.isIntegratedSoftphone,
-        recordPauseCount: this.agentRecording?.pause,
-      };
-    });
+      timeStamp,
+      basicInfo,
+      isMultipleCalls,
+      isInComingCall,
+      showSubmitStep,
+      allowTransfer,
+      allowTransferCall,
+      disableInternalTransfer,
+      hideCallNote,
+      isDefaultRecord,
+      isInbound,
+      currentCallId,
+    } = uiProps;
+
+    // Transfer menu state
+    const [transferAnchorEl, setTransferAnchorEl] = useState<HTMLElement | null>(null);
+    const transferRef = useRef<HTMLButtonElement>(null);
+    const isTransferMenuOpen = Boolean(transferAnchorEl);
+
+    useEffect(() => {
+      if (currentCallId) {
+        this.reset();
+      }
+    }, [currentCallId]);
+
+    const handleTransferClick = useCallback(() => {
+      setTransferAnchorEl(transferRef.current);
+    }, []);
+
+    const handleTransferClose = useCallback(() => {
+      setTransferAnchorEl(null);
+    }, []);
 
     const handleHoldToggle = useCallback(() => {
       if (isOnHold) {
-        this.unhold();
+        uiFunctions.onUnhold();
       } else {
-        this.hold();
+        uiFunctions.onHold();
       }
-    }, [isOnHold]);
+    }, [isOnHold, uiFunctions]);
 
     const handleMuteToggle = useCallback(() => {
       if (isMuted) {
-        this.unmute();
+        uiFunctions.onUnmute();
       } else {
-        this.mute();
+        uiFunctions.onMute();
       }
-    }, [isMuted]);
+    }, [isMuted, uiFunctions]);
 
-    const handleRecordToggle = useCallback(() => {
+    const handleRecordClick = useCallback(() => {
+      if (!callControlPermissions.allowRecordControl) return;
       if (isRecording) {
-        this.onStopRecord();
+        if (callControlPermissions.allowPauseRecord) {
+          uiFunctions.onPauseRecord();
+        } else {
+          uiFunctions.onStopRecord();
+        }
       } else {
-        this.onRecord();
+        uiFunctions.onRecord();
       }
-    }, [isRecording]);
+    }, [isRecording, callControlPermissions, uiFunctions]);
 
     const showCallEnded = callStatus === 'callEnd';
-    const showRecordButton = callControlPermissions.allowRecordControl || this.isDefaultRecord;
+    const showRecordButton = callControlPermissions.allowRecordControl || isDefaultRecord;
+    const isOnActive = isMultipleCalls;
+    const showCountdown =
+      callControlPermissions.allowPauseRecord &&
+      recordPauseCount != null &&
+      !isRecording &&
+      !!timeStamp;
+    const phoneNumber = currentCall
+      ? (isInbound ? currentCall.ani : currentCall.dnis) || ''
+      : '';
+    const direction = currentCall?.callType === 'INBOUND' ? 'inbound' : 'outbound';
 
     if (!currentCall) {
       return (
@@ -562,270 +973,149 @@ class ActivityCallView extends RcViewModule {
       <div className="flex flex-col h-full bg-neutral-base overflow-hidden">
         {/* IVR Alerts */}
         {ivrAlertData.length > 0 && (
-          <div className="bg-warning-t10 border-b border-warning p-3">
-            {ivrAlertData.map((alert, index) => (
-              <div key={index} className="mb-2 last:mb-0">
-                {alert.subject && (
-                  <div className="typography-subtitleMini text-warning">{alert.subject}</div>
-                )}
-                {alert.body && (
-                  <div className="typography-descriptor text-neutral-b1">{alert.body}</div>
-                )}
-              </div>
-            ))}
-          </div>
+          <IvrAlertPanel
+            ivrAlertData={ivrAlertData}
+            isCallEnd={showCallEnded}
+          />
         )}
 
         {/* Call Info Header */}
-        <div className="p-4 border-b border-neutral-b4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="typography-subtitle mb-1">
-                {showCallEnded ? t('callEnded') : t('activeCall')}
-              </div>
-              <div className="typography-mainText text-neutral-b1 truncate">
-                {contactName || t('unknown')}
-              </div>
-              {contactName && contactName !== currentCall.ani && (
-                <div className="typography-descriptor text-neutral-b2">
-                  {currentCall.ani}
-                </div>
-              )}
-            </div>
-            {isOnHold && (
-              <span className="px-2 py-1 bg-warning-t20 text-warning typography-descriptorMini rounded">
-                {t('onHold')}
-              </span>
-            )}
+        <CallInfoHeader
+          contactName={contactName || t('unknown')}
+          phoneNumber={phoneNumber}
+          status={showCallEnded ? 'ended' : 'active'}
+          direction={direction as 'inbound' | 'outbound'}
+          isOnHold={isOnHold}
+          followInfos={basicInfo?.followInfos}
+          callInfos={basicInfo?.callInfos}
+          onCopySuccess={uiFunctions.onCopySuccess}
+        />
+
+        {/* Agent Script Icon */}
+        {hasAgentScript && !showCallEnded && (
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-neutral-b4 bg-primary-t10">
+            <Tooltip title={t('engageScript')}>
+              <IconButton
+                symbol={TranscriptionMd}
+                size="small"
+                variant="contained"
+                color="neutral"
+                onClick={uiFunctions.openAgentScript}
+                data-sign="agentScriptButton"
+              />
+            </Tooltip>
+            <span className="typography-descriptorMini text-primary-b">
+              {t('engageScript')}
+            </span>
           </div>
-          {/* Queue info */}
-          {currentCall.queue?.name && (
-            <div className="typography-descriptor text-neutral-b3 mt-1">
-              {currentCall.queue.name}
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Call Controls - Only show when call is active */}
         {!showCallEnded && (
-          <div className="flex flex-wrap justify-center gap-2 p-3 border-b border-neutral-b4">
-            {/* Mute Button - Only for integrated softphone */}
-            {isIntegratedSoftphone && (
-              <button
-                type="button"
-                onClick={handleMuteToggle}
-                className={`px-3 py-2 rounded-lg typography-descriptorMini ${
-                  isMuted ? 'bg-danger text-neutral-w0' : 'bg-neutral-b5 text-neutral-b1 hover:bg-neutral-b4'
-                }`}
-              >
-                {isMuted ? t('unmute') : t('mute')}
-              </button>
-            )}
-
-            {/* Hold Button */}
-            {callControlPermissions.allowHoldCall && (
-              <button
-                type="button"
-                onClick={handleHoldToggle}
-                className={`px-3 py-2 rounded-lg typography-descriptorMini ${
-                  isOnHold ? 'bg-warning text-neutral-w0' : 'bg-neutral-b5 text-neutral-b1 hover:bg-neutral-b4'
-                }`}
-              >
-                {isOnHold ? t('unhold') : t('hold')}
-              </button>
-            )}
-
-            {/* Record Button */}
-            {showRecordButton && (
-              <button
-                type="button"
-                onClick={handleRecordToggle}
-                disabled={!callControlPermissions.allowRecordControl}
-                className={`px-3 py-2 rounded-lg typography-descriptorMini ${
-                  isRecording ? 'bg-danger text-neutral-w0' : 'bg-neutral-b5 text-neutral-b1 hover:bg-neutral-b4'
-                } disabled:opacity-50`}
-              >
-                {isRecording ? t('stopRecord') : t('record')}
-              </button>
-            )}
-
-            {/* Pause Record Button */}
-            {callControlPermissions.allowPauseRecord && isRecording && (
-              <button
-                type="button"
-                onClick={this.onPauseRecord}
-                className="px-3 py-2 rounded-lg typography-descriptorMini bg-neutral-b5 text-neutral-b1 hover:bg-neutral-b4"
-              >
-                {t('pauseRecord')} {recordPauseCount !== undefined && `(${recordPauseCount})`}
-              </button>
-            )}
-
-            {/* Keypad Button */}
-            <button
-              type="button"
-              onClick={() => this.setKeypadOpen(!isKeypadOpen)}
-              className={`px-3 py-2 rounded-lg typography-descriptorMini ${
-                isKeypadOpen ? 'bg-primary-b text-neutral-w0' : 'bg-neutral-b5 text-neutral-b1 hover:bg-neutral-b4'
-              }`}
-            >
-              {t('keypad')}
-            </button>
-
-            {/* Transfer Button */}
-            {this.allowTransfer && (
-              <button
-                type="button"
-                onClick={() => this.goToTransferCallPage('internal')}
-                className="px-3 py-2 rounded-lg typography-descriptorMini bg-neutral-b5 text-neutral-b1 hover:bg-neutral-b4"
-              >
-                {t('transfer')}
-              </button>
-            )}
-
-            {/* Requeue Button */}
-            {callControlPermissions.allowRequeueCall && (
-              <button
-                type="button"
-                onClick={this.goToRequeueCallPage}
-                className="px-3 py-2 rounded-lg typography-descriptorMini bg-neutral-b5 text-neutral-b1 hover:bg-neutral-b4"
-              >
-                {t('requeue')}
-              </button>
-            )}
-
-            {/* Hangup Button */}
-            {callControlPermissions.allowHangupCall && (
-              <button
-                type="button"
-                onClick={this.hangUp}
-                className="px-3 py-2 rounded-lg typography-descriptorMini bg-danger text-neutral-w0 hover:bg-danger-f"
-              >
-                {t('hangUp')}
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Keypad */}
-        {isKeypadOpen && !showCallEnded && (
-          <div className="p-4 border-b border-neutral-b4">
-            <input
-              type="text"
-              value={keypadValue}
-              readOnly
-              aria-label={t('keypadInput')}
-              className="w-full p-2 mb-2 text-center typography-title bg-neutral-b5 rounded"
+          <div className="border-b border-neutral-b4 p-3">
+            <EvCallControlButtons
+              isMuted={isMuted}
+              isOnHold={isOnHold}
+              isRecording={isRecording}
+              showMuteButton={isIntegratedSoftphone}
+              showHoldButton={callControlPermissions.allowHoldCall}
+              showTransferButton={allowTransfer}
+              showRecordButton={showRecordButton}
+              showHangupButton={!isOnActive}
+              showActiveCallButton={isOnActive}
+              onMute={handleMuteToggle}
+              onHold={handleHoldToggle}
+              onTransfer={handleTransferClick}
+              onRecord={handleRecordClick}
+              onHangup={uiFunctions.onHangup}
+              onActiveCall={uiFunctions.onActiveCall}
+              disabled={isInComingCall}
+              disableTransfer={isInComingCall || !allowTransfer}
+              disableRecord={!callControlPermissions.allowRecordControl}
+              size="medium"
             />
-            <div className="grid grid-cols-3 gap-2">
-              {['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#'].map(
-                (digit) => (
-                  <button
-                    key={digit}
-                    type="button"
-                    onClick={() => this.handleKeypadClick(digit)}
-                    className="p-3 typography-subtitle bg-neutral-b5 rounded hover:bg-neutral-b4"
-                  >
-                    {digit}
-                  </button>
-                ),
-              )}
-            </div>
+            {/* Record Countdown (when recording is paused with countdown) */}
+            {showCountdown && (
+              <div className="flex justify-center mt-2">
+                <RecordCountdown
+                  recordPauseCount={recordPauseCount!}
+                  timeStamp={timeStamp!}
+                  onResumeRecord={uiFunctions.onResumeRecord}
+                  onRestartTimer={uiFunctions.onRestartTimer}
+                />
+              </div>
+            )}
+            {/* Transfer Menu */}
+            <TransferMenu
+              anchorEl={transferAnchorEl}
+              isOpen={isTransferMenuOpen}
+              onClose={handleTransferClose}
+              onSelect={uiFunctions.onTransferSelect}
+              allowTransferCall={callControlPermissions.allowTransferCall}
+              allowRequeueCall={callControlPermissions.allowRequeueCall}
+              disableInternalTransfer={disableInternalTransfer}
+              labels={{
+                internalTransfer: t('internalTransfer'),
+                phoneBookTransfer: t('phoneBookTransfer'),
+                queueTransfer: t('queueTransfer'),
+                enterANumber: t('enterANumber'),
+              }}
+            />
           </div>
         )}
 
-        {/* Agent Script Link */}
-        {hasAgentScript && (
-          <div className="p-3 border-b border-neutral-b4 bg-primary-t10">
-            <button
-              type="button"
-              onClick={() => this.evAgentScript.setIsDisplayAgentScript(true)}
-              className="text-primary-b typography-subtitleMini hover:underline"
-            >
-              {t('viewAgentScript')}
-            </button>
-          </div>
+        {/* Keypad Panel */}
+        {!showCallEnded && (
+          <DialpadPanel
+            isOpen={isKeypadOpen}
+            value={keypadValue}
+            onToggle={uiFunctions.setKeypadOpen}
+            onChange={uiFunctions.handleKeypadChange}
+            onKeyPress={uiFunctions.handleKeypadKeyPress}
+          />
         )}
 
         {/* Call Log Form */}
-        <div className="flex-1 p-4 overflow-auto">
-          <div className="typography-subtitle mb-4">{t('callLog')}</div>
-          <div className="space-y-4">
-            {/* Disposition Dropdown */}
-            {dispositionPickList.length > 0 && (
-              <div>
-                <label className="typography-descriptor text-neutral-b2 block mb-1">
-                  {t('disposition')} <span className="text-danger">*</span>
-                </label>
-                <select
-                  value={dispositionData?.dispositionId || ''}
-                  onChange={(e) => this.onUpdateCallLog('dispositionId', e.target.value)}
-                  aria-label={t('disposition')}
-                  className={`w-full p-2 border rounded ${
-                    !validated.dispositionId ? 'border-danger' : 'border-neutral-b4'
-                  }`}
-                >
-                  <option value="">{t('selectDisposition')}</option>
-                  {dispositionPickList.map((item) => (
-                    <option key={item.dispositionId} value={item.dispositionId}>
-                      {item.disposition}
-                    </option>
-                  ))}
-                </select>
-                {!validated.dispositionId && (
-                  <p className="typography-descriptor text-danger mt-1">
-                    {t('dispositionRequired')}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Notes Textarea */}
-            {!this.activityCallViewOptions?.hideCallNote && (
-              <div>
-                <label className="typography-descriptor text-neutral-b2 block mb-1">
-                  {t('notes')} {required.notes && <span className="text-danger">*</span>}
-                </label>
-                <textarea
-                  value={dispositionData?.notes || ''}
-                  onChange={(e) => this.onUpdateCallLog('notes', e.target.value)}
-                  aria-label={t('notes')}
-                  maxLength={32000}
-                  className={`w-full p-2 border rounded h-24 resize-none ${
-                    !validated.notes ? 'border-danger' : 'border-neutral-b4'
-                  }`}
-                  placeholder={t('enterNotes')}
-                />
-                {!validated.notes && (
-                  <p className="typography-descriptor text-danger mt-1">
-                    {t('notesRequired')}
-                  </p>
-                )}
-              </div>
-            )}
+        {showSubmitStep && (
+          <div className="flex-1 p-4 overflow-auto">
+            <div className="typography-subtitle mb-4">{t('callLog')}</div>
+            <DispositionForm
+              dispositionPickList={dispositionPickList}
+              dispositionData={dispositionData}
+              validated={validated}
+              required={required}
+              hideCallNote={hideCallNote}
+              onFieldChange={uiFunctions.onUpdateCallLog}
+              selectPlaceholder={t('pleaseSelect')}
+              dispositionErrorText={t('dispositionError')}
+              notesErrorText={t('notesRequired')}
+              dispositionLabel={t('disposition')}
+              notesLabel={t('notes')}
+              notesPlaceholder={t('enterNotes')}
+            />
           </div>
-        </div>
+        )}
 
-        {/* Submit Button */}
-        <div className="p-4 border-t border-neutral-b4">
-          <button
-            type="button"
-            onClick={this.disposeCall}
-            disabled={saveStatus === SaveStatus.SAVING}
-            className={`w-full py-3 rounded-lg typography-subtitle ${
-              saveStatus === SaveStatus.SAVING
-                ? 'bg-neutral-b4 text-neutral-b2 cursor-not-allowed'
-                : saveStatus === SaveStatus.SAVED
-                ? 'bg-success text-neutral-w0'
-                : 'bg-primary-b text-neutral-w0 hover:bg-primary-f'
-            }`}
-          >
-            {saveStatus === SaveStatus.SAVING
-              ? t('saving')
-              : saveStatus === SaveStatus.SAVED
-              ? t('saved')
-              : t('submit')}
-          </button>
-        </div>
+        {/* Submit Button - Only show when call ended and submit step is visible */}
+        {showCallEnded && showSubmitStep && (
+          <div className="p-4 border-t border-neutral-b4 shadow-[0_-2px_5px_0_rgba(0,0,0,0.15)]">
+            <Button
+              data-sign="submitButton"
+              size="large"
+              fullWidth
+              disabled={saveStatus === SaveStatus.SAVING}
+              loading={saveStatus === SaveStatus.SAVING}
+              onClick={uiFunctions.disposeCall}
+              color={saveStatus === SaveStatus.SAVED ? 'success' : 'primary'}
+            >
+              {saveStatus === SaveStatus.SAVED ? (
+                <Icon symbol={CheckMd} size="medium" />
+              ) : saveStatus === SaveStatus.SAVING ? null : (
+                t('submit')
+              )}
+            </Button>
+          </div>
+        )}
       </div>
     );
   }

@@ -4,6 +4,12 @@ import {
   optional,
   RcModule,
 } from '@ringcentral-integration/next-core';
+import {
+  ContactMatcher,
+} from '@ringcentral-integration/micro-contacts/src/app/services/ContactMatcher';
+import {
+  ActivityMatcher,
+} from '@ringcentral-integration/micro-contacts/src/app/services/ActivityMatcher';
 
 import type { EvAddSessionNotification, EvBaseCall } from '../EvClient/interfaces';
 import { EvClient } from '../EvClient';
@@ -19,20 +25,6 @@ import type {
   OnCallEndedCallback,
 } from './EvCallMonitor.interface';
 
-// Import types for matchers - actual services come from micro-contacts
-type ContactMatcher = {
-  dataMapping: Record<string, any[]>;
-  addQuerySource: (config: { getQueriesFn: () => string[]; readyCheckFn: () => boolean }) => void;
-  forceMatchNumber: (params: { phoneNumber: string }) => Promise<void>;
-};
-
-type ActivityMatcher = {
-  dataMapping: Record<string, any[]>;
-  addQuerySource: (config: { getQueriesFn: () => string[]; readyCheckFn: () => boolean }) => void;
-  match: (params: { queries: string[]; ignoreCache: boolean }) => Promise<void>;
-  _getQueries: () => string[];
-};
-
 /**
  * EvCallMonitor module - Call monitoring with contact/activity matching
  * Enriches call data with contact and activity matches
@@ -45,8 +37,8 @@ class EvCallMonitor extends RcModule {
     private evClient: EvClient,
     private evPresence: EvPresence,
     private evCallDataSource: EvCallDataSource,
-    @optional('ContactMatcher') private contactMatcher?: ContactMatcher,
-    @optional('ActivityMatcher') private activityMatcher?: ActivityMatcher,
+    @optional() private contactMatcher?: ContactMatcher,
+    @optional() private activityMatcher?: ActivityMatcher,
     @optional('EvCallMonitorOptions') private evCallMonitorOptions?: EvCallMonitorOptions,
   ) {
     super();

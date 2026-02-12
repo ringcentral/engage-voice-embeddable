@@ -9,6 +9,7 @@ import {
   useConnector,
   delegate,
   PortManager,
+  RouterPlugin,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import { DialTextField, Button, IconButton, Link } from '@ringcentral/spring-ui';
@@ -19,7 +20,6 @@ import { EvCall } from '../../services/EvCall';
 import { EvAuth } from '../../services/EvAuth';
 import { EvSettings } from '../../services/EvSettings';
 import { EvClient } from '../../services/EvClient';
-import { Redirect } from '../../services/Redirect';
 import type { DialerViewOptions, DialerViewProps } from './DialerView.interface';
 import i18n from './i18n';
 
@@ -36,7 +36,7 @@ class DialerView extends RcViewModule {
     private evAuth: EvAuth,
     private evSettings: EvSettings,
     private evClient: EvClient,
-    private redirect: Redirect,
+    private router: RouterPlugin,
     private storagePlugin: StoragePlugin,
     private portManager: PortManager,
     @optional('DialerViewOptions') private dialerViewOptions?: DialerViewOptions,
@@ -75,8 +75,13 @@ class DialerView extends RcViewModule {
   }
 
   @action
-  setToNumber(value: string): void {
+  _setToNumber(value: string): void {
     this.toNumber = value;
+  }
+
+  @delegate('server')
+  async setToNumber(value: string): Promise<void> {
+    this._setToNumber(value);
   }
 
   @action
@@ -99,7 +104,7 @@ class DialerView extends RcViewModule {
   /**
    * Initiate an outbound call with redial support
    */
-  // TODO: on server
+  @delegate('server')
   async dialout(): Promise<void> {
     if (this.toNumber) {
       this.setLatestDialoutNumber();
@@ -127,7 +132,7 @@ class DialerView extends RcViewModule {
    * Navigate to manual dial settings page
    */
   goToManualDialSettings(): void {
-    this.redirect.push('/settings/manualDial');
+    this.router.push('/settings/manualDial');
   }
 
   component(_props?: DialerViewProps) {

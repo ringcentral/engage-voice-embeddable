@@ -154,25 +154,15 @@ class EvPresence extends RcModule {
   // --- Offhook / dialout actions ---
 
   @action
-  _setCurrentCallUii(uii: string) {
+  setCurrentCallUii(uii: string) {
     this.currentCallUii = uii;
   }
 
-  @delegate('server')
-  async setCurrentCallUii(uii: string) {
-    this._setCurrentCallUii(uii);
-  }
-
   @action
-  _setDialoutStatus(status: DialoutStatusesType) {
+  setDialoutStatus(status: DialoutStatusesType) {
     if (this.dialoutStatus !== status) {
       this.dialoutStatus = status;
     }
-  }
-
-  @delegate('server')
-  async setDialoutStatus(status: DialoutStatusesType) {
-    this._setDialoutStatus(status);
   }
 
   @action
@@ -326,6 +316,7 @@ class EvPresence extends RcModule {
       .subscribe(
         EvCallbackTypes.OFFHOOK_INIT,
         async (data: EvOffhookInitResponse) => {
+          this.logger.info('OFFHOOK_INIT~~', data);
           this.evPresenceEvents.emit(EvCallbackTypes.OFFHOOK_INIT, data);
           if (data.status === 'OK') {
             await this.setOffhookInit();
@@ -363,6 +354,7 @@ class EvPresence extends RcModule {
         },
       )
       .subscribe(EvCallbackTypes.ADD_SESSION, async (data: EvAddSessionNotification) => {
+        console.log('ADD_SESSION~~', data);
         if (data.status === 'OK') {
           await this.addNewSession(data);
           // Emit RINGING on evPresenceEvents for the public event API
@@ -491,6 +483,7 @@ class EvPresence extends RcModule {
       const mainCall = this.getMainCall(currentCall.uii);
       if (currentCall && mainCall) {
         this._oldCalls = currentCalls;
+        this.setDialoutStatus(dialoutStatuses.callConnected);
         this.evPresenceEvents.emit(callStatus.ANSWERED, currentCall);
       } else {
         await this.clearCalls();

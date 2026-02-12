@@ -19,3 +19,8 @@ export * from './TimezoneSelect';
 export * from './EvAlertRenderer';
 export * from './SessionConfig';
 export * from './ManualPassModal';
+export * from './TransferMenu';
+export * from './IvrAlertPanel';
+export * from './DialpadPanel';
+export * from './DispositionForm';
+export * from './RecordCountdown';

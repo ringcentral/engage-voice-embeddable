@@ -12,6 +12,7 @@ import {
   StoragePlugin,
   PortManager,
   delegate,
+  RouterPlugin,
 } from '@ringcentral-integration/next-core';
 import { format, parse } from '@ringcentral-integration/phone-number';
 import { sleep } from '@ringcentral-integration/commons/utils';
@@ -82,7 +83,6 @@ class EvAgentSession extends RcModule {
     private evClient: EvClient,
     private evAuth: EvAuth,
     private evPresence: EvPresence,
-    private redirect: Redirect,
     private auth: Auth,
     private toast: Toast,
     private locale: Locale,
@@ -90,6 +90,7 @@ class EvAgentSession extends RcModule {
     private storagePlugin: StoragePlugin,
     private portManager: PortManager,
     private multiLoginView: MultiLoginView,
+    private router: RouterPlugin,
     @optional('EvAgentSessionOptions')
     private evAgentSessionOptions?: EvAgentSessionOptions,
   ) {
@@ -135,7 +136,7 @@ class EvAgentSession extends RcModule {
         this.isAgentUpdating = false;
       } else {
         this.logger.info('!!!!to Dialer');
-        this.redirect.goToDialer();
+        this.router.push('/agent/dialer');
       }
     });
     if (this._isLogin) {
@@ -599,7 +600,7 @@ class EvAgentSession extends RcModule {
           this._emitTriggerConfig();
         }
         await this.updateAgentConfigs();
-        this.goToSettingsPage();
+        this._navigateToSettingsPage();
         this._showUpdateSuccessAlert();
       });
     } catch (error) {
@@ -904,8 +905,8 @@ class EvAgentSession extends RcModule {
    * Navigate to session config page
    */
   private _navigateToSessionConfigPage(): void {
-    this.redirect.goToSessionConfig();
     this.logger.info('to sessionConfig~~');
+    this.router.push('/sessionConfig');
   }
 
   /**
@@ -922,8 +923,8 @@ class EvAgentSession extends RcModule {
   /**
    * Navigate to settings page
    */
-  goToSettingsPage(): void {
-    this.redirect.push('/settings');
+  _navigateToSettingsPage(): void {
+    this.router.push('/settings');
   }
 
   /**

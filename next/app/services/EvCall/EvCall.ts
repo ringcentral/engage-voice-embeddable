@@ -50,9 +50,6 @@ const DEFAULT_OUTBOUND_SETTING: DialoutFormGroup = {
   name: 'EvCall',
 })
 class EvCall extends RcModule {
-  /** Activity call ID from route, set from EvActivityCallUI */
-  activityCallId = '';
-
   ringTimeLimit: RingTimeLimit = {
     min: 20,
     max: 120,
@@ -81,6 +78,14 @@ class EvCall extends RcModule {
     } else {
       this.initialize();
     }
+  }
+
+  @state
+  activityCallId = '';
+
+  @action
+  setActivityCallId(id: string) {
+    this.activityCallId = id;
   }
 
   @storage
@@ -356,8 +361,10 @@ class EvCall extends RcModule {
   /**
    * Initiate an outbound call
    */
+  @delegate('server')
   async dialout(phoneNumber: string): Promise<void> {
-    await this.evPresence.setCurrentCallUii('');
+    this.logger.info('dialout~~', phoneNumber);
+    this.evPresence.setCurrentCallUii('');
     // Handle integrated softphone
     if (this.evAgentSession.isIntegratedSoftphone) {
       try {
@@ -373,6 +380,7 @@ class EvCall extends RcModule {
     }
     try {
       const destination = this._checkAndParseNumber(phoneNumber);
+      this.logger.info('destination~~', destination);
       await this._manualOutdial({
         destination,
         callerId: this.callerId,
@@ -395,12 +403,14 @@ class EvCall extends RcModule {
   /**
    * Preview dial - used for preview campaign dialing
    */
+  @delegate('server')
   async previewDial(
     requestId: string,
     leadPhone: string,
     leadPhoneE164: string,
   ): Promise<void> {
-    await this.evPresence.setCurrentCallUii('');
+    this.logger.info('previewDial~~', requestId, leadPhone, leadPhoneE164);
+    this.evPresence.setCurrentCallUii('');
     // Handle integrated softphone
     if (this.evAgentSession.isIntegratedSoftphone) {
       try {
@@ -440,6 +450,7 @@ class EvCall extends RcModule {
         const getOffhookInitResult = this._getOffhookInitResult();
         this.evClient.offhookInit();
         offhookInitResult = await getOffhookInitResult;
+        this.logger.info('offhookInitResult~~', offhookInitResult);
       }
       if (
         this.evSettings.isOffhook ||
@@ -472,10 +483,12 @@ class EvCall extends RcModule {
       this.setPhoneDialing();
     }
     try {
+      this.logger.info('manualOutdial~~ isOffhook', this.evSettings.isOffhook);
       if (!this.evSettings.isOffhook) {
         const getOffhookInitResult = this._getOffhookInitResult();
-        this.evClient.offhookInit();
+        await this.evClient.offhookInit();
         offhookInitResult = await getOffhookInitResult;
+        this.logger.info('offhookInitResult~~', offhookInitResult);
       }
       if (
         this.evSettings.isOffhook ||

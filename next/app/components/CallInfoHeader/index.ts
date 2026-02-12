@@ -1,2 +1,2 @@
 export * from './CallInfoHeader';
-export type { CallInfoHeaderProps } from './CallInfoHeader.interface';
+export type { CallInfoHeaderProps, CallInfoItem } from './CallInfoHeader.interface';

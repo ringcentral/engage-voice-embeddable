@@ -93,48 +93,48 @@ class AppView extends RcViewModule {
     },
     // Call-related routes (more specific routes first)
     {
-      path: '/calls/:id/transferCall/queueGroup/:groupId',
+      path: '/activityCallLog/:id/transferCall/queueGroup/:groupId',
       component: this._requeueCallGroupItemView.component,
       authentication: true,
     },
     {
-      path: '/calls/:id/transferCall/queueGroup',
+      path: '/activityCallLog/:id/transferCall/queueGroup',
       component: this._requeueCallGroupView.component,
       authentication: true,
     },
     {
-      path: '/calls/:id/transferCall/internal',
+      path: '/activityCallLog/:id/transferCall/internal',
       component: this._transferInternalView.component,
       authentication: true,
     },
     {
-      path: '/calls/:id/transferCall/phoneBook',
+      path: '/activityCallLog/:id/transferCall/phoneBook',
       component: this._transferPhoneBookView.component,
       authentication: true,
     },
     {
-      path: '/calls/:id/transferCall/manualEntry',
+      path: '/activityCallLog/:id/transferCall/manualEntry',
       component: this._transferManualEntryView.component,
       authentication: true,
     },
     {
-      path: '/calls/:id/transferCall',
+      path: '/activityCallLog/:id/transferCall',
       component: this._transferCallView.component,
       authentication: true,
     },
     {
-      path: '/calls/:id/activeCallList',
+      path: '/activityCallLog/:id/activeCallList',
       component: this._activeCallListView.component,
       authentication: true,
     },
     {
-      path: '/calls',
+      path: '/activityCallLog/:id',
       component: this._activityCallView.component,
       authentication: true,
     },
     // History detail route (for viewing specific call history)
     {
-      path: '/history/:id/:method',
+      path: '/history/callLog/:id/:method',
       component: this._callHistoryDetailView.component,
       authentication: true,
     },

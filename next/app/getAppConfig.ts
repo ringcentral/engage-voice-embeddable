@@ -39,6 +39,12 @@ import {
   ConnectivityMonitor,
   ConnectivityManager,
 } from '@ringcentral-integration/micro-auth/src/app/services';
+import {
+  ContactMatcher,
+} from '@ringcentral-integration/micro-contacts/src/app/services/ContactMatcher';
+import {
+  ActivityMatcher,
+} from '@ringcentral-integration/micro-contacts/src/app/services/ActivityMatcher';
 
 import { AppView } from './AppView';
 
@@ -248,6 +254,8 @@ export const getAppConfig = ({
     },
     ConnectivityMonitor,
     ConnectivityManager,
+    ContactMatcher,
+    ActivityMatcher,
   ];
 
   // Engage Voice services

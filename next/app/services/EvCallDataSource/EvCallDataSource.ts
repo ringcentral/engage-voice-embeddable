@@ -113,7 +113,7 @@ class EvCallDataSource extends RcModule {
    * Add a new call to raw calls mapping
    */
   @action
-  _addNewCall(call: EvBaseCall): void {
+  addNewCall(call: EvBaseCall): void {
     let rawAgentRecording = call?.agentRecording;
     if (rawAgentRecording) {
       rawAgentRecording = {
@@ -130,11 +130,6 @@ class EvCallDataSource extends RcModule {
       gate: this._getCurrentGateData(call),
       agentRecording: rawAgentRecording,
     } as EvCallData;
-  }
-
-  @delegate('server')
-  async addNewCall(call: EvBaseCall): Promise<void> {
-    this._addNewCall(call);
   }
 
   /**
@@ -179,23 +174,18 @@ class EvCallDataSource extends RcModule {
    * Drop a session from other calls
    */
   @action
-  _dropSession(dropSession: EvDropSessionNotification): void {
+  dropSession(dropSession: EvDropSessionNotification): void {
     const id = this._getCallEncodeId(dropSession);
     this.data.otherCallIds = this.otherCallIds.filter(
       (callId) => callId !== id,
     );
   }
 
-  @delegate('server')
-  async dropSession(dropSession: EvDropSessionNotification): Promise<void> {
-    this._dropSession(dropSession);
-  }
-
   /**
    * Remove an ended call and move to call logs
    */
   @action
-  _removeEndedCall(endedCall: EvEndedCall): void {
+  removeEndedCall(endedCall: EvEndedCall): void {
     const id = this._getCallEncodeId(endedCall);
     // Remove current agent session call with uii
     this.data.callIds = this.callIds.filter((callId) => callId !== id);
@@ -216,46 +206,31 @@ class EvCallDataSource extends RcModule {
     }
   }
 
-  @delegate('server')
-  async removeEndedCall(endedCall: EvEndedCall): Promise<void> {
-    this._removeEndedCall(endedCall);
-  }
-
   /**
    * Clear all active calls
    */
   @action
-  _clearCalls(): void {
+  clearCalls(): void {
     this.data.callIds = [];
     this.data.otherCallIds = [];
-  }
-
-  @delegate('server')
-  async clearCalls(): Promise<void> {
-    this._clearCalls();
   }
 
   /**
    * Set call hold status
    */
   @action
-  _setCallHoldStatus(res: EvHoldResponse): void {
+  setCallHoldStatus(res: EvHoldResponse): void {
     const id = this.evClient.encodeUii(res);
     if (this.data.callsMapping[id]) {
       this.data.callsMapping[id].isHold = res.holdState;
     }
   }
 
-  @delegate('server')
-  async setCallHoldStatus(res: EvHoldResponse): Promise<void> {
-    this._setCallHoldStatus(res);
-  }
-
   /**
    * Limit calls to max 250 and 7 days retention
    */
   @action
-  _limitCalls(): void {
+  limitCalls(): void {
     const lastWeekDayTimestamp = this._getLastWeekDayTimestamp();
     const storageCallData: CallDataState = {
       callIds: [],
@@ -307,22 +282,12 @@ class EvCallDataSource extends RcModule {
     this.changeCallsLimited(true);
   }
 
-  @delegate('server')
-  async limitCalls(): Promise<void> {
-    this._limitCalls();
-  }
-
   /**
    * Reset call data
    */
   @action
-  _resetData(): void {
+  resetData(): void {
     this.data = { ...DEFAULT_DATA };
-  }
-
-  @delegate('server')
-  async resetData(): Promise<void> {
-    this._resetData();
   }
 
   private _getCallEncodeId(

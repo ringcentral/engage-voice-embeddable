@@ -4,6 +4,7 @@ import {
   optional,
   useConnector,
 } from '@ringcentral-integration/next-core';
+import { Auth } from '@ringcentral-integration/micro-auth/src/app/services';
 import { ConnectivityView as BaseConnectivityView } from '@ringcentral-integration/micro-auth/src/app/views/ConnectivityView/Connectivity.view';
 import { ConnectivityManager } from '@ringcentral-integration/micro-auth/src/app/services';
 import { useObservableState } from 'observable-hooks';
@@ -36,6 +37,7 @@ export class ConnectivityView extends BaseConnectivityView {
     protected _connectivityManager: ConnectivityManager,
     protected _evClient: EvClient,
     protected _evAuth: EvAuth,
+    protected _auth: Auth,
     @optional() protected _evIntegratedSoftphone?: EvIntegratedSoftphone,
   ) {
     super(_connectivityManager);
@@ -49,6 +51,11 @@ export class ConnectivityView extends BaseConnectivityView {
     const baseProps = super.getUIProps();
     if (baseProps.mode) {
       return { ...baseProps, severity: 'error' };
+    }
+    if (!this._auth.loggedIn) {
+      return {
+        ...baseProps, severity: 'error',
+      };
     }
     if (this._evAuth.isSocketReconnecting) {
       return {

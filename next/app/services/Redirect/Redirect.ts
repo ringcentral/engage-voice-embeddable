@@ -2,6 +2,7 @@ import { Auth } from '@ringcentral-integration/micro-auth/src/app/services';
 import {
   injectable,
   optional,
+  ModuleRef,
   RcModule,
   RouterPlugin,
   watch,
@@ -10,7 +11,10 @@ import {
 
 import { loginStatus } from '../../../enums';
 import { EvAuth } from '../EvAuth';
+import { EvCallMonitor } from '../EvCallMonitor';
 import type { RedirectOptions } from './Redirect.interface';
+import { EvClient } from '../EvClient';
+import { EvCall } from '../EvCall';
 
 /**
  * Redirect service - Handles router redirections based on login status
@@ -26,10 +30,13 @@ class Redirect extends RcModule {
   private readonly _dialerPath: string;
 
   constructor(
-    protected _auth: Auth,
-    protected _evAuth: EvAuth,
     protected _router: RouterPlugin,
     protected _portManager: PortManager,
+    protected _auth: Auth,
+    protected _evAuth: EvAuth,
+    protected _evClient: EvClient,
+    protected _evCallMonitor: EvCallMonitor,
+    protected _evCall: EvCall,
     @optional('RedirectOptions')
     protected _options?: RedirectOptions,
   ) {
@@ -82,6 +89,7 @@ class Redirect extends RcModule {
     this._watchRcAuthStatus();
     this._watchEvAuthStatus();
     this._watchEvLoginStatus();
+    this._watchEvCallStatus();
   }
 
   /**
@@ -132,6 +140,48 @@ class Redirect extends RcModule {
   }
 
   /**
+   * Watch call status and redirect accordingly:
+   * - On ringing: trigger contact matching
+   * - On answered: set active call and navigate to activity call page
+   * - On ended: redirect from sub-activity paths back to parent
+   */
+  private _watchEvCallStatus(): void {
+    this._evCallMonitor.onCallRinging(async () => {
+      this.logger.info('onCallRinging~~');
+      const call = await this._evClient.getCurrentCall();
+      if (call) {
+        await this._evCallMonitor.getMatcher(call);
+      }
+    });
+    this._evCallMonitor.onCallAnswered(async (call) => {
+      this.logger.info('onCallAnswered~~', call);
+      if (!call?.session) return;
+      const id = this._evClient.encodeUii(call.session);
+      this._evCall.setActivityCallId(id);
+      await this._evCallMonitor.getMatcher(call);
+      this.gotoActivityCallPage(id);
+    });
+    this._evCallMonitor.onCallEnded(async () => {
+      this.logger.info('onCallEnded~~');
+      this._redirectOnCallEnded();
+    });
+  }
+
+  /**
+   * Handle routing when a call ends.
+   * If on a sub-path of /activityCallLog/{id}/..., redirect back to
+   * the parent activity call log page.
+   */
+  private _redirectOnCallEnded(): void {
+    const subPathRegex = /^\/activityCallLog\/([^/]+)\//;
+    const match = this.currentPath.match(subPathRegex);
+    if (match) {
+      const id = match[1];
+      this.gotoActivityCallPage(id);
+    }
+  }
+
+  /**
    * Navigate to login page
    */
   goToLogin(): void {
@@ -157,6 +207,10 @@ class Redirect extends RcModule {
    */
   goToDialer(): void {
     this._router.push(this._dialerPath);
+  }
+
+  gotoActivityCallPage(id: string): void {
+    this._router.push(`/activityCallLog/${id}`);
   }
 
   /**
