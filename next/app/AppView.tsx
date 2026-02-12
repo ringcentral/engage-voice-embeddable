@@ -234,6 +234,7 @@ class AppView extends RcViewModule {
           <div className="flex-none">
             <AppAnnouncementRender>
               <this._connectivityView.component />
+              <this._activityCallView.Announcement />
               {this._appViewOptions?.headers}
             </AppAnnouncementRender>
           </div>

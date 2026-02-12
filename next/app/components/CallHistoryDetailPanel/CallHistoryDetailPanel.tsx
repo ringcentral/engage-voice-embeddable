@@ -34,7 +34,7 @@ function formatCallTime(timestamp: number): string {
  */
 export const CallHistoryDetailPanel: FunctionComponent<
   CallHistoryDetailPanelProps
-> = ({ callDetail, callMeta, isInbound, callNotFound, onBack }) => {
+> = ({ callDetail, callMeta, isInbound, isActiveCall, callNotFound, onBack }) => {
   const { t } = useLocale(i18n);
 
   const contactName = useMemo(() => {
@@ -95,7 +95,7 @@ export const CallHistoryDetailPanel: FunctionComponent<
         <CallInfoHeader
           contactName={contactName || t('unknown')}
           phoneNumber={phoneNumber}
-          status="ended"
+          status={isActiveCall ? 'active' : 'ended'}
           direction={direction}
           followInfos={followInfos}
           secondaryTitle={callTimeText?.title}

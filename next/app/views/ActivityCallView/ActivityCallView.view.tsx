@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   action,
+  autobind,
   computed,
   injectable,
   optional,
@@ -17,11 +18,11 @@ import {
   type UIFunctions,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
-import { AppFooterNav, AppHeaderNav } from '@ringcentral-integration/micro-core/src/app/components';
+import { AppFooterNav, AppHeaderNav, AppAnnouncement } from '@ringcentral-integration/micro-core/src/app/components';
 import { PageHeader } from '@ringcentral-integration/next-widgets/components';
 import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
 import { Button, IconButton, Tooltip, Icon } from '@ringcentral/spring-ui';
-import { TranscriptionMd, CheckMd, CaretRightMd } from '@ringcentral/spring-icon';
+import { TranscriptionMd, CheckMd, ActiveCallMd, CaretRightMd } from '@ringcentral/spring-icon';
 
 import { EvPresence } from '../../services/EvPresence';
 import { EvCall } from '../../services/EvCall';
@@ -813,6 +814,85 @@ class ActivityCallView extends RcViewModule {
       goToRequeueCallPage: () => this.goToRequeueCallPage(),
       goToTransferCallPage: (type) => this.goToTransferCallPage(type),
     };
+  }
+
+  /**
+   * Navigate to the current active call page
+   */
+  goToActiveCall = () => {
+    if (this.callId) {
+      this.router.push(`/activityCallLog/${this.callId}`);
+    }
+  };
+
+  /**
+   * Check if user is currently on the activity call page
+   */
+  get isOnActiveCallPage(): boolean {
+    return this.router.currentPath?.startsWith('/activityCallLog/') ?? false;
+  }
+
+  /**
+   * Announcement banner component for active call notification.
+   * Renders in AppView's AppAnnouncementRender area.
+   * Shows when there is an active call and the user is not on the call page.
+   */
+  @autobind
+  Announcement() {
+    const { t } = useLocale(i18n);
+    const { hasActiveCall, isOnCallPage, contactName, phoneNumber, isInbound } =
+      useConnector(() => {
+        const call = this.currentCall;
+        const hasCall = !!call;
+        const isInbound = call?.callType === 'INBOUND';
+        const name = this.getContactName(call);
+        const phone = call
+          ? (isInbound ? call.ani : call.dnis) || ''
+          : '';
+        return {
+          hasActiveCall: hasCall,
+          isOnCallPage: this.isOnActiveCallPage,
+          contactName: name,
+          phoneNumber: formatPhoneNumber({ phoneNumber: phone }),
+          isInbound,
+        };
+      });
+    if (!hasActiveCall || isOnCallPage) {
+      return null;
+    }
+    const displayName = contactName || phoneNumber || t('unknown');
+    return (
+      <AppAnnouncement>
+        <div
+          tabIndex={0}
+          role="button"
+          data-sign="activeCallAnnouncement"
+          className="bg-success text-neutral-w0 w-full py-2 pl-2 pr-4 flex items-center h-14 cursor-pointer"
+          onClick={this.goToActiveCall}
+        >
+          <div className="relative">
+            <Icon
+              className="size-9 flex items-center justify-center"
+              size="medium"
+              symbol={ActiveCallMd}
+              data-sign="active-call-icon"
+            />
+          </div>
+          <div className="flex flex-col mx-3 flex-auto w-0">
+            <span className="typography-subtitle truncate">{displayName}</span>
+            <span className="typography-mainText truncate">
+              {t('activeCall')}
+            </span>
+          </div>
+          <IconButton
+            symbol={CaretRightMd}
+            size="small"
+            variant="icon"
+            data-sign="goToActiveCallButton"
+          />
+        </div>
+      </AppAnnouncement>
+    );
   }
 
   component(_props?: ActivityCallViewProps) {

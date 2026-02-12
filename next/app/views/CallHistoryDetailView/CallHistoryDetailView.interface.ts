@@ -30,6 +30,7 @@ interface CallHistoryDetailViewUIProps {
   callDetail: any | undefined;
   callMeta: CallDetailMeta;
   isInbound: boolean;
+  isActiveCall: boolean;
   callNotFound: boolean;
 }
 

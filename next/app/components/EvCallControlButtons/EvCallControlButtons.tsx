@@ -1,4 +1,4 @@
-import { IconButton, CallButton, Tooltip } from '@ringcentral/spring-ui';
+import { IconButton, CallButton } from '@ringcentral/spring-ui';
 import {
   MuteMd,
   MicrophoneMd,
@@ -27,20 +27,18 @@ export const MuteButton: FunctionComponent<MuteButtonProps> = ({
   disabled = false,
   onClick,
   'data-sign': dataSign = 'muteButton',
-  size = 'medium',
 }) => {
   return (
-    <Tooltip content={isMuted ? 'Unmute' : 'Mute'}>
-      <IconButton
-        symbol={isMuted ? MuteMd : MicrophoneMd}
-        onClick={onClick}
-        disabled={disabled}
-        data-sign={dataSign}
-        size={size}
-        variant={isMuted ? 'contained' : 'outlined'}
-        color={isMuted ? 'danger' : 'neutral'}
-      />
-    </Tooltip>
+    <IconButton
+      symbol={isMuted ? MuteMd : MicrophoneMd}
+      onClick={onClick}
+      disabled={disabled}
+      data-sign={dataSign}
+      size="large"
+      variant="inverted"
+      color={isMuted ? 'danger' : 'neutral'}
+      title={isMuted ? 'Unmute' : 'Mute'}
+    />
   );
 };
 
@@ -52,20 +50,18 @@ export const HoldButton: FunctionComponent<HoldButtonProps> = ({
   disabled = false,
   onClick,
   'data-sign': dataSign = 'holdButton',
-  size = 'medium',
 }) => {
   return (
-    <Tooltip content={isOnHold ? 'Unhold' : 'Hold'}>
-      <IconButton
-        symbol={HoldMd}
-        onClick={onClick}
-        disabled={disabled}
-        data-sign={dataSign}
-        size={size}
-        variant={isOnHold ? 'contained' : 'outlined'}
-        color={isOnHold ? 'warning' : 'neutral'}
-      />
-    </Tooltip>
+    <IconButton
+      symbol={HoldMd}
+      onClick={onClick}
+      disabled={disabled}
+      data-sign={dataSign}
+      size="large"
+      variant="inverted"
+      color={isOnHold ? 'warning' : 'neutral'}
+      title={isOnHold ? 'Unhold' : 'Hold'}
+    />
   );
 };
 
@@ -79,17 +75,16 @@ export const TransferButton: FunctionComponent<CallControlButtonProps> = ({
   size = 'medium',
 }) => {
   return (
-    <Tooltip content="Transfer">
-      <IconButton
-        symbol={TransferCallMd}
-        onClick={onClick}
-        disabled={disabled}
-        data-sign={dataSign}
-        size={size}
-        variant="outlined"
-        color="neutral"
-      />
-    </Tooltip>
+    <IconButton
+      symbol={TransferCallMd}
+      onClick={onClick}
+      disabled={disabled}
+      data-sign={dataSign}
+      size="large"
+      variant="inverted"
+      color="neutral"
+      title="Transfer"
+    />
   );
 };
 
@@ -110,19 +105,17 @@ export const RecordButton: FunctionComponent<RecordButtonProps> = ({
     if (isPaused) return 'Resume Recording';
     return 'Start Recording';
   };
-
   return (
-    <Tooltip content={getTooltip()}>
-      <IconButton
-        symbol={RecordMd}
-        onClick={onClick}
-        disabled={disabled}
-        data-sign={dataSign}
-        size={size}
-        variant={isRecording ? 'contained' : 'outlined'}
-        color={isRecording && !isPaused ? 'danger' : 'neutral'}
-      />
-    </Tooltip>
+    <IconButton
+      symbol={RecordMd}
+      onClick={onClick}
+      disabled={disabled}
+      data-sign={dataSign}
+      size="large"
+      variant="inverted"
+      color={isRecording && !isPaused ? 'danger' : 'neutral'}
+      title={getTooltip()}
+    />
   );
 };
 
@@ -133,42 +126,37 @@ export const HangupButton: FunctionComponent<CallControlButtonProps> = ({
   disabled = false,
   onClick,
   'data-sign': dataSign = 'hangupButton',
-  size = 'medium',
 }) => {
   return (
-    <Tooltip content="End Call">
-      <CallButton
-        variant="end"
-        onClick={onClick}
-        disabled={disabled}
-        data-sign={dataSign}
-        size={size}
-      />
-    </Tooltip>
+    <CallButton
+      variant="end"
+      onClick={onClick}
+      disabled={disabled}
+      data-sign={dataSign}
+      size="small"
+      title="End Call"
+    />
   );
 };
 
 /**
- * ActiveCallButton - Switch to active call
+ * ActiveCallButton - Switch to active call list
  */
 export const ActiveCallButton: FunctionComponent<CallControlButtonProps> = ({
   disabled = false,
   onClick,
   'data-sign': dataSign = 'activeCallButton',
-  size = 'medium',
 }) => {
   return (
-    <Tooltip content="Active Calls">
-      <IconButton
-        symbol={ActiveCallMd}
-        onClick={onClick}
-        disabled={disabled}
-        data-sign={dataSign}
-        size={size}
-        variant="contained"
-        color="success"
-      />
-    </Tooltip>
+    <IconButton
+      symbol={ActiveCallMd}
+      onClick={onClick}
+      disabled={disabled}
+      data-sign={dataSign}
+      size="large"
+      variant="inverted"
+      color="success"
+    />
   );
 };
 
@@ -208,7 +196,7 @@ export const EvCallControlButtons: FunctionComponent<EvCallControlButtonsProps> 
 }) => {
   return (
     <div
-      className={clsx('flex items-center justify-center gap-3', className)}
+      className={clsx('flex items-center justify-between', className)}
       data-sign={dataSign}
     >
       {showHoldButton && (
@@ -216,7 +204,6 @@ export const EvCallControlButtons: FunctionComponent<EvCallControlButtonsProps> 
           isOnHold={isOnHold}
           disabled={disabled}
           onClick={onHold}
-          size={size}
         />
       )}
 
@@ -225,7 +212,6 @@ export const EvCallControlButtons: FunctionComponent<EvCallControlButtonsProps> 
           isMuted={isMuted}
           disabled={disabled}
           onClick={onMute}
-          size={size}
         />
       )}
 
@@ -233,7 +219,6 @@ export const EvCallControlButtons: FunctionComponent<EvCallControlButtonsProps> 
         <TransferButton
           disabled={disabled || disableTransfer}
           onClick={onTransfer}
-          size={size}
         />
       )}
 
@@ -243,7 +228,6 @@ export const EvCallControlButtons: FunctionComponent<EvCallControlButtonsProps> 
           isPaused={isRecordingPaused}
           disabled={disabled || disableRecord}
           onClick={onRecord}
-          size={size}
         />
       )}
 
@@ -251,11 +235,10 @@ export const EvCallControlButtons: FunctionComponent<EvCallControlButtonsProps> 
         <ActiveCallButton
           disabled={disabled}
           onClick={onActiveCall}
-          size={size}
         />
       ) : (
         showHangupButton && (
-          <HangupButton disabled={disabled} onClick={onHangup} size={size} />
+          <HangupButton disabled={disabled} onClick={onHangup} />
         )
       )}
     </div>
