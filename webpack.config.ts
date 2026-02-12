@@ -1,6 +1,6 @@
 import path from 'path';
 import type { WebpackConfigOptions } from '@ringcentral-integration/next-builder';
-import type { RuleSetRule } from 'webpack';
+import { DefinePlugin, type RuleSetRule } from 'webpack';
 import { getBaseWebpackConfig, merge } from './next/lib/webpack/builder.webpack';
 import type { AppConfig } from './config';
 
@@ -40,6 +40,17 @@ export const getWebpackConfig = (options: WebpackConfigOptions<AppConfig>) => {
     module: {
       rules: getCustomRules(),
     },
+    plugins: [
+      new DefinePlugin({
+        // Adapter entry uses these env vars for building the app URL
+        'process.env.HOSTING_URL': JSON.stringify(
+          process.env.HOSTING_URL || '.',
+        ),
+        'process.env.APP_VERSION': JSON.stringify(
+          projectConfig.appConfig.appVersion || '',
+        ),
+      }),
+    ],
     resolve: {
       alias: {
         // Brand logo path alias for dynamic brand theming

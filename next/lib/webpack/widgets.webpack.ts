@@ -267,10 +267,11 @@ export const getBaseWebpackConfig = ({
     : {};
 
   // css
+  // thread-loader is not used for CSS/SCSS rules because style-loader and
+  // css-loader require loaderContext.utils.contextify which is unavailable in workers
   rules.push({
     test: /\.css$/i,
     use: [
-      ...threadLoader,
       {
         loader: 'style-loader',
         options: styleLoaderOptions,
@@ -284,7 +285,6 @@ export const getBaseWebpackConfig = ({
     test: /\.sass|\.scss/,
     exclude: /(\.global|\.inline)\.(sass|scss)/,
     use: [
-      ...threadLoader,
       {
         loader: 'style-loader',
         options: styleLoaderOptions,
@@ -332,7 +332,6 @@ export const getBaseWebpackConfig = ({
   rules.push({
     test: /(\.global)\.(sass|scss)/,
     use: [
-      ...threadLoader,
       {
         loader: 'style-loader',
         options: styleLoaderOptions,

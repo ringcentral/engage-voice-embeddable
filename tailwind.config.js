@@ -4,7 +4,7 @@ const baseConfig = require('./next/tailwind.base.config');
 module.exports = {
   presets: [baseConfig()],
   content: [
-    './next/index.html',
+    './next/app.html',
     './next/*.{tsx,ts}',
     './next/app/**/*.{tsx,ts}',
     './node_modules/@ringcentral-integration/**/*.{js,ts,jsx,tsx}',

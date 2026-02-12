@@ -4,11 +4,19 @@
   "themePath": "./next",
   "pages": [
     {
-      "index": "next/index.html",
-      "main": "next/main.ts"
+      "index": "next/app.html",
+      "main": "next/app.ts"
+    },
+    {
+      "main": "next/adapter.ts",
+      "filename": "adapter.js"
     }
   ],
-  "assets": ["next/icon.svg"],
+  "assets": [
+    "next/icon.svg",
+    { "from": "next/popup.html", "to": "popup.html" },
+    { "from": "next/index.html", "to": "index.html" }
+  ],
   "environment": {
     "local": {
       "brand": ["rc"],
