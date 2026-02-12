@@ -15,6 +15,8 @@ import { EvCallMonitor } from '../EvCallMonitor';
 import type { RedirectOptions } from './Redirect.interface';
 import { EvClient } from '../EvClient';
 import { EvCall } from '../EvCall';
+import { ActivityCallView } from '../../views/ActivityCallView';
+import { DialerView } from '../../views/DialerView';
 
 /**
  * Redirect service - Handles router redirections based on login status
@@ -37,6 +39,8 @@ class Redirect extends RcModule {
     protected _evClient: EvClient,
     protected _evCallMonitor: EvCallMonitor,
     protected _evCall: EvCall,
+    protected _dialerView: DialerView,
+    protected _activityCallView: ActivityCallView,
     @optional('RedirectOptions')
     protected _options?: RedirectOptions,
   ) {
@@ -158,12 +162,19 @@ class Redirect extends RcModule {
       if (!call?.session) return;
       const id = this._evClient.encodeUii(call.session);
       this._evCall.setActivityCallId(id);
+      this._dialerView.setToNumber('');
       await this._evCallMonitor.getMatcher(call);
       this.gotoActivityCallPage(id);
     });
-    this._evCallMonitor.onCallEnded(async () => {
+    this._evCallMonitor.onCallEnded(async (call) => {
       this.logger.info('onCallEnded~~');
       this._redirectOnCallEnded();
+      if (!this._activityCallView.showSubmitStep) {
+        this._router.push(this._dialerPath);
+      } else {
+        const id = this._evClient.encodeUii(call.session);
+        this.gotoActivityCallPage(id);
+      }
     });
   }
 
@@ -210,7 +221,11 @@ class Redirect extends RcModule {
   }
 
   gotoActivityCallPage(id: string): void {
-    this._router.push(`/activityCallLog/${id}`);
+    const path = `/activityCallLog/${id}`;
+    if (this._router.currentPath === path) {
+      return;
+    }
+    this._router.push(path);
   }
 
   /**

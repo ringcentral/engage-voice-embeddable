@@ -611,10 +611,13 @@ class ActivityCallView extends RcViewModule {
   };
 
   goBack = () => {
+    const isEnded = this.callStatus === 'callEnd';
     this.evCall.setDialoutStatus(dialoutStatuses.idle);
     this.router.goBack();
     this.reset();
-    this.evCall.activityCallId = '';
+    if (isEnded) {
+      this.evCall.activityCallId = '';
+    }
   };
 
   /**
@@ -867,7 +870,7 @@ class ActivityCallView extends RcViewModule {
           tabIndex={0}
           role="button"
           data-sign="activeCallAnnouncement"
-          className="bg-success text-neutral-w0 w-full py-2 pl-2 pr-4 flex items-center h-14 cursor-pointer"
+          className="bg-gradient-mixed bg-base-primary-b-high-contrast bg-cover-neutral-b0/30 text-neutral-50 w-full py-2 pl-2 pr-4 flex items-center h-14"
           onClick={this.goToActiveCall}
         >
           <div className="relative">
@@ -884,10 +887,9 @@ class ActivityCallView extends RcViewModule {
               {t('activeCall')}
             </span>
           </div>
-          <IconButton
+          <Icon
             symbol={CaretRightMd}
             size="small"
-            variant="icon"
             data-sign="goToActiveCallButton"
           />
         </div>
