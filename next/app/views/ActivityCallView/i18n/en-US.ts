@@ -1,8 +1,8 @@
 export default {
   // Call Status
   noActiveCall: 'No active call',
-  activeCall: 'Active Call',
-  callEnded: 'Call Ended',
+  activeCall: 'Active call',
+  callEnded: 'Call ended',
   unknown: 'Unknown',
   onHold: 'On Hold',
 
@@ -34,7 +34,7 @@ export default {
   restartTimer: 'Restart timer',
 
   // Call Log
-  callLog: 'Call Log',
+  callLog: 'Call log',
   disposition: 'Disposition',
   selectDisposition: 'Please select',
   pleaseSelect: 'Please select',

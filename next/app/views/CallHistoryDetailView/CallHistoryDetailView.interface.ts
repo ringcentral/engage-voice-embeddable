@@ -14,15 +14,6 @@ interface CallHistoryDetailViewProps {
 }
 
 /**
- * Disposition item from the disposition pick list
- */
-interface DispositionPickItem {
-  dispositionId: string;
-  disposition: string;
-  isDefault?: boolean;
-}
-
-/**
  * Extra metadata from the raw call / endedCall for the detail view
  */
 interface CallDetailMeta {
@@ -38,7 +29,6 @@ interface CallDetailMeta {
 interface CallHistoryDetailViewUIProps {
   callDetail: any | undefined;
   callMeta: CallDetailMeta;
-  dispositions: DispositionPickItem[];
   isInbound: boolean;
   callNotFound: boolean;
 }
@@ -47,7 +37,6 @@ interface CallHistoryDetailViewUIProps {
  * CallHistoryDetailView UI action functions (returned by getUIFunctions)
  */
 interface CallHistoryDetailViewUIFunctions {
-  onSave: (callId: string, notes: string, dispositionId: string | null) => Promise<void>;
   onBack: () => void;
 }
 
@@ -57,5 +46,4 @@ export type {
   CallHistoryDetailViewUIProps,
   CallHistoryDetailViewUIFunctions,
   CallDetailMeta,
-  DispositionPickItem,
 };

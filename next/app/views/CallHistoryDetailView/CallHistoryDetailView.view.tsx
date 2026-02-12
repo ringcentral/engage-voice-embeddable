@@ -20,8 +20,8 @@ import type {
 } from './CallHistoryDetailView.interface';
 
 /**
- * CallHistoryDetailView - Call history log detail view
- * Displays call details and allows adding notes/disposition
+ * CallHistoryDetailView - Read-only call history detail view
+ * Displays call details (contact, time, direction, metadata)
  */
 @injectable({
   name: 'CallHistoryDetailView',
@@ -42,12 +42,6 @@ class CallHistoryDetailView extends RcViewModule {
     this._router.goBack();
   }
 
-  async saveCallLog(callId: string, notes: string, dispositionId: string | null) {
-    // Save call log implementation would go here
-    this._options?.onSave?.();
-    this.goBack();
-  }
-
   /**
    * Returns reactive UI state for the view
    */
@@ -60,12 +54,10 @@ class CallHistoryDetailView extends RcViewModule {
         call.sessionId === callId,
     );
     const isInbound = callDetail?.direction === callDirection.inbound;
-    // Raw call data for extra metadata and dispositions
+    // Raw call data for extra metadata
     const rawCall = callId
       ? this._evCallHistory.callsMapping[callId]
       : undefined;
-    const dispositions =
-      rawCall?.outdialDispositions?.dispositions ?? [];
     // endedCall is typed as boolean in EvBaseCall but at runtime
     // it holds the full EvEndedCall object with termParty/termReason
     const endedCall = (rawCall?.endedCall as unknown) as
@@ -80,7 +72,6 @@ class CallHistoryDetailView extends RcViewModule {
     return {
       callDetail,
       callMeta,
-      dispositions,
       isInbound,
       callNotFound: !callDetail,
     };
@@ -91,8 +82,6 @@ class CallHistoryDetailView extends RcViewModule {
    */
   getUIFunctions(): UIFunctions<CallHistoryDetailViewUIFunctions> {
     return {
-      onSave: (callId: string, notes: string, dispositionId: string | null) =>
-        this.saveCallLog(callId, notes, dispositionId),
       onBack: () => this.goBack(),
     };
   }

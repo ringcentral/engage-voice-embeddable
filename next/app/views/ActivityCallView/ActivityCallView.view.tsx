@@ -10,15 +10,18 @@ import {
   storage,
   StoragePlugin,
   useConnector,
+  useParams,
   watch,
   PortManager,
   type UIProps,
   type UIFunctions,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
+import { AppFooterNav, AppHeaderNav } from '@ringcentral-integration/micro-core/src/app/components';
+import { PageHeader } from '@ringcentral-integration/next-widgets/components';
 import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
 import { Button, IconButton, Tooltip, Icon } from '@ringcentral/spring-ui';
-import { TranscriptionMd, CheckMd } from '@ringcentral/spring-icon';
+import { TranscriptionMd, CheckMd, CaretRightMd } from '@ringcentral/spring-icon';
 
 import { EvPresence } from '../../services/EvPresence';
 import { EvCall } from '../../services/EvCall';
@@ -39,7 +42,6 @@ import type { EvCallData } from '../../services/EvCallDataSource/EvCallDataSourc
 import type { EvCallDispositionData } from '../../services/EvCallDisposition/EvCallDisposition.interface';
 
 import { CallInfoHeader } from '../../components/CallInfoHeader';
-import type { CallInfoItem } from '../../components/CallInfoHeader';
 import { EvCallControlButtons } from '../../components/EvCallControlButtons';
 import { TransferMenu } from '../../components/TransferMenu';
 import type { TransferOption } from '../../components/TransferMenu';
@@ -86,62 +88,6 @@ interface DispositionItem {
   disposition: string;
   requireNote?: boolean;
 }
-
-/**
- * Call info map for building callInfos
- */
-const CALL_INFO_MAP: { attr: string; name: string; formatTime?: boolean }[] = [
-  { attr: 'dnis', name: 'DNIS' },
-  { attr: 'uii', name: 'Call ID' },
-  { attr: 'termParty', name: 'Term Party' },
-  { attr: 'termReason', name: 'Term Reason' },
-  { attr: 'timestamp', name: 'Call Time', formatTime: true },
-];
-
-/**
- * Format a timestamp to a readable date string
- */
-const formatTimestamp = (value: string): string => {
-  try {
-    const date = new Date(value);
-    if (isNaN(date.getTime())) return value;
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
-  } catch {
-    return value;
-  }
-};
-
-/**
- * Build call info items from call data
- */
-const getCallInfos = (call: any): CallInfoItem[] => {
-  if (!call) return [];
-  return CALL_INFO_MAP.reduce<CallInfoItem[]>((list, { attr, name, formatTime }) => {
-    let value: string | undefined;
-    if (call[attr]) {
-      value = String(call[attr]);
-    }
-    if (!value && call.endedCall?.[attr]) {
-      value = String(call.endedCall[attr]);
-    }
-    if (value !== undefined) {
-      list.push({
-        attr,
-        name,
-        content: formatTime ? formatTimestamp(value) : value,
-      });
-    }
-    return list;
-  }, []);
-};
 
 /**
  * ActivityCallView module - Call activity log and keypad
@@ -492,7 +438,6 @@ class ActivityCallView extends RcViewModule {
     const formattedNumber = formatPhoneNumber({ phoneNumber: phoneNumber || '' });
     return {
       subject: isInbound ? fromMatchName : toMatchName,
-      callInfos: getCallInfos(call),
       followInfos: [
         formattedNumber,
         ...(call.queue?.name ? [call.queue.name] : []),
@@ -657,9 +602,16 @@ class ActivityCallView extends RcViewModule {
     this.router.push(`/activityCallLog/${this.callId}/activeCallList`);
   };
 
+  /**
+   * Navigate to the call details page (read-only info)
+   */
+  goToCallDetailPage = () => {
+    this.router.push(`/history/callLog/${this.callId}/create`);
+  };
+
   goBack = () => {
     this.evCall.setDialoutStatus(dialoutStatuses.idle);
-    this.router.push('/agent/dialer');
+    this.router.goBack();
     this.reset();
     this.evCall.activityCallId = '';
   };
@@ -837,6 +789,8 @@ class ActivityCallView extends RcViewModule {
    */
   getUIFunctions(): UIFunctions<ActivityCallViewUIFunctions> {
     return {
+      onBack: () => this.goBack(),
+      onCallInfoClick: () => this.goToCallDetailPage(),
       onMute: () => this.mute(),
       onUnmute: () => this.unmute(),
       onHold: () => this.hold(),
@@ -862,12 +816,21 @@ class ActivityCallView extends RcViewModule {
   }
 
   component(_props?: ActivityCallViewProps) {
+    const params = useParams<{ id?: string }>();
     const { t } = useLocale(i18n);
     const { current: uiFunctions } = useRef(this.getUIFunctions());
+
+    // Sync route param :id to evCall.activityCallId (matches old project pattern)
+    useEffect(() => {
+      if (params.id && params.id !== this.evCall.activityCallId) {
+        this.evCall.setActivityCallId(params.id);
+      }
+    }, [params.id]);
 
     const uiProps = useConnector(() => this.getUIProps());
 
     const {
+      activityCallId,
       currentCall,
       contactName,
       isMuted,
@@ -897,7 +860,6 @@ class ActivityCallView extends RcViewModule {
       hideCallNote,
       isDefaultRecord,
       isInbound,
-      currentCallId,
     } = uiProps;
 
     // Transfer menu state
@@ -905,11 +867,12 @@ class ActivityCallView extends RcViewModule {
     const transferRef = useRef<HTMLButtonElement>(null);
     const isTransferMenuOpen = Boolean(transferAnchorEl);
 
+    // Reset form state when navigating to a different call
     useEffect(() => {
-      if (currentCallId) {
+      if (activityCallId) {
         this.reset();
       }
-    }, [currentCallId]);
+    }, [activityCallId]);
 
     const handleTransferClick = useCallback(() => {
       setTransferAnchorEl(transferRef.current);
@@ -963,14 +926,28 @@ class ActivityCallView extends RcViewModule {
 
     if (!currentCall) {
       return (
-        <div className="p-4 text-center text-neutral-b2">
-          <p className="typography-mainText">{t('noActiveCall')}</p>
+        <div className="flex flex-col h-full bg-neutral-base">
+          <AppHeaderNav override resetImmediately>
+            <PageHeader onBackClick={uiFunctions.onBack}>
+              {showCallEnded ? t('callLog') : t('activeCall')}
+            </PageHeader>
+          </AppHeaderNav>
+          <div className="flex-1 flex items-center justify-center text-neutral-b2">
+            <p className="typography-mainText">{t('noActiveCall')}</p>
+          </div>
+          <AppFooterNav />
         </div>
       );
     }
 
     return (
       <div className="flex flex-col h-full bg-neutral-base overflow-hidden">
+        <AppHeaderNav override resetImmediately>
+          <PageHeader onBackClick={uiFunctions.onBack}>
+            {showCallEnded ? t('callLog') : t('activeCall')}
+          </PageHeader>
+        </AppHeaderNav>
+
         {/* IVR Alerts */}
         {ivrAlertData.length > 0 && (
           <IvrAlertPanel
@@ -987,98 +964,30 @@ class ActivityCallView extends RcViewModule {
           direction={direction as 'inbound' | 'outbound'}
           isOnHold={isOnHold}
           followInfos={basicInfo?.followInfos}
-          callInfos={basicInfo?.callInfos}
-          onCopySuccess={uiFunctions.onCopySuccess}
+          onClick={uiFunctions.onCallInfoClick}
+          actions={
+            <IconButton
+              symbol={CaretRightMd}
+              size="small"
+              variant="icon"
+              color="neutral"
+              onClick={uiFunctions.onCallInfoClick}
+              data-sign="viewCallDetailButton"
+            />
+          }
         />
 
-        {/* Agent Script Icon */}
-        {hasAgentScript && !showCallEnded && (
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-neutral-b4 bg-primary-t10">
-            <Tooltip title={t('engageScript')}>
-              <IconButton
-                symbol={TranscriptionMd}
-                size="small"
-                variant="contained"
-                color="neutral"
-                onClick={uiFunctions.openAgentScript}
-                data-sign="agentScriptButton"
-              />
-            </Tooltip>
-            <span className="typography-descriptorMini text-primary-b">
-              {t('engageScript')}
-            </span>
-          </div>
-        )}
-
-        {/* Call Controls - Only show when call is active */}
-        {!showCallEnded && (
-          <div className="border-b border-neutral-b4 p-3">
-            <EvCallControlButtons
-              isMuted={isMuted}
-              isOnHold={isOnHold}
-              isRecording={isRecording}
-              showMuteButton={isIntegratedSoftphone}
-              showHoldButton={callControlPermissions.allowHoldCall}
-              showTransferButton={allowTransfer}
-              showRecordButton={showRecordButton}
-              showHangupButton={!isOnActive}
-              showActiveCallButton={isOnActive}
-              onMute={handleMuteToggle}
-              onHold={handleHoldToggle}
-              onTransfer={handleTransferClick}
-              onRecord={handleRecordClick}
-              onHangup={uiFunctions.onHangup}
-              onActiveCall={uiFunctions.onActiveCall}
-              disabled={isInComingCall}
-              disableTransfer={isInComingCall || !allowTransfer}
-              disableRecord={!callControlPermissions.allowRecordControl}
-              size="medium"
-            />
-            {/* Record Countdown (when recording is paused with countdown) */}
-            {showCountdown && (
-              <div className="flex justify-center mt-2">
-                <RecordCountdown
-                  recordPauseCount={recordPauseCount!}
-                  timeStamp={timeStamp!}
-                  onResumeRecord={uiFunctions.onResumeRecord}
-                  onRestartTimer={uiFunctions.onRestartTimer}
-                />
-              </div>
-            )}
-            {/* Transfer Menu */}
-            <TransferMenu
-              anchorEl={transferAnchorEl}
-              isOpen={isTransferMenuOpen}
-              onClose={handleTransferClose}
-              onSelect={uiFunctions.onTransferSelect}
-              allowTransferCall={callControlPermissions.allowTransferCall}
-              allowRequeueCall={callControlPermissions.allowRequeueCall}
-              disableInternalTransfer={disableInternalTransfer}
-              labels={{
-                internalTransfer: t('internalTransfer'),
-                phoneBookTransfer: t('phoneBookTransfer'),
-                queueTransfer: t('queueTransfer'),
-                enterANumber: t('enterANumber'),
-              }}
-            />
-          </div>
-        )}
-
-        {/* Keypad Panel */}
-        {!showCallEnded && (
-          <DialpadPanel
-            isOpen={isKeypadOpen}
-            value={keypadValue}
-            onToggle={uiFunctions.setKeypadOpen}
-            onChange={uiFunctions.handleKeypadChange}
-            onKeyPress={uiFunctions.handleKeypadKeyPress}
+        {/* IVR Alerts */}
+        {ivrAlertData.length > 0 && (
+          <IvrAlertPanel
+            ivrAlertData={ivrAlertData}
+            isCallEnd={showCallEnded}
           />
         )}
 
-        {/* Call Log Form */}
-        {showSubmitStep && (
+        {/* Scrollable middle: Call log form */}
+        {showSubmitStep ? (
           <div className="flex-1 p-4 overflow-auto">
-            <div className="typography-subtitle mb-4">{t('callLog')}</div>
             <DispositionForm
               dispositionPickList={dispositionPickList}
               dispositionData={dispositionData}
@@ -1094,28 +1003,100 @@ class ActivityCallView extends RcViewModule {
               notesPlaceholder={t('enterNotes')}
             />
           </div>
+        ) : (
+          <div className="flex-1" />
         )}
 
-        {/* Submit Button - Only show when call ended and submit step is visible */}
-        {showCallEnded && showSubmitStep && (
-          <div className="p-4 border-t border-neutral-b4 shadow-[0_-2px_5px_0_rgba(0,0,0,0.15)]">
-            <Button
-              data-sign="submitButton"
-              size="large"
-              fullWidth
-              disabled={saveStatus === SaveStatus.SAVING}
-              loading={saveStatus === SaveStatus.SAVING}
-              onClick={uiFunctions.disposeCall}
-              color={saveStatus === SaveStatus.SAVED ? 'success' : 'primary'}
-            >
-              {saveStatus === SaveStatus.SAVED ? (
-                <Icon symbol={CheckMd} size="medium" />
-              ) : saveStatus === SaveStatus.SAVING ? null : (
-                t('submit')
-              )}
-            </Button>
-          </div>
-        )}
+        {/* Pinned bottom section */}
+        <div className="flex-shrink-0">
+          {/* Keypad Panel */}
+          {!showCallEnded && (
+            <DialpadPanel
+              isOpen={isKeypadOpen}
+              value={keypadValue}
+              onToggle={uiFunctions.setKeypadOpen}
+              onChange={uiFunctions.handleKeypadChange}
+              onKeyPress={uiFunctions.handleKeypadKeyPress}
+            />
+          )}
+
+          {/* Record Countdown */}
+          {!showCallEnded && showCountdown && (
+            <div className="flex justify-center py-2">
+              <RecordCountdown
+                recordPauseCount={recordPauseCount!}
+                timeStamp={timeStamp!}
+                onResumeRecord={uiFunctions.onResumeRecord}
+                onRestartTimer={uiFunctions.onRestartTimer}
+              />
+            </div>
+          )}
+
+          {/* Call Controls - pinned at bottom when active */}
+          {!showCallEnded && (
+            <div className="border-t border-neutral-b4 px-4 py-3">
+              <EvCallControlButtons
+                isMuted={isMuted}
+                isOnHold={isOnHold}
+                isRecording={isRecording}
+                showMuteButton={isIntegratedSoftphone}
+                showHoldButton={callControlPermissions.allowHoldCall}
+                showTransferButton={allowTransfer}
+                showRecordButton={showRecordButton}
+                showHangupButton={!isOnActive}
+                showActiveCallButton={isOnActive}
+                onMute={handleMuteToggle}
+                onHold={handleHoldToggle}
+                onTransfer={handleTransferClick}
+                onRecord={handleRecordClick}
+                onHangup={uiFunctions.onHangup}
+                onActiveCall={uiFunctions.onActiveCall}
+                disabled={isInComingCall}
+                disableTransfer={isInComingCall || !allowTransfer}
+                disableRecord={!callControlPermissions.allowRecordControl}
+                size="small"
+              />
+              {/* Transfer Menu */}
+              <TransferMenu
+                anchorEl={transferAnchorEl}
+                isOpen={isTransferMenuOpen}
+                onClose={handleTransferClose}
+                onSelect={uiFunctions.onTransferSelect}
+                allowTransferCall={callControlPermissions.allowTransferCall}
+                allowRequeueCall={callControlPermissions.allowRequeueCall}
+                disableInternalTransfer={disableInternalTransfer}
+                labels={{
+                  internalTransfer: t('internalTransfer'),
+                  phoneBookTransfer: t('phoneBookTransfer'),
+                  queueTransfer: t('queueTransfer'),
+                  enterANumber: t('enterANumber'),
+                }}
+              />
+            </div>
+          )}
+
+          {/* Submit Button - Only show when call ended */}
+          {showCallEnded && showSubmitStep && (
+            <div className="p-4 border-t border-neutral-b4 shadow-[0_-2px_5px_0_rgba(0,0,0,0.15)]">
+              <Button
+                data-sign="submitButton"
+                size="large"
+                fullWidth
+                disabled={saveStatus === SaveStatus.SAVING}
+                loading={saveStatus === SaveStatus.SAVING}
+                onClick={uiFunctions.disposeCall}
+                color={saveStatus === SaveStatus.SAVED ? 'success' : 'primary'}
+              >
+                {saveStatus === SaveStatus.SAVED ? (
+                  <Icon symbol={CheckMd} size="medium" />
+                ) : saveStatus === SaveStatus.SAVING ? null : (
+                  t('submit')
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+        <AppFooterNav />
       </div>
     );
   }

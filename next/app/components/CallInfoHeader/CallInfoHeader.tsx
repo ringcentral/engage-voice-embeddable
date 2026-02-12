@@ -1,177 +1,92 @@
-import { Icon, Avatar, IconButton, Tooltip } from '@ringcentral/spring-ui';
-import { ProfileMd, IncomingCallMd, OutgoingCallMd, CopyMd } from '@ringcentral/spring-icon';
-import clsx from 'clsx';
+import { Avatar, ListItem, ListItemText } from '@ringcentral/spring-ui';
+import { IncomingCallMd, OutgoingCallMd } from '@ringcentral/spring-icon';
 import type { FunctionComponent } from 'react';
-import React, { useCallback, useState } from 'react';
+import React from 'react';
 
 import { StatusBadge } from '../StatusBadge';
 import type { CallInfoHeaderProps } from './CallInfoHeader.interface';
 
 /**
- * Copy text to clipboard and invoke callback
- */
-const copyToClipboard = async (text: string, name: string, onCopySuccess?: (name: string) => void) => {
-  try {
-    await navigator.clipboard.writeText(text);
-    onCopySuccess?.(name);
-  } catch {
-    // Fallback for older browsers
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    document.body.appendChild(textArea);
-    textArea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textArea);
-    onCopySuccess?.(name);
-  }
-};
-
-/**
  * CallInfoHeader - Displays call contact information with status
  *
- * Shows contact name, phone number, call direction, status badge,
- * follow-up info, and copyable call metadata.
- * Used in active call views and call history.
+ * Uses Spring UI ListItem layout with direction icon as Avatar.
+ * Shows contact name, phone number, status badge, and follow-up info.
+ * Clickable to navigate to call details page.
  */
 export const CallInfoHeader: FunctionComponent<CallInfoHeaderProps> = ({
   contactName,
   phoneNumber,
   status,
   direction,
-  avatar,
   isOnHold = false,
   className,
   'data-sign': dataSign,
   actions,
   followInfos,
-  callInfos,
-  onCopySuccess,
+  secondaryTitle,
+  onClick,
 }) => {
   const displayName = contactName || phoneNumber;
   const showPhoneNumber = contactName && phoneNumber !== contactName;
   const displayStatus = isOnHold ? 'onHold' : status;
-  const [isExpanded, setIsExpanded] = useState(false);
-  const hasCallInfos = callInfos && callInfos.length > 0;
+  const isInbound = direction === 'inbound';
+  const DirectionIcon = isInbound ? IncomingCallMd : OutgoingCallMd;
 
-  const toggleExpanded = useCallback(() => {
-    setIsExpanded((prev) => !prev);
-  }, []);
+  const primaryContent = (
+    <span className="flex items-center gap-2">
+      <span
+        className="typography-subtitle text-neutral-b1 truncate"
+        data-sign="contactName"
+      >
+        {displayName}
+      </span>
+      {displayStatus && (
+        <StatusBadge status={displayStatus} className="flex-shrink-0" />
+      )}
+    </span>
+  );
+
+  const secondaryParts: string[] = [];
+  if (showPhoneNumber) {
+    secondaryParts.push(phoneNumber);
+  }
+  if (followInfos && followInfos.length > 0) {
+    secondaryParts.push(...followInfos);
+  }
+  const secondaryContent =
+    secondaryParts.length > 0 ? (
+      <span
+        className="typography-descriptor text-neutral-b2 truncate"
+        data-sign="secondaryInfo"
+        title={secondaryTitle}
+      >
+        {secondaryParts.join(' | ')}
+      </span>
+    ) : null;
 
   return (
-    <div
-      className={clsx('border-b border-neutral-b4', className)}
+    <ListItem
+      clickable={!!onClick}
+      onClick={onClick}
+      divider
+      className={className}
       data-sign={dataSign || 'callInfoHeader'}
+      hoverable={false}
+      size="large"
     >
-      {/* Main header row */}
-      <div className="flex items-center gap-3 p-3">
-        {/* Avatar or default contact icon */}
-        <div className="flex-shrink-0">
-          {avatar || (
-            <Avatar size="small">
-              <Icon symbol={ProfileMd} size="medium" />
-            </Avatar>
-          )}
-        </div>
-        {/* Contact info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            {/* Direction indicator */}
-            {direction && (
-              <Icon
-                symbol={direction === 'inbound' ? IncomingCallMd : OutgoingCallMd}
-                size="small"
-                className={clsx(
-                  direction === 'inbound' ? 'text-primary-b' : 'text-success',
-                )}
-                data-sign={`direction-${direction}`}
-              />
-            )}
-            {/* Contact name */}
-            <span
-              className="typography-subtitle text-neutral-b1 truncate"
-              data-sign="contactName"
-            >
-              {displayName}
-            </span>
-            {/* Status badge */}
-            {displayStatus && (
-              <StatusBadge status={displayStatus} className="flex-shrink-0" />
-            )}
-          </div>
-          {/* Phone number (if different from name) */}
-          {showPhoneNumber && (
-            <span
-              className="typography-descriptor text-neutral-b2 truncate block"
-              data-sign="phoneNumber"
-            >
-              {phoneNumber}
-            </span>
-          )}
-          {/* Follow infos (formatted number, queue name) */}
-          {followInfos && followInfos.length > 0 && (
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
-              {followInfos.map((info, index) => (
-                <span
-                  key={index}
-                  className="typography-descriptor text-neutral-b3"
-                  data-sign={`followInfo-${index}`}
-                >
-                  {info}
-                  {index < followInfos.length - 1 && (
-                    <span className="text-neutral-b4 mx-1">|</span>
-                  )}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        {/* Action buttons */}
-        {actions && <div className="flex-shrink-0 flex gap-1">{actions}</div>}
-      </div>
-      {/* Expandable call info details */}
-      {hasCallInfos && (
-        <div className="px-3 pb-2">
-          <button
-            type="button"
-            className="typography-descriptorMini text-primary-b hover:underline cursor-pointer"
-            onClick={toggleExpanded}
-            data-sign="toggleCallInfos"
-          >
-            {isExpanded ? 'Hide details' : 'Show details'}
-          </button>
-          {isExpanded && (
-            <div className="mt-2 space-y-1" data-sign="callInfoDetails">
-              {callInfos.map((info) => (
-                <div
-                  key={info.attr}
-                  className="flex items-center justify-between gap-2"
-                  data-sign={`callInfo-${info.attr}`}
-                >
-                  <span className="typography-descriptorMini text-neutral-b3 flex-shrink-0">
-                    {info.name}
-                  </span>
-                  <div className="flex items-center gap-1 min-w-0">
-                    <span className="typography-descriptorMini text-neutral-b1 truncate">
-                      {info.content}
-                    </span>
-                    {onCopySuccess && (
-                      <Tooltip title="Copy">
-                        <IconButton
-                          symbol={CopyMd}
-                          size="xsmall"
-                          variant="plain"
-                          onClick={() => copyToClipboard(info.content, info.name, onCopySuccess)}
-                          data-sign={`copy-${info.attr}`}
-                        />
-                      </Tooltip>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+      {direction && (
+        <Avatar
+          size="small"
+          classes={{ content: 'bg-neutral-b5 text-neutral-b2' }}
+        >
+          <DirectionIcon />
+        </Avatar>
       )}
-    </div>
+      <ListItemText
+        primary={primaryContent}
+        secondary={secondaryContent}
+      />
+      {actions}
+    </ListItem>
   );
 };

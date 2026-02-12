@@ -1,15 +1,13 @@
-import type { CallInfoItem } from '../../components/CallInfoHeader';
 import type { TransferOption } from '../../components/TransferMenu';
 import type { IvrAlertData } from '../../components/IvrAlertPanel';
 import type { DispositionItem, DispositionData, DispositionValidation, DispositionRequired } from '../../components/DispositionForm';
 import type { SaveStatus } from './ActivityCallView.view';
 
 /**
- * Basic call info with call metadata and follow-up info
+ * Basic call info with follow-up info
  */
 export interface BasicInfo {
   subject: string;
-  callInfos: CallInfoItem[];
   followInfos: string[];
 }
 
@@ -36,6 +34,7 @@ export interface ActivityCallViewProps {
  * ActivityCallView UI state props (returned by getUIProps)
  */
 export interface ActivityCallViewUIProps {
+  activityCallId: string;
   currentCall: any;
   contactName: string;
   isMuted: boolean;
@@ -71,6 +70,8 @@ export interface ActivityCallViewUIProps {
  * ActivityCallView UI action functions (returned by getUIFunctions)
  */
 export interface ActivityCallViewUIFunctions {
+  onBack: () => void;
+  onCallInfoClick: () => void;
   onMute: () => void;
   onUnmute: () => void;
   onHold: () => void;

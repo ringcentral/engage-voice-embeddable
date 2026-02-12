@@ -137,10 +137,18 @@ class CallHistoryView extends RcViewModule {
   }
 
   /**
-   * Navigate to call history detail page
+   * Navigate to call history detail page (read-only details)
    */
   goToCallDetail(callId: string) {
     this._router.push(`/history/callLog/${callId}/create`);
+  }
+
+  /**
+   * Navigate to activity call page for creating/updating call log
+   * Matches old project pattern: EvCallHistoryUI.goCreateCallLogPage
+   */
+  goToCallLogPage(callId: string) {
+    this._router.push(`/activityCallLog/${callId}`);
   }
 
   /**
@@ -274,9 +282,12 @@ class CallHistoryView extends RcViewModule {
   ) => {
     return async (actionType: string) => {
       switch (actionType) {
-        case 'viewDetail':
         case 'createLog':
         case 'viewLog':
+          // Navigate to activity call page for creating/updating log
+          this.goToCallLogPage(call.id);
+          break;
+        case 'viewDetail':
           this.goToCallDetail(call.id);
           break;
         default:

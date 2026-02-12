@@ -55,7 +55,6 @@ export const DispositionForm: FunctionComponent<DispositionFormProps> = ({
             error={!validated.dispositionId}
             helperText={!validated.dispositionId ? dispositionErrorText : undefined}
             required
-            fullWidth
             data-sign="dispositionSelect"
           >
             <option value="" disabled>
