@@ -8,7 +8,6 @@ import {
   optional,
   RcModule,
   state,
-  watch,
   PortManager,
 } from '@ringcentral-integration/next-core';
 
@@ -129,7 +128,7 @@ class EvCallHistory extends RcModule {
         phoneNumber: call.ani,
         callType: call.callType,
       });
-      const id = this._getCallId(call.session);
+      const id = this.evPresence.getCallId(call.session ?? {});
       const direction =
         call.callType?.toLowerCase() === 'outbound'
           ? callDirection.outbound
@@ -167,6 +166,8 @@ class EvCallHistory extends RcModule {
       return {
         id,
         direction,
+        agent,
+        contact,
         from,
         to,
         fromName: from.name || from.phoneNumber,
@@ -184,18 +185,19 @@ class EvCallHistory extends RcModule {
     });
   }
 
+  /**
+   * Alias for formattedCalls - formatted call logs (ended calls)
+   */
+  get formattedCallLogs(): FormattedCall[] {
+    return this.formattedCalls;
+  }
+
   private _formatPhoneNumber(phoneNumber: string): string {
     return formatPhoneNumber({
       phoneNumber,
       countryCode: 'US',
       currentLocale: this.locale.currentLocale,
     });
-  }
-
-  private _getCallId(session: any): string {
-    if (!session) return '';
-    const { uii, sessionId } = session;
-    return `${uii}-${sessionId}`;
   }
 
   @computed((that: EvCallHistory) => [that.formattedCalls])
@@ -228,7 +230,8 @@ class EvCallHistory extends RcModule {
 
   @computed((that: EvCallHistory) => [that.rawCalls])
   get uniqueIdentifies(): string[] {
-    return makeCallsUniqueIdentifies(this.rawCalls);
+    // rawCalls are EvCallData at runtime (enriched by EvCallDataSource)
+    return makeCallsUniqueIdentifies(this.rawCalls as any[]);
   }
 
   /**
@@ -238,7 +241,7 @@ class EvCallHistory extends RcModule {
     // Placeholder for any timestamp tracking logic
   }
 
-  override initialize() {
+  initialize() {
     this.evSubscription.subscribe(
       EvCallbackTypes.DIRECT_AGENT_TRANSFER_NOTIF,
       (data: { status: string; ani?: string }) => {

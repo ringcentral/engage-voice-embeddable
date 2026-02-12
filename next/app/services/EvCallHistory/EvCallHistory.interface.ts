@@ -6,13 +6,25 @@ export interface EvCallHistoryOptions {
 }
 
 /**
+ * Call party info (agent or contact)
+ */
+export interface CallParty {
+  name: string;
+  phoneNumber: string;
+}
+
+/**
  * Formatted call entry - compatible with CallsListPage from micro-phone
  */
 export interface FormattedCall {
   id: string;
   direction: string;
-  from: { name: string; phoneNumber: string };
-  to: { name: string; phoneNumber: string };
+  /** Agent party info */
+  agent: CallParty;
+  /** Contact party info */
+  contact: CallParty;
+  from: CallParty;
+  to: CallParty;
   fromName: string;
   toName: string;
   fromMatches: ContactMatch[];
