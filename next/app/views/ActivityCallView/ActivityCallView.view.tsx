@@ -14,6 +14,7 @@ import {
   useParams,
   watch,
   PortManager,
+  delegate,
   type UIProps,
   type UIFunctions,
 } from '@ringcentral-integration/next-core';
@@ -21,8 +22,8 @@ import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import { AppFooterNav, AppHeaderNav, AppAnnouncement } from '@ringcentral-integration/micro-core/src/app/components';
 import { PageHeader } from '@ringcentral-integration/next-widgets/components';
 import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
-import { Button, IconButton, Tooltip, Icon } from '@ringcentral/spring-ui';
-import { TranscriptionMd, CheckMd, ActiveCallMd, CaretRightMd } from '@ringcentral/spring-icon';
+import { Button, IconButton, Icon } from '@ringcentral/spring-ui';
+import { CheckMd, ActiveCallMd, CaretRightMd } from '@ringcentral/spring-icon';
 
 import { EvPresence } from '../../services/EvPresence';
 import { EvCall } from '../../services/EvCall';
@@ -158,6 +159,9 @@ class ActivityCallView extends RcViewModule {
     notes: false,
   };
 
+  @state
+  viewCallId = '';
+
   @storage
   @state
   scrollTo: string | null = null;
@@ -190,6 +194,11 @@ class ActivityCallView extends RcViewModule {
   @action
   setScrollTo(id: string | null) {
     this.scrollTo = id;
+  }
+
+  @action
+  setViewCallId(id: string) {
+    this.viewCallId = id;
   }
 
   @action
@@ -228,20 +237,29 @@ class ActivityCallView extends RcViewModule {
   }
 
   /**
+   * Whether the view is in history mode (navigated from call history)
+   */
+  get isHistoryMode(): boolean {
+    return this.router.currentPath?.startsWith('/history/') ?? false;
+  }
+
+  /**
    * Get current call ID
    */
   get callId(): string {
-    return this.evCall.activityCallId;
+    return this.viewCallId || this.evCall.activityCallId;
   }
 
   /**
    * Get current call with enriched contact data
    */
   get currentCall() {
-    const call = this.evCall.currentCall;
+    const id = this.callId;
+    if (!id) return null;
+    const call = this.evPresence.callsMapping[id];
     if (!call) return null;
-    const callId = this.evCallMonitor.getCallId(call.session || {});
-    return this.evCallMonitor.callsMapping[callId] || call;
+    const monitorCallId = this.evCallMonitor.getCallId(call.session || {});
+    return this.evCallMonitor.callsMapping[monitorCallId] || call;
   }
 
   /**
@@ -476,7 +494,8 @@ class ActivityCallView extends RcViewModule {
 
   // Call Control Actions
 
-  hangUp = async () => {
+  @delegate('server')
+  async hangUp() {
     if (this.currentCall?.session?.sessionId) {
       await this.evActiveCallControl.hangUp(this.currentCall.session.sessionId);
     }
@@ -486,7 +505,8 @@ class ActivityCallView extends RcViewModule {
   /**
    * Hold or unhold, multi-call aware (navigates to call list if multiple)
    */
-  handleHoldOrUnhold = (type: 'hold' | 'unhold') => {
+  @delegate('server')
+  async handleHoldOrUnhold(type: 'hold' | 'unhold') {
     if (this.isMultipleCalls) {
       this.goToActiveCallList();
       return;
@@ -607,16 +627,24 @@ class ActivityCallView extends RcViewModule {
    * Navigate to the call details page (read-only info)
    */
   goToCallDetailPage = () => {
-    this.router.push(`/history/callLog/${this.callId}/create`);
+    this.router.push(`/history/${this.callId}/detail`);
   };
 
-  goBack = () => {
+  @delegate('server')
+  async goBack() {
+    if (this.isHistoryMode) {
+      this.setViewCallId('');
+      this.router.goBack();
+      this.reset();
+      return;
+    }
     const isEnded = this.callStatus === 'callEnd';
     this.evCall.setDialoutStatus(dialoutStatuses.idle);
+    this.setViewCallId('');
     this.router.goBack();
     this.reset();
     if (isEnded) {
-      this.evCall.activityCallId = '';
+      this.evCall.setActivityCallId('');
     }
   };
 
@@ -785,7 +813,14 @@ class ActivityCallView extends RcViewModule {
       hideCallNote: this.activityCallViewOptions?.hideCallNote ?? false,
       isDefaultRecord: this.isDefaultRecord,
       isInbound: this.isInbound,
+      isHistoryMode: this.isHistoryMode,
+      viewCallId: this.viewCallId,
     };
+  }
+
+  @delegate('server')
+  async setCallId(id: string) {
+    this.evCall.setActivityCallId(id);
   }
 
   /**
@@ -793,6 +828,8 @@ class ActivityCallView extends RcViewModule {
    */
   getUIFunctions(): UIFunctions<ActivityCallViewUIFunctions> {
     return {
+      setCallId: async (id: string) => await this.setCallId(id),
+      setViewCallId: (id: string) => this.setViewCallId(id),
       onBack: () => this.goBack(),
       onCallInfoClick: () => this.goToCallDetailPage(),
       onMute: () => this.mute(),
@@ -829,10 +866,12 @@ class ActivityCallView extends RcViewModule {
   };
 
   /**
-   * Check if user is currently on the activity call page
+   * Check if user is currently on a call-related page
    */
   get isOnActiveCallPage(): boolean {
-    return this.router.currentPath?.startsWith('/activityCallLog/') ?? false;
+    const path = this.router.currentPath;
+    if (!path) return false;
+    return path.startsWith('/activityCallLog/') || path.startsWith('/history/');
   }
 
   /**
@@ -845,7 +884,9 @@ class ActivityCallView extends RcViewModule {
     const { t } = useLocale(i18n);
     const { hasActiveCall, isOnCallPage, contactName, phoneNumber, isInbound } =
       useConnector(() => {
-        const call = this.currentCall;
+        // Use evCall.currentCall (based on activityCallId) not this.currentCall
+        // to avoid showing the banner for history-viewed calls
+        const call = this.evCall.currentCall;
         const hasCall = !!call;
         const isInbound = call?.callType === 'INBOUND';
         const name = this.getContactName(call);
@@ -898,16 +939,9 @@ class ActivityCallView extends RcViewModule {
   }
 
   component(_props?: ActivityCallViewProps) {
-    const params = useParams<{ id?: string }>();
+    const params = useParams<{ id?: string; method?: string }>();
     const { t } = useLocale(i18n);
     const { current: uiFunctions } = useRef(this.getUIFunctions());
-
-    // Sync route param :id to evCall.activityCallId (matches old project pattern)
-    useEffect(() => {
-      if (params.id && params.id !== this.evCall.activityCallId) {
-        this.evCall.setActivityCallId(params.id);
-      }
-    }, [params.id]);
 
     const uiProps = useConnector(() => this.getUIProps());
 
@@ -942,6 +976,8 @@ class ActivityCallView extends RcViewModule {
       hideCallNote,
       isDefaultRecord,
       isInbound,
+      isHistoryMode,
+      viewCallId,
     } = uiProps;
 
     // Transfer menu state
@@ -949,12 +985,22 @@ class ActivityCallView extends RcViewModule {
     const transferRef = useRef<HTMLButtonElement>(null);
     const isTransferMenuOpen = Boolean(transferAnchorEl);
 
+    // Sync route param :id to viewCallId, and only set evCall.activityCallId for active call routes
+    useEffect(() => {
+      if (params.id) {
+        uiFunctions.setViewCallId(params.id);
+        if (!isHistoryMode && params.id !== activityCallId) {
+          uiFunctions.setCallId(params.id);
+        }
+      }
+    }, [params.id]);
+
     // Reset form state when navigating to a different call
     useEffect(() => {
-      if (activityCallId) {
+      if (activityCallId || viewCallId) {
         this.reset();
       }
-    }, [activityCallId]);
+    }, [activityCallId, viewCallId]);
 
     const handleTransferClick = useCallback(() => {
       setTransferAnchorEl(transferRef.current);
@@ -994,6 +1040,9 @@ class ActivityCallView extends RcViewModule {
     }, [isRecording, callControlPermissions, uiFunctions]);
 
     const showCallEnded = callStatus === 'callEnd';
+    const pageTitle = isHistoryMode
+      ? (params.method === 'create' ? t('createCallLog') : t('updateCallLog'))
+      : (showCallEnded ? t('callLog') : t('activeCall'));
     const showRecordButton = callControlPermissions.allowRecordControl || isDefaultRecord;
     const isOnActive = isMultipleCalls;
     const showCountdown =
@@ -1011,7 +1060,7 @@ class ActivityCallView extends RcViewModule {
         <div className="flex flex-col h-full bg-neutral-base">
           <AppHeaderNav override resetImmediately>
             <PageHeader onBackClick={uiFunctions.onBack}>
-              {showCallEnded ? t('callLog') : t('activeCall')}
+              {pageTitle}
             </PageHeader>
           </AppHeaderNav>
           <div className="flex-1 flex items-center justify-center text-neutral-b2">
@@ -1026,7 +1075,7 @@ class ActivityCallView extends RcViewModule {
       <div className="flex flex-col h-full bg-neutral-base overflow-hidden">
         <AppHeaderNav override resetImmediately>
           <PageHeader onBackClick={uiFunctions.onBack}>
-            {showCallEnded ? t('callLog') : t('activeCall')}
+            {pageTitle}
           </PageHeader>
         </AppHeaderNav>
 

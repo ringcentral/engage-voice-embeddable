@@ -7,15 +7,13 @@ import {
   state,
   storage,
   StoragePlugin,
+  delegate,
 } from '@ringcentral-integration/next-core';
 
-import { tabManagerEvents } from '../../../enums';
 import { EvClient } from '../EvClient';
-import { EvSettings } from '../EvSettings';
 import { EvPresence } from '../EvPresence';
 import { EvIntegratedSoftphone } from '../EvIntegratedSoftphone';
 import { EvAgentSession } from '../EvAgentSession';
-import { TabManager } from '../EvTabManager';
 import type {
   EvActiveCallControlOptions,
   EvClientHangUpParams,
@@ -32,13 +30,10 @@ import type {
 class EvActiveCallControl extends RcModule {
   constructor(
     private evClient: EvClient,
-    private evSettings: EvSettings,
     private evPresence: EvPresence,
     private evIntegratedSoftphone: EvIntegratedSoftphone,
     private evAgentSession: EvAgentSession,
     private storagePlugin: StoragePlugin,
-    private portManager: PortManager,
-    @optional() private tabManager?: TabManager,
     @optional('EvActiveCallControlOptions')
     private evActiveCallControlOptions?: EvActiveCallControlOptions,
   ) {
@@ -53,10 +48,6 @@ class EvActiveCallControl extends RcModule {
   @storage
   @state
   timeStamp: number | null = null;
-
-  get tabManagerEnabled(): boolean {
-    return !!this.tabManager;
-  }
 
   @action
   setIsRecording(isRecording: boolean) {
@@ -78,6 +69,7 @@ class EvActiveCallControl extends RcModule {
   /**
    * Start recording the current call
    */
+  @delegate('server')
   async record(): Promise<void> {
     const { state, message } = await this.evClient.record(true);
     if (state === 'RECORDING') {
@@ -90,6 +82,7 @@ class EvActiveCallControl extends RcModule {
   /**
    * Stop recording the current call
    */
+  @delegate('server')
   async stopRecord(): Promise<void> {
     const { state, message } = await this.evClient.record(false);
     if (state === 'STOPPED') {
@@ -102,6 +95,7 @@ class EvActiveCallControl extends RcModule {
   /**
    * Pause recording the current call
    */
+  @delegate('server')
   async pauseRecord(): Promise<void> {
     const { state, message } = await this.evClient.pauseRecord(false);
     if (state === 'PAUSED') {
@@ -114,71 +108,81 @@ class EvActiveCallControl extends RcModule {
   /**
    * Resume recording the current call
    */
-  resumeRecord(): void {
+  @delegate('server')
+  async resumeRecord(): Promise<void> {
     this.resumeRecordAction();
   }
 
   /**
    * Send DTMF tone via keypad
    */
-  onKeypadClick(value: string): void {
+  @delegate('server')
+  async onKeypadClick(value: string): Promise<void> {
     this.evClient.sipSendDTMF(value);
   }
 
   /**
    * Mute the current call
    */
-  mute(): void {
-    this._sipToggleMute(true);
+  @delegate('server')
+  async mute(): Promise<void> {
+    await this._sipToggleMute(true);
   }
 
   /**
    * Unmute the current call
    */
-  unmute(): void {
-    this._sipToggleMute(false);
+  @delegate('server')
+  async unmute(): Promise<void> {
+    await this._sipToggleMute(false);
   }
 
   /**
    * Hang up a call by session ID
    */
-  hangUp(sessionId: string): void {
+  @delegate('server')
+  async hangUp(sessionId: string): Promise<void> {
     this.evClient.hangup({ sessionId });
   }
 
   /**
    * Reject an incoming call
    */
-  reject(): void {
+  @delegate('server')
+  async reject(): Promise<void> {
     this.logger.info('reject call');
   }
 
   /**
    * Put the current call on hold
    */
-  hold(): void {
-    this._changeOnHoldState(true);
+  @delegate('server')
+  async hold(): Promise<void> {
+    await this._changeOnHoldState(true);
   }
 
   /**
    * Take the current call off hold
    */
-  unhold(): void {
-    this._changeOnHoldState(false);
+  @delegate('server')
+  async unhold(): Promise<void> {
+    await this._changeOnHoldState(false);
   }
 
   /**
    * Hang up a session
    */
-  hangupSession({ sessionId }: EvClientHangUpParams): void {
-    this.evClient.hangup({ sessionId });
+  @delegate('server')
+  async hangupSession({ sessionId }: EvClientHangUpParams): Promise<void> {
+    await this.evClient.hangup({ sessionId });
   }
 
   /**
    * Hold or unhold a session
    */
-  holdSession({ sessionId, state }: EvClientHoldSessionParams): void {
-    this.evClient.holdSession({ state, sessionId });
+  @delegate('server')
+  async holdSession({ sessionId, state }: EvClientHoldSessionParams): Promise<void> {
+    await this.evClient.holdSession({ state, sessionId });
   }
 
   /**

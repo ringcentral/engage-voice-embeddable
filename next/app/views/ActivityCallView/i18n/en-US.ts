@@ -35,6 +35,8 @@ export default {
 
   // Call Log
   callLog: 'Call log',
+  createCallLog: 'Create call log',
+  updateCallLog: 'Update call log',
   disposition: 'Disposition',
   selectDisposition: 'Please select',
   pleaseSelect: 'Please select',

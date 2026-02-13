@@ -64,12 +64,16 @@ export interface ActivityCallViewUIProps {
   hideCallNote: boolean;
   isDefaultRecord: boolean;
   isInbound: boolean;
+  isHistoryMode: boolean;
+  viewCallId: string;
 }
 
 /**
  * ActivityCallView UI action functions (returned by getUIFunctions)
  */
 export interface ActivityCallViewUIFunctions {
+  setCallId: (id: string) => Promise<void>;
+  setViewCallId: (id: string) => void;
   onBack: () => void;
   onCallInfoClick: () => void;
   onMute: () => void;

@@ -132,9 +132,15 @@ class AppView extends RcViewModule {
       component: this._activityCallView.component,
       authentication: true,
     },
-    // History detail route (for viewing specific call history)
+    // History call log route (for creating/updating call log from history)
     {
-      path: '/history/callLog/:id/:method',
+      path: '/history/:id/callLog/:method',
+      component: this._activityCallView.component,
+      authentication: true,
+    },
+    // History detail route (for viewing read-only call details)
+    {
+      path: '/history/:id/detail',
       component: this._callHistoryDetailView.component,
       authentication: true,
     },
