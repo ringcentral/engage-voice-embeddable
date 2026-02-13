@@ -413,6 +413,7 @@ class EvClient extends RcModule {
       authenticateResponse.type === 'Authenticate Error' ||
       authenticateResponse.message
     ) {
+      //  TODO: handle the error
       throw new EvTypeError({
         type: messageTypes.CONNECT_ERROR,
         data: authenticateResponse.message,

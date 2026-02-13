@@ -1,4 +1,4 @@
-import { IconButton, Tooltip } from '@ringcentral/spring-ui';
+import { IconButton } from '@ringcentral/spring-ui';
 import clsx from 'clsx';
 import type { FunctionComponent } from 'react';
 import React, { useEffect, useState } from 'react';
@@ -68,16 +68,17 @@ export const RecordCountdown: FunctionComponent<RecordCountdownProps> = ({
       className={clsx('inline-flex', className)}
       data-sign={dataSign}
     >
-      <Tooltip title="Restart timer">
-        <IconButton
-          symbol={() => <CountdownIcon count={remainingTime} />}
-          onClick={onRestartTimer}
-          variant="contained"
-          color="danger"
-          size="medium"
-          data-sign="restartTimerButton"
-        />
-      </Tooltip>
+      <IconButton
+        symbol={() => <CountdownIcon count={remainingTime} />}
+        onClick={onRestartTimer}
+        variant="contained"
+        color="danger"
+        size="medium"
+        data-sign="restartTimerButton"
+        TooltipProps={{
+          title: 'Restart timer',
+        }}
+      />
     </div>
   );
 };

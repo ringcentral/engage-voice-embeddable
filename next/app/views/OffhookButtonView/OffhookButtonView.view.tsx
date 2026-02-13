@@ -7,7 +7,7 @@ import {
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import React, { useCallback } from 'react';
-import { IconButton, Tooltip } from '@ringcentral/spring-ui';
+import { IconButton } from '@ringcentral/spring-ui';
 import { AgentMd } from '@ringcentral/spring-icon';
 import clsx from 'clsx';
 
@@ -138,21 +138,23 @@ class OffhookButtonView extends RcViewModule {
       t,
     );
     return (
-      <Tooltip title={tooltipText} triggerWhenDisabled>
-        <IconButton
-          symbol={AgentMd}
-          size="small"
-          variant={isOffhook ? 'contained' : 'outlined'}
-          color={isOffhook ? 'success' : 'neutral'}
-          disabled={isOffHookDisabled}
-          onClick={handleOffhook}
-          aria-label={tooltipText}
-          className={clsx(
-            isTransitioning && 'animate-pulse',
-            props?.className,
-          )}
-        />
-      </Tooltip>
+      <IconButton
+        symbol={AgentMd}
+        size="small"
+        variant={isOffhook ? 'contained' : 'outlined'}
+        color={isOffhook ? 'success' : 'neutral'}
+        disabled={isOffHookDisabled}
+        onClick={handleOffhook}
+        aria-label={tooltipText}
+        className={clsx(
+          isTransitioning && 'animate-pulse',
+          props?.className,
+        )}
+        TooltipProps={{
+          title: tooltipText,
+          triggerWhenDisabled: true,
+        }}
+      />
     );
   }
 }

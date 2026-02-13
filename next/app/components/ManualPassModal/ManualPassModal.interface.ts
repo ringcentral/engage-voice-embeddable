@@ -32,6 +32,4 @@ export interface ManualPassModalProps {
   defaultTimezone: string;
   /** Whether form submission is disabled */
   disabled?: boolean;
-  /** Translation function */
-  t: (key: string) => string;
 }

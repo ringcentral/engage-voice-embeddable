@@ -1,7 +1,7 @@
-import { Select, Textarea } from '@ringcentral/spring-ui';
+import { Select, Option, Textarea } from '@ringcentral/spring-ui';
 import clsx from 'clsx';
 import type { FunctionComponent } from 'react';
-import React from 'react';
+import React, { useCallback } from 'react';
 
 import type { DispositionFormProps } from './DispositionForm.interface';
 
@@ -40,6 +40,15 @@ export const DispositionForm: FunctionComponent<DispositionFormProps> = ({
     label: item.disposition,
   }));
 
+  const handleDispositionChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      onFieldChange('dispositionId', e.target.value || '');
+    },
+    [onFieldChange],
+  );
+
+  const selectedValue = dispositionData?.dispositionId || null;
+
   return (
     <div className={clsx('space-y-4', className)} data-sign={dataSign}>
       {/* Disposition Dropdown */}
@@ -47,23 +56,23 @@ export const DispositionForm: FunctionComponent<DispositionFormProps> = ({
         <div data-sign="dispositionField">
           <Select
             label={dispositionLabel}
-            value={dispositionData?.dispositionId || ''}
-            onChange={(event) => {
-              const value = (event.target as HTMLSelectElement).value;
-              onFieldChange('dispositionId', value);
-            }}
+            value={selectedValue}
+            placeholder={selectPlaceholder}
+            onChange={handleDispositionChange}
             error={!validated.dispositionId}
             helperText={!validated.dispositionId ? dispositionErrorText : undefined}
             required
             data-sign="dispositionSelect"
+            renderValue={(value) => {
+              if (!value) return selectPlaceholder;
+              const selected = dispositionOptions.find((item) => item.value === value);
+              return selected?.label || selectPlaceholder;
+            }}
           >
-            <option value="" disabled>
-              {selectPlaceholder}
-            </option>
             {dispositionOptions.map((option) => (
-              <option key={option.value} value={option.value}>
+              <Option key={option.value} value={option.value}>
                 {option.label}
-              </option>
+              </Option>
             ))}
           </Select>
         </div>

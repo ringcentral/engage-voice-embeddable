@@ -37,7 +37,9 @@ export const MuteButton: FunctionComponent<MuteButtonProps> = ({
       size="large"
       variant="inverted"
       color={isMuted ? 'danger' : 'neutral'}
-      title={isMuted ? 'Unmute' : 'Mute'}
+      TooltipProps={{
+        title: isMuted ? 'Unmute' : 'Mute',
+      }}
     />
   );
 };
@@ -60,7 +62,9 @@ export const HoldButton: FunctionComponent<HoldButtonProps> = ({
       size="large"
       variant="inverted"
       color={isOnHold ? 'warning' : 'neutral'}
-      title={isOnHold ? 'Unhold' : 'Hold'}
+      TooltipProps={{
+        title: isOnHold ? 'Unhold' : 'Hold',
+      }}
     />
   );
 };
@@ -83,7 +87,9 @@ export const TransferButton: FunctionComponent<CallControlButtonProps> = ({
       size="large"
       variant="inverted"
       color="neutral"
-      title="Transfer"
+      TooltipProps={{
+        title: 'Transfer',
+      }}
     />
   );
 };
@@ -114,7 +120,9 @@ export const RecordButton: FunctionComponent<RecordButtonProps> = ({
       size="large"
       variant="inverted"
       color={isRecording && !isPaused ? 'danger' : 'neutral'}
-      title={getTooltip()}
+      TooltipProps={{
+        title: getTooltip(),
+      }}
     />
   );
 };

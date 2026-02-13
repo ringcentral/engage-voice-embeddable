@@ -2,8 +2,8 @@ import { Autocomplete } from '@ringcentral/spring-ui';
 import dayjs from 'dayjs';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
-import type { FunctionComponent, SyntheticEvent } from 'react';
-import React, { useMemo, useState, useCallback } from 'react';
+import type { FunctionComponent } from 'react';
+import React, { useMemo, useCallback } from 'react';
 
 import type { TimezoneSelectProps, TimezoneOption } from './TimezoneSelect.interface';
 
@@ -76,31 +76,24 @@ export const TimezoneSelect: FunctionComponent<TimezoneSelectProps> = ({
   'data-sign': dataSign = 'timezoneSelect',
   className,
 }) => {
-  const [inputValue, setInputValue] = useState('');
-
   const timezones = useMemo(() => getTimezoneOptions(), []);
 
-  const selectedValue = useMemo(() => {
-    if (!value) return null;
-    return timezones.find((tz) => tz.id === value) || { id: value, label: value };
+  const selectedValue = useMemo((): TimezoneOption[] => {
+    if (!value) return [];
+    const found = timezones.find((tz) => tz.id === value);
+    return found ? [found] : [{ id: value, label: value }];
   }, [value, timezones]);
 
   const handleChange = useCallback(
-    (_event: SyntheticEvent, newValue: TimezoneOption | null) => {
-      onChange(newValue?.id || '');
+    (newValue: TimezoneOption[]) => {
+      const selected = newValue.length > 0 ? newValue[newValue.length - 1] : null;
+      onChange(selected?.id || '');
     },
     [onChange],
   );
 
-  const handleInputChange = useCallback(
-    (_event: SyntheticEvent, newInputValue: string) => {
-      setInputValue(newInputValue);
-    },
-    [],
-  );
-
   const filterOptions = useCallback(
-    (options: TimezoneOption[], state: { inputValue: string }) => {
+    (options: TimezoneOption[], state: { inputValue?: string }) => {
       const input = state.inputValue?.toLowerCase() || '';
       if (!input) return options;
       return options.filter((option) =>
@@ -115,10 +108,7 @@ export const TimezoneSelect: FunctionComponent<TimezoneSelectProps> = ({
       options={timezones}
       value={selectedValue}
       onChange={handleChange}
-      inputValue={inputValue}
-      onInputChange={handleInputChange}
-      getOptionLabel={(option) => option.label}
-      isOptionEqualToValue={(option, val) => option.id === val.id}
+      getOptionLabel={(option: TimezoneOption) => option.label}
       filterOptions={filterOptions}
       label={label}
       placeholder={placeholder}
@@ -127,7 +117,6 @@ export const TimezoneSelect: FunctionComponent<TimezoneSelectProps> = ({
       required={required}
       disabled={disabled}
       className={className}
-      clearOnBlur
       data-sign={dataSign}
     />
   );

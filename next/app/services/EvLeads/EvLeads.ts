@@ -9,6 +9,7 @@ import {
   state,
   storage,
   StoragePlugin,
+  delegate,
 } from '@ringcentral-integration/next-core';
 
 import { EvCallbackTypes } from '../EvClient/enums';
@@ -208,6 +209,7 @@ class EvLeads extends RcModule {
   /**
    * Manual pass a lead with disposition
    */
+  @delegate('server')
   async manualPassLead({
     lead,
     dispositionId,
@@ -236,6 +238,7 @@ class EvLeads extends RcModule {
   /**
    * Fetch leads from preview dial
    */
+  @delegate('server')
   async fetchLeads(): Promise<boolean> {
     if (this.loading) {
       return false;
@@ -262,6 +265,7 @@ class EvLeads extends RcModule {
   /**
    * Dial a lead
    */
+  @delegate('server')
   async dialLead(lead: Lead, destination: string): Promise<void> {
     const destinationE164 = isE164(destination) ? destination : undefined;
     const dialedList = lead.dialedList || [];

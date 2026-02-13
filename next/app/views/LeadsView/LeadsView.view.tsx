@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import {
   injectable,
   optional,
@@ -17,8 +17,7 @@ import { EvAgentSession } from '../../services/EvAgentSession';
 import { EvAuth } from '../../services/EvAuth';
 import { EvClient } from '../../services/EvClient';
 import { LeadItem } from '../../components/LeadItem';
-import type { PhoneNumberData } from '../../components/LeadItem';
-import { ManualPassModal } from '../../components/ManualPassModal';
+import type { PhoneNumberData, ManualPassParams } from '../../components/LeadItem';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber';
 import i18n from './i18n';
 
@@ -63,13 +62,7 @@ class LeadsView extends RcViewModule {
     await this.evLeads.dialLead(lead, destination);
   };
 
-  manualPassLead = async (params: {
-    lead: Lead;
-    dispositionId: string;
-    notes: string;
-    callback: boolean;
-    callbackDTS: string;
-  }) => {
+  manualPassLead = async (params: ManualPassParams) => {
     await this.evLeads.manualPassLead(params);
   };
 
@@ -104,35 +97,7 @@ class LeadsView extends RcViewModule {
       defaultTimezone: (this.evAuth.agent?.authenticateResponse as any)?.regionalSettings?.timezoneName || 'America/New_York',
     }));
 
-    const [manualPassModalOpen, setManualPassModalOpen] = useState(false);
-    const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-
     const agentBusy = AGENT_BUSY_STATES.includes(agentState);
-
-    const handleOpenManualPass = useCallback((lead: Lead) => {
-      setSelectedLead(lead);
-      setManualPassModalOpen(true);
-    }, []);
-
-    const handleCloseManualPass = useCallback(() => {
-      setManualPassModalOpen(false);
-      setSelectedLead(null);
-    }, []);
-
-    const handleManualPass = useCallback(async (params: {
-      dispositionId: string;
-      notes: string;
-      callback: boolean;
-      callbackDTS: string;
-    }) => {
-      if (selectedLead) {
-        await this.manualPassLead({
-          lead: selectedLead,
-          ...params,
-        });
-        handleCloseManualPass();
-      }
-    }, [selectedLead, handleCloseManualPass]);
 
     return (
       <div className="flex flex-col h-full bg-neutral-base">
@@ -148,28 +113,21 @@ class LeadsView extends RcViewModule {
           ) : (
             <List>
               {filteredLeads.map((lead) => {
-                // Compute display name from lead data
                 const displayName = [lead.firstName, lead.midName, lead.lastName]
                   .filter(Boolean)
                   .join(' ') || 'Unknown';
-
-                // Parse phone numbers from destination
                 const destination = lead.destinationE164 || lead.destination;
                 const destinations = typeof destination === 'string'
                   ? destination.split(PHONE_DELIMETER)
                   : Array.isArray(destination)
                     ? destination
                     : [];
-
                 const phoneNumbers: PhoneNumberData[] = destinations.map((dest) => ({
                   formatted: formatPhoneNumber({ phoneNumber: dest }),
                   destination: dest,
                 }));
-
-                // Check if dial is allowed based on lead state
                 const allowDial = ALLOW_DIAL_STATES.includes(lead.leadState);
                 const disableManualPass = DISABLE_MANUAL_PASS_STATES.includes(lead.leadState);
-
                 return (
                   <LeadItem
                     key={lead.leadId}
@@ -180,9 +138,11 @@ class LeadsView extends RcViewModule {
                     isDialing={isDialing}
                     disabled={pendingDisposition || agentBusy}
                     onDial={(dest) => this.dialLead(lead, dest)}
-                    onManualPass={() => handleOpenManualPass(lead)}
+                    onPass={this.manualPassLead}
                     showManualPassButton={allowManualPass}
                     disableManualPass={disableManualPass}
+                    fetchDispositionList={this.fetchDispositionList}
+                    defaultTimezone={defaultTimezone}
                   />
                 );
               })}
@@ -200,19 +160,6 @@ class LeadsView extends RcViewModule {
             {t('getLeads')}
           </Button>
         </div>
-
-        {selectedLead && (
-          <ManualPassModal
-            open={manualPassModalOpen}
-            onClose={handleCloseManualPass}
-            onSubmit={handleManualPass}
-            fetchDispositionList={this.fetchDispositionList}
-            campaignId={selectedLead.campaignId || ''}
-            defaultTimezone={defaultTimezone}
-            disabled={isDialing || pendingDisposition || agentBusy}
-            t={t}
-          />
-        )}
       </div>
     );
   }

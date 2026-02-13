@@ -1,4 +1,4 @@
-import { DialPad, DialTextField, IconButton, Tooltip } from '@ringcentral/spring-ui';
+import { DialPad, DialTextField, IconButton } from '@ringcentral/spring-ui';
 import { Xmd, DialpadMd } from '@ringcentral/spring-icon';
 import clsx from 'clsx';
 import type { FunctionComponent } from 'react';
@@ -40,15 +40,16 @@ export const DialpadPanel: FunctionComponent<DialpadPanelProps> = ({
         )}
         data-sign={dataSign}
       >
-        <Tooltip title="Keypad">
-          <IconButton
-            symbol={DialpadMd}
-            size="small"
-            variant="plain"
-            onClick={() => onToggle(true)}
-            data-sign="keypadOpenButton"
-          />
-        </Tooltip>
+        <IconButton
+          symbol={DialpadMd}
+          size="small"
+          variant="icon"
+          onClick={() => onToggle(true)}
+          data-sign="keypadOpenButton"
+          TooltipProps={{
+            title: 'Keypad',
+          }}
+        />
       </div>
     );
   }

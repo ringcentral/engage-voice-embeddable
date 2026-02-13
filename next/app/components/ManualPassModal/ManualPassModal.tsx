@@ -1,18 +1,21 @@
-import type { FunctionComponent, SyntheticEvent } from 'react';
+import type { FunctionComponent } from 'react';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   Button,
   Textarea,
   Select,
+  Option,
   Checkbox,
   DatePicker,
   TimePicker,
 } from '@ringcentral/spring-ui';
-
+import { PageHeader } from '@ringcentral-integration/next-widgets/components';
+import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import { TimezoneSelect, formatDateTimeToServerTime } from '../TimezoneSelect';
 import type { DispositionItem } from '../../services/EvLeads';
 import type { ManualPassModalProps } from './ManualPassModal.interface';
+import i18n from './i18n';
 
 /**
  * ManualPassModal - Modal for manual pass lead functionality
@@ -27,8 +30,8 @@ export const ManualPassModal: FunctionComponent<ManualPassModalProps> = ({
   campaignId,
   defaultTimezone,
   disabled = false,
-  t,
 }) => {
+  const { t } = useLocale(i18n);
   const [dispositionList, setDispositionList] = useState<DispositionItem[]>([]);
   const [notes, setNotes] = useState('');
   const [callback, setCallback] = useState(false);
@@ -86,15 +89,15 @@ export const ManualPassModal: FunctionComponent<ManualPassModalProps> = ({
   );
 
   const handleDispositionChange = useCallback(
-    (_e: SyntheticEvent, value: string | null) => {
-      setDisposition(value || '');
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setDisposition(e.target.value || '');
     },
     [],
   );
 
   const handleCallbackChange = useCallback(
-    (_e: React.ChangeEvent<HTMLInputElement>, checked: boolean) => {
-      setCallback(checked);
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setCallback(e.target.checked);
     },
     [],
   );
@@ -112,13 +115,11 @@ export const ManualPassModal: FunctionComponent<ManualPassModalProps> = ({
   }, [callbackDate]);
 
   const handleTimeChange = useCallback((value: Date | null) => {
-    if (value && callbackDate) {
-      // Preserve date from current callbackDate
-      const newDate = new Date(callbackDate);
-      newDate.setHours(value.getHours());
-      newDate.setMinutes(value.getMinutes());
-      setCallbackDate(newDate);
-    }
+    if (!value || !callbackDate) return;
+    const newDate = new Date(callbackDate);
+    newDate.setHours(value.getHours());
+    newDate.setMinutes(value.getMinutes());
+    setCallbackDate(newDate);
   }, [callbackDate]);
 
   const handleTimezoneChange = useCallback((value: string) => {
@@ -146,7 +147,7 @@ export const ManualPassModal: FunctionComponent<ManualPassModalProps> = ({
   }, [disposition, notes, callback, callbackDate, timezone, onSubmit]);
 
   const handleClose = useCallback(
-    (_event: SyntheticEvent, _reason: string) => {
+    () => {
       if (!submitting) {
         onClose();
       }
@@ -167,11 +168,7 @@ export const ManualPassModal: FunctionComponent<ManualPassModalProps> = ({
       size="fullScreen"
     >
       <div className="flex flex-col h-full">
-        {/* Header */}
-        <div className="p-4 border-b border-neutral-b4">
-          <h2 className="typography-title">{t('manualPass')}</h2>
-        </div>
-
+        <PageHeader onBackClick={handleClose}>{t('manualPass')}</PageHeader>
         {/* Content */}
         <div className="flex-1 overflow-auto p-4 flex flex-col gap-4">
           <Textarea
@@ -185,27 +182,35 @@ export const ManualPassModal: FunctionComponent<ManualPassModalProps> = ({
 
           <Select
             label={t('disposition')}
-            value={disposition}
+            value={disposition || null}
+            placeholder={t('selectDisposition')}
             onChange={handleDispositionChange}
             required
-            fullWidth
             data-sign="manualPassDisposition"
+            renderValue={
+              (value) => {
+                if (!value) return t('selectDisposition');
+                const selected = dispositionList.find((item) => item.value === value);
+                return selected?.label || t('selectDisposition');
+              }
+            }
           >
             {dispositionList.map((item) => (
-              <Select.Option key={item.value} value={item.value}>
+              <Option key={item.value} value={item.value}>
                 {item.label}
-              </Select.Option>
+              </Option>
             ))}
           </Select>
 
           {disposition && (
             <>
-              <Checkbox
-                checked={callback}
-                onChange={handleCallbackChange}
-                label={t('setCallbackTime')}
-                data-sign="manualPassCallback"
-              />
+              <label className="flex items-center gap-2 typography-mainText text-neutral-b1 cursor-pointer" data-sign="manualPassCallback">
+                <Checkbox
+                  checked={callback}
+                  onChange={handleCallbackChange}
+                />
+                {t('setCallbackTime')}
+              </label>
 
               {callback && (
                 <div className="flex flex-col gap-4">
@@ -222,9 +227,10 @@ export const ManualPassModal: FunctionComponent<ManualPassModalProps> = ({
                     label={t('callbackDate')}
                     fullWidth
                     data-sign="manualPassDate"
+                    disablePast
                   />
-
                   <TimePicker
+                    dateMode
                     value={callbackDate}
                     onChange={handleTimeChange}
                     label={t('callbackTime')}
