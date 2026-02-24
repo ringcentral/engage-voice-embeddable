@@ -87,7 +87,7 @@ export const WorkingStateSelect: FunctionComponent<WorkingStateSelectProps> = ({
   const statusVariant = mapColorToStatusVariant(stateColor);
 
   return (
-    <div className={clsx('flex-1', className)} data-sign={dataSign}>
+    <div className={clsx('flex min-w-0 [&>*]:min-w-0', className)} data-sign={dataSign}>
       <Tooltip title={stateText} triggerWhenDisabled={disabled}>
         <button
           ref={buttonRef}
@@ -106,7 +106,7 @@ export const WorkingStateSelect: FunctionComponent<WorkingStateSelectProps> = ({
           data-sign="workingStateButton"
         >
           <StatusIndicator variant={statusVariant} size="medium" />
-          <Text className="typography-descriptorMini text-neutral-b1 truncate flex-1 text-left">
+          <Text className="typography-descriptorMini text-neutral-b1 truncate text-left flex-1 min-w-0">
             {stateText}
           </Text>
           <span

@@ -404,7 +404,9 @@ class EvClient extends RcModule {
         interval: 0,
         timeout: 120 * 1000,
       },
-    ).catch(() => {
+    ).catch((e) => {
+      this.logger.error('getAndHandleAuthenticateResponse error~~', e);
+      console.error(e);
       throw new EvTypeError({
         type: messageTypes.CONNECT_TIMEOUT,
       });

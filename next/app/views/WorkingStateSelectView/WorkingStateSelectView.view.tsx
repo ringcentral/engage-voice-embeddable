@@ -1,22 +1,30 @@
 import {
+  autobind,
   computed,
   injectable,
   optional,
   RcViewModule,
+  RouterPlugin,
   useConnector,
+  delegate,
 } from '@ringcentral-integration/next-core';
+import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
+import { AppAnnouncement } from '@ringcentral-integration/micro-core/src/app/components';
+import { Announcement } from '@ringcentral/spring-ui';
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { agentStatesColors } from '../../../enums';
 import { getClockByTimestamp } from '../../../lib/getClockByTimestamp';
 import { EvWorkingState } from '../../services/EvWorkingState';
 import { EvAuth } from '../../services/EvAuth';
+import { EvCall } from '../../services/EvCall';
 import { WorkingStateSelect } from '../../components/WorkingStateSelect';
 import type { AgentStateOption } from '../../components/WorkingStateSelect';
 import type {
   WorkingStateSelectViewOptions,
   WorkingStateSelectViewProps,
 } from './WorkingStateSelectView.interface';
+import i18n from './i18n';
 
 /**
  * WorkingStateSelectView - View module for agent working state selection
@@ -31,6 +39,8 @@ class WorkingStateSelectView extends RcViewModule {
   constructor(
     private _evWorkingState: EvWorkingState,
     private _evAuth: EvAuth,
+    private _evCall: EvCall,
+    private _router: RouterPlugin,
     @optional('WorkingStateSelectViewOptions')
     private _options?: WorkingStateSelectViewOptions,
   ) {
@@ -129,9 +139,77 @@ class WorkingStateSelectView extends RcViewModule {
     this._evWorkingState.changeWorkingState(state);
   }
 
+  @computed((that: WorkingStateSelectView) => [
+    that._router.currentPath,
+  ])
+  get isOnCallLogPage(): boolean {
+    const path = this._router.currentPath;
+    if (!path) return false;
+    return path.startsWith('/activityCallLog/') || path.startsWith('/history/');
+  }
+
+  @delegate('server')
+  async _goToCallLog() {
+    const callId =
+      this._evWorkingState.pendingDispositionCallId ||
+      this._evCall.activityCallId;
+    if (callId) {
+      this._router.push(`/history/${callId}/callLog/create`);
+    }
+  };
+
+  goToCallLog = async () => {
+    await this._goToCallLog();
+  };
+
   private _checkOverTime(intervalTime: number): boolean {
     return (
       this.isBreak && this.maxBreakTime > 0 && intervalTime > this.maxBreakTime
+    );
+  }
+
+  /**
+   * Announcement banner shown when agent is in Pending Disposition state.
+   * Renders in AppView's AppAnnouncementRender area.
+   */
+  @autobind
+  Announcement() {
+    const { t } = useLocale(i18n);
+    const { isPendingDisposition, time } = useConnector(() => ({
+      isPendingDisposition: this._evWorkingState.isPendingDisposition,
+      time: this._evWorkingState.time,
+    }));
+    const [intervalTime, setIntervalTime] = useState(
+      () => Date.now() - time,
+    );
+    useEffect(() => {
+      if (!isPendingDisposition) return;
+      const updateTimer = () => {
+        setIntervalTime(Date.now() - time);
+      };
+      updateTimer();
+      const timerId = setInterval(updateTimer, 1000);
+      return () => clearInterval(timerId);
+    }, [isPendingDisposition, time]);
+    if (!isPendingDisposition) {
+      return null;
+    }
+    const timerText = getClockByTimestamp(intervalTime);
+    return (
+      <AppAnnouncement>
+        <Announcement
+          severity="neutral"
+          className="rounded-none cursor-pointer"
+          classes={{ body: 'gap-2' }}
+          data-sign="pendingDispositionAnnouncement"
+          onClick={this.goToCallLog}
+          action={
+            <span className="typography-subtitleMini">{timerText}</span>
+          }
+        >
+          {t('pendingDisposition')}
+        </Announcement>
+      </AppAnnouncement>
     );
   }
 

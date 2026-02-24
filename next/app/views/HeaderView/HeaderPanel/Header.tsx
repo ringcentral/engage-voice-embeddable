@@ -87,7 +87,7 @@ export const Header: FunctionComponent<HeaderProps> = ({
       ) : (
         <>
           <div className="flex relative justify-center items-center px-3 w-full bg-neutral-base h-9">
-            <div className="flex gap-3 justify-center items-center">
+            <div className="flex gap-3 justify-center items-center flex-shrink-0">
               {avatarRoot}
               <Text
                 className="typography-subtitle text-neutral-b0"
@@ -96,8 +96,9 @@ export const Header: FunctionComponent<HeaderProps> = ({
                 {appTitle ?? title}
               </Text>
             </div>
-            <i className="flex-auto" />
-            <nav className="flex justify-center items-center">{nav}</nav>
+            <nav className="flex items-center justify-end flex-1 min-w-0 gap-1">
+              {nav}
+            </nav>
           </div>
 
           {

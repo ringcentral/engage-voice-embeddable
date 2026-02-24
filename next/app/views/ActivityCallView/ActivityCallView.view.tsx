@@ -305,9 +305,10 @@ class ActivityCallView extends RcViewModule {
   @computed((that: ActivityCallView) => [
     that.currentCall,
     that.currentMainCall,
+    that.isHistoryMode,
   ])
   get callStatus(): 'active' | 'callEnd' | 'onHold' {
-    if (this.currentCall?.endedCall) {
+    if (this.currentCall?.endedCall || this.isHistoryMode) {
       return 'callEnd';
     }
     const mainCall = this.currentMainCall as EvCallData | null;
@@ -652,6 +653,7 @@ class ActivityCallView extends RcViewModule {
    * Navigate to dialer without submitting disposition
    */
   gotoDialWithoutSubmit = async () => {
+    this.logger.info('gotoDialWithoutSubmit');
     await this.doDisposeCall();
     this.evWorkingState.setIsPendingDisposition(false);
     this.router.push('/agent/dialer');
@@ -887,7 +889,7 @@ class ActivityCallView extends RcViewModule {
         // Use evCall.currentCall (based on activityCallId) not this.currentCall
         // to avoid showing the banner for history-viewed calls
         const call = this.evCall.currentCall;
-        const hasCall = !!call;
+        const hasCall = !!call && !call.endedCall;
         const isInbound = call?.callType === 'INBOUND';
         const name = this.getContactName(call);
         const phone = call
@@ -985,12 +987,16 @@ class ActivityCallView extends RcViewModule {
     const transferRef = useRef<HTMLButtonElement>(null);
     const isTransferMenuOpen = Boolean(transferAnchorEl);
 
-    // Sync route param :id to viewCallId, and only set evCall.activityCallId for active call routes
+    // Sync route param :id to viewCallId, and only set evCall.activityCallId for active calls
     useEffect(() => {
       if (params.id) {
         uiFunctions.setViewCallId(params.id);
         if (!isHistoryMode && params.id !== activityCallId) {
-          uiFunctions.setCallId(params.id);
+          const call = this.evPresence.callsMapping[params.id];
+          if (!call?.endedCall) {
+            this.logger.info('setCallId~~', params.id);
+            uiFunctions.setCallId(params.id);
+          }
         }
       }
     }, [params.id]);

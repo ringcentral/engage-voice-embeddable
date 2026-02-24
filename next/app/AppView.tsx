@@ -39,6 +39,7 @@ import { ActiveCallListView } from './views/ActiveCallListView';
 import { CallHistoryDetailView } from './views/CallHistoryDetailView';
 import { AgentView } from './views/AgentView';
 import { ConnectivityView } from './views/ConnectivityView';
+import { WorkingStateSelectView } from './views/WorkingStateSelectView';
 
 import type { AppViewOptions } from '../interfaces';
 
@@ -202,6 +203,7 @@ class AppView extends RcViewModule {
     private _activeCallListView: ActiveCallListView,
     private _callHistoryDetailView: CallHistoryDetailView,
     private _connectivityView: ConnectivityView,
+    private _workingStateSelectView: WorkingStateSelectView,
     @optional('AppViewOptions')
     private _appViewOptions?: AppViewOptions,
   ) {
@@ -241,6 +243,7 @@ class AppView extends RcViewModule {
             <AppAnnouncementRender>
               <this._connectivityView.component />
               <this._activityCallView.Announcement />
+              <this._workingStateSelectView.Announcement />
               {this._appViewOptions?.headers}
             </AppAnnouncementRender>
           </div>

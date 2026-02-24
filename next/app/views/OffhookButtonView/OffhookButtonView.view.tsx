@@ -147,6 +147,7 @@ class OffhookButtonView extends RcViewModule {
         onClick={handleOffhook}
         aria-label={tooltipText}
         className={clsx(
+          'flex-shrink-0',
           isTransitioning && 'animate-pulse',
           props?.className,
         )}

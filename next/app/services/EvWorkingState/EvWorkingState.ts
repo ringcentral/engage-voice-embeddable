@@ -85,6 +85,10 @@ class EvWorkingState extends RcModule {
   @state
   isPendingDisposition = false;
 
+  @storage
+  @state
+  pendingDispositionCallId = '';
+
   @action
   setAgentState(agentState: AgentState): void {
     this.agentState = agentState;
@@ -94,14 +98,16 @@ class EvWorkingState extends RcModule {
   }
 
   @action
-  setIsPendingDisposition(isPendingDisposition: boolean): void {
+  setIsPendingDisposition(isPendingDisposition: boolean, callId = ''): void {
     this.isPendingDisposition = isPendingDisposition;
+    this.pendingDispositionCallId = isPendingDisposition ? callId : '';
   }
 
   @action
   resetWorkingState(): void {
     this.time = Date.now();
     this.isPendingDisposition = false;
+    this.pendingDispositionCallId = '';
   }
 
   @action
@@ -189,8 +195,10 @@ class EvWorkingState extends RcModule {
     this.evAgentSession.onTriggerConfig(() => {
       this._handleTriggerConfig();
     });
-    this.evCallMonitor.onCallEnded(() => {
-      this.setIsPendingDisposition(true);
+    this.evCallMonitor.onCallEnded((call) => {
+      this.logger.info('onCallEnded~~ setIsPendingDisposition(true)');
+      const callId = call ? this.evClient.getMainId(call.uii) : '';
+      this.setIsPendingDisposition(true, callId);
     });
     this.evSubscription.subscribe(
       EvCallbackTypes.AGENT_STATE,
