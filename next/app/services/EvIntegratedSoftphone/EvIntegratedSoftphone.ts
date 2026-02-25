@@ -422,7 +422,7 @@ class EvIntegratedSoftphone extends RcModule {
   /**
    * Stop ringtone audio
    */
-  stopRingtone(): void {
+  stopRingtone() {
     this._stopAudio();
   }
 

@@ -20,6 +20,8 @@ import { EvCall } from '../../services/EvCall';
 import { EvAuth } from '../../services/EvAuth';
 import { EvSettings } from '../../services/EvSettings';
 import { EvClient } from '../../services/EvClient';
+import { EvCallMonitor } from '../../services/EvCallMonitor';
+import { EvWorkingState } from '../../services/EvWorkingState';
 import type { DialerViewOptions, DialerViewProps } from './DialerView.interface';
 import i18n from './i18n';
 
@@ -36,6 +38,8 @@ class DialerView extends RcViewModule {
     private evAuth: EvAuth,
     private evSettings: EvSettings,
     private evClient: EvClient,
+    private evCallMonitor: EvCallMonitor,
+    private evWorkingState: EvWorkingState,
     private router: RouterPlugin,
     private storagePlugin: StoragePlugin,
     private portManager: PortManager,
@@ -141,13 +145,15 @@ class DialerView extends RcViewModule {
     const {
       toNumber,
       hasDialer,
-      isDialing,
       isIdle,
+      isOnCall,
+      isPendingDisposition,
     } = useConnector(() => ({
       toNumber: this.toNumber,
       hasDialer: this.hasDialer,
-      isDialing: this.evCall.isDialing,
       isIdle: this.isIdle,
+      isOnCall: this.evCallMonitor.isOnCall,
+      isPendingDisposition: this.evWorkingState.isPendingDisposition,
     }));
 
     const handleBackspace = useCallback(() => {
@@ -179,66 +185,87 @@ class DialerView extends RcViewModule {
 
     return (
       <div className="flex flex-col h-full bg-neutral-base p-4">
-        {/* Main Content - Vertically Centered */}
         <div className="flex-1 flex flex-col justify-center items-center">
-          {/* Phone Number Input with Delete Button */}
-          <div className="w-full mb-4 [&_input]:text-center flex justify-center">
-            <DialTextField
-              value={toNumber}
-              onChange={handleInputChange}
-              placeholder={t('enterNumber')}
-              inputProps={{
-                'data-sign': 'dialerInput',
-              }}
-              endAdornment={
-                toNumber && (
-                  <IconButton
-                    symbol={BackspaceMd}
-                    size="small"
-                    variant="icon"
-                    onClick={handleBackspace}
-                    disabled={isDialing}
-                    data-sign="backspaceButton"
-                  />
-                )
-              }
-            />
-          </div>
-
-          {/* Call Tips - shown when no number entered */}
-          {!toNumber && (
-            <div className="text-center">
+          {isPendingDisposition ? (
+            <p
+              className="typography-descriptor text-neutral-b2 text-center"
+              data-sign="callBusyTip"
+            >
+              {t('pendingDispositionTip')}
+            </p>
+          ) : !isIdle || isOnCall ? (
+            <>
               <p
-                className="typography-descriptor text-neutral-b2"
-                data-sign="callButtonTip"
+                className="typography-descriptor text-neutral-b2 text-center"
+                data-sign="callBusyTip"
               >
-                {t('callButtonTip')}
+                {t('callInProgressTip')}
               </p>
-              <p
-                className="typography-descriptor text-neutral-b2 mt-2"
-                data-sign="callButtonEmergencyTip"
-              >
-                {t('callButtonEmergencyTip')}
-              </p>
-            </div>
-          )}
-
-          {/* Call Button - shown when number entered */}
-          {toNumber && (
-            <div className="flex justify-center">
-              <Button
-                size="large"
-                onClick={isIdle ? handleDial : handleHangup}
-                disabled={!isIdle && isDialing ? false : !toNumber.trim()}
-                data-sign="callButton"
-              >
-                {t('callButton')}
-              </Button>
-            </div>
+              <div className="flex justify-center mt-4">
+                <Button
+                  size="large"
+                  onClick={handleHangup}
+                  data-sign="hangupButton"
+                  color="danger"
+                >
+                  {t('hangupButton')}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="w-full mb-4 [&_input]:text-center flex justify-center">
+                <DialTextField
+                  value={toNumber}
+                  onChange={handleInputChange}
+                  placeholder={t('enterNumber')}
+                  inputProps={{
+                    'data-sign': 'dialerInput',
+                  }}
+                  endAdornment={
+                    toNumber && (
+                      <IconButton
+                        symbol={BackspaceMd}
+                        size="small"
+                        variant="icon"
+                        onClick={handleBackspace}
+                        data-sign="backspaceButton"
+                      />
+                    )
+                  }
+                />
+              </div>
+              {!toNumber && (
+                <div className="text-center">
+                  <p
+                    className="typography-descriptor text-neutral-b2"
+                    data-sign="callButtonTip"
+                  >
+                    {t('callButtonTip')}
+                  </p>
+                  <p
+                    className="typography-descriptor text-neutral-b2 mt-2"
+                    data-sign="callButtonEmergencyTip"
+                  >
+                    {t('callButtonEmergencyTip')}
+                  </p>
+                </div>
+              )}
+              {toNumber && (
+                <div className="flex justify-center">
+                  <Button
+                    size="large"
+                    onClick={handleDial}
+                    disabled={!toNumber.trim()}
+                    data-sign="callButton"
+                  >
+                    {t('callButton')}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </div>
-
-        {/* Manual Dial Settings Link - Fixed at Bottom */}
         <div className="text-center pb-2">
           <Link
             onClick={handleGoToSettings}

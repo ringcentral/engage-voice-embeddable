@@ -18,7 +18,7 @@ import { format, parse } from '@ringcentral-integration/phone-number';
 import { sleep } from '@ringcentral-integration/commons/utils';
 import { EventEmitter } from 'events';
 import { equals } from 'ramda';
-
+import { parseNumber } from '../../../lib/parseNumber';
 import type { LoginTypes } from '../../../enums';
 import {
   agentSessionEvents,
@@ -32,7 +32,6 @@ import { EvClient } from '../EvClient';
 import { evStatus } from '../EvClient/enums';
 import { EvAuth } from '../EvAuth';
 import { EvPresence } from '../EvPresence';
-import { Redirect } from '../Redirect';
 import { MultiLoginView } from '../../views/MultiLoginView';
 import type {
   EvAgentSessionOptions,
@@ -546,7 +545,7 @@ class EvAgentSession extends RcModule {
     this._setConfiguring(true);
     try {
       let config = inputConfig ?? this._checkFieldsResult(this.formGroup);
-      this.logger.info('configureAgent~~', triggerEvent);
+      this.logger.info('configureAgent~~', triggerEvent, config);
       await this._clearCalls();
       const connectResult = await this._connectEvServer(config);
       let result = connectResult.result;
@@ -698,13 +697,10 @@ class EvAgentSession extends RcModule {
           });
           throw new Error(`'extensionNumber' is an empty number.`);
         }
-        const formatPhoneNumber = format({
-          phoneNumber: extensionNumber,
-        });
-        const { parsedNumber, isValid } = parse({
-          input: formatPhoneNumber,
-        });
-        if (!isValid || !parsedNumber || parsedNumber === '') {
+        let parsedNumber = '';
+        try {
+          parsedNumber = parseNumber(extensionNumber);
+        } catch (error) {
           this.toast.danger({
             message: t(messageTypes.INVALID_PHONE_NUMBER),
             ttl: 0,

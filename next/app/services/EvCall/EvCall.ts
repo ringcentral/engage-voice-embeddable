@@ -396,8 +396,9 @@ class EvCall extends RcModule {
   /**
    * Cancel an ongoing outbound call
    */
-  outdialCancel(): void {
-    this.evClient.manualOutdialCancel(this.evPresence.currentCallUii);
+  @delegate('server')
+  async outdialCancel(): Promise<void> {
+    await this.evClient.manualOutdialCancel(this.evPresence.currentCallUii);
   }
 
   /**

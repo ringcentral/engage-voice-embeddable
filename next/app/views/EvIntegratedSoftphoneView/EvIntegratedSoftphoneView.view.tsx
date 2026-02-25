@@ -8,6 +8,7 @@ import {
   portal,
   RcViewModule,
   PortManager,
+  delegate,
 } from '@ringcentral-integration/next-core';
 import type { PortalInstance } from '@ringcentral-integration/next-core';
 import { Button } from '@ringcentral/spring-ui';
@@ -213,12 +214,13 @@ class EvIntegratedSoftphoneView extends RcViewModule {
   /**
    * Show the ringing confirmation modal with ringtone
    */
-  showRingingModal(payload: RingingPayload): void {
+  @delegate('mainClient')
+  async showRingingModal(payload: RingingPayload): Promise<void> {
     // Prevent duplicate modals
     if (this._ringingInstance) {
       return;
     }
-    this.evIntegratedSoftphone.playRingtone();
+    await this.evIntegratedSoftphone.playRingtone();
     const instance = this.modalView.open(this.ringingModal, payload);
     this._ringingInstance = instance;
     instance.closed.then((answer) => {
@@ -235,7 +237,8 @@ class EvIntegratedSoftphoneView extends RcViewModule {
   /**
    * Close the ringing modal if open (e.g. when SIP_ENDED fires)
    */
-  closeRingingModal(): void {
+  @delegate('mainClient')
+  async closeRingingModal(): Promise<void> {
     if (this._ringingInstance) {
       this.evIntegratedSoftphone.stopRingtone();
       this.modalView.close(this.ringingModal);
@@ -246,6 +249,7 @@ class EvIntegratedSoftphoneView extends RcViewModule {
   /**
    * Show the registration failed alert modal, reloads app on confirm
    */
+  @delegate('mainClient')
   async showRegistrationFailedModal(): Promise<void> {
     const result = this.modalView.open(this.registrationFailedModal);
     await result.closed;
