@@ -56,6 +56,7 @@ import type {
   ActivityCallViewUIProps,
   ActivityCallViewUIFunctions,
 } from './ActivityCallView.interface';
+import { getCallInfos } from './getCallInfos';
 import i18n, { t as translate } from './i18n';
 
 /**
@@ -462,6 +463,7 @@ class ActivityCallView extends RcViewModule {
         formattedNumber,
         ...(call.queue?.name ? [call.queue.name] : []),
       ],
+      callInfos: getCallInfos(call),
     };
   }
 
@@ -1056,11 +1058,6 @@ class ActivityCallView extends RcViewModule {
       recordPauseCount != null &&
       !isRecording &&
       !!timeStamp;
-    const phoneNumber = currentCall
-      ? (isInbound ? currentCall.ani : currentCall.dnis) || ''
-      : '';
-    const direction = currentCall?.callType === 'INBOUND' ? 'inbound' : 'outbound';
-
     if (!currentCall) {
       return (
         <div className="flex flex-col h-full bg-neutral-base">
@@ -1095,12 +1092,12 @@ class ActivityCallView extends RcViewModule {
 
         {/* Call Info Header */}
         <CallInfoHeader
-          contactName={contactName || t('unknown')}
-          phoneNumber={phoneNumber}
-          status={showCallEnded ? 'ended' : 'active'}
-          direction={direction as 'inbound' | 'outbound'}
-          isOnHold={isOnHold}
+          subject={basicInfo?.subject}
+          isInbound={isInbound}
+          status={showCallEnded ? 'callEnd' : 'active'}
+          isRinging={!showCallEnded}
           followInfos={basicInfo?.followInfos}
+          callInfos={basicInfo?.callInfos}
           onClick={uiFunctions.onCallInfoClick}
           actions={
             <IconButton

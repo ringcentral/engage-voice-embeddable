@@ -75,9 +75,12 @@ export const CallHistoryDetailPanel: FunctionComponent<
     );
   }
 
-  const direction = isInbound ? 'inbound' : 'outbound';
   const directionLabel = isInbound ? t('inbound') : t('outbound');
-  const followInfos: string[] = [directionLabel];
+  const followInfos: string[] = [];
+  if (phoneNumber) {
+    followInfos.push(phoneNumber);
+  }
+  followInfos.push(directionLabel);
   if (callTimeText) {
     followInfos.push(callTimeText.text);
   }
@@ -93,12 +96,10 @@ export const CallHistoryDetailPanel: FunctionComponent<
       <div className="flex-1 overflow-y-auto">
         {/* Call basic info via CallInfoHeader */}
         <CallInfoHeader
-          contactName={contactName || t('unknown')}
-          phoneNumber={phoneNumber}
-          status={isActiveCall ? 'active' : 'ended'}
-          direction={direction}
+          subject={contactName || t('unknown')}
+          isInbound={isInbound}
+          status={isActiveCall ? 'active' : 'callEnd'}
           followInfos={followInfos}
-          secondaryTitle={callTimeText?.title}
           data-sign="callDetailInfoHeader"
         />
         {/* Detail fields */}

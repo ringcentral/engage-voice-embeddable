@@ -1,92 +1,95 @@
-import { Avatar, ListItem, ListItemText } from '@ringcentral/spring-ui';
-import { IncomingCallMd, OutgoingCallMd } from '@ringcentral/spring-icon';
 import type { FunctionComponent } from 'react';
 import React from 'react';
-
-import { StatusBadge } from '../StatusBadge';
+import clsx from 'clsx';
+import { Avatar, ListItem, ListItemText } from '@ringcentral/spring-ui';
+import { IncomingCallMd, OutgoingCallMd } from '@ringcentral/spring-icon';
+import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import type { CallInfoHeaderProps } from './CallInfoHeader.interface';
+import i18n from './i18n';
+
+const statusBarColorMap: Record<string, string> = {
+  active: 'bg-success',
+  callEnd: 'bg-neutral-b4',
+};
 
 /**
- * CallInfoHeader - Displays call contact information with status
+ * CallInfoHeader - Displays call contact information with status bar
  *
- * Uses Spring UI ListItem layout with direction icon as Avatar.
- * Shows contact name, phone number, status badge, and follow-up info.
- * Clickable to navigate to call details page.
+ * Aligned with BasicCallInfo from @ringcentral-integration/widgets.
+ * Shows direction icon, subject (contact name), followInfos with "|" separator,
+ * and a colored status bar at the bottom.
  */
 export const CallInfoHeader: FunctionComponent<CallInfoHeaderProps> = ({
-  contactName,
-  phoneNumber,
+  subject,
+  isInbound = false,
+  isRinging = false,
   status,
-  direction,
-  isOnHold = false,
+  followInfos,
   className,
   'data-sign': dataSign,
   actions,
-  followInfos,
-  secondaryTitle,
   onClick,
 }) => {
-  const displayName = contactName || phoneNumber;
-  const showPhoneNumber = contactName && phoneNumber !== contactName;
-  const displayStatus = isOnHold ? 'onHold' : status;
-  const isInbound = direction === 'inbound';
+  const { t } = useLocale(i18n);
   const DirectionIcon = isInbound ? IncomingCallMd : OutgoingCallMd;
-
-  const primaryContent = (
-    <span className="flex items-center gap-2">
-      <span
-        className="typography-subtitle text-neutral-b1 truncate"
-        data-sign="contactName"
-      >
-        {displayName}
-      </span>
-      {displayStatus && (
-        <StatusBadge status={displayStatus} className="flex-shrink-0" />
-      )}
+  const filteredFollowInfos = followInfos?.filter(Boolean) ?? [];
+  const primaryContent = subject ? (
+    <span
+      className="typography-subtitle text-neutral-b1 truncate"
+      data-sign="matchName"
+      title={subject}
+    >
+      {subject}
     </span>
-  );
-
-  const secondaryParts: string[] = [];
-  if (showPhoneNumber) {
-    secondaryParts.push(phoneNumber);
-  }
-  if (followInfos && followInfos.length > 0) {
-    secondaryParts.push(...followInfos);
-  }
+  ) : null;
   const secondaryContent =
-    secondaryParts.length > 0 ? (
+    filteredFollowInfos.length > 0 ? (
       <span
         className="typography-descriptor text-neutral-b2 truncate"
-        data-sign="secondaryInfo"
-        title={secondaryTitle}
+        data-sign="followInfo"
+        title={filteredFollowInfos.join(' | ')}
       >
-        {secondaryParts.join(' | ')}
+        {filteredFollowInfos.join(' | ')}
       </span>
     ) : null;
+  const statusBarColor = status ? statusBarColorMap[status] : undefined;
 
   return (
-    <ListItem
-      clickable={!!onClick}
-      onClick={onClick}
-      divider
-      className={className}
-      data-sign={dataSign || 'callInfoHeader'}
-      hoverable={false}
-      size="large"
+    <div
+      className={clsx('relative overflow-hidden shadow-[0_2px_5px_0_rgba(0,0,0,0.15)]', className)}
+      data-sign={dataSign || 'basicCallInfo'}
     >
-      {direction && (
+      <ListItem
+        clickable={!!onClick}
+        onClick={onClick}
+        divider={false}
+        hoverable={false}
+        size="large"
+      >
         <Avatar
           size="small"
-          classes={{ content: 'bg-neutral-b5 text-neutral-b2' }}
+          variant="squircle"
+          classes={{ content: 'bg-neutral-base text-neutral-b2' }}
+          title={t(isInbound ? 'inbound' : 'outbound')}
         >
           <DirectionIcon />
         </Avatar>
+        <ListItemText
+          primary={primaryContent}
+          secondary={secondaryContent}
+        />
+        {actions}
+      </ListItem>
+      {statusBarColor && (
+        <div
+          className={clsx(
+            'absolute bottom-0 left-0 w-full h-[4px]',
+            statusBarColor,
+            isRinging && 'animate-pulse',
+          )}
+          data-sign={`shinyBar-${status}`}
+        />
       )}
-      <ListItemText
-        primary={primaryContent}
-        secondary={secondaryContent}
-      />
-      {actions}
-    </ListItem>
+    </div>
   );
 };
