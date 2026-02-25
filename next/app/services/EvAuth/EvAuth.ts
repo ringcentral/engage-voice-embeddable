@@ -268,15 +268,15 @@ class EvAuth extends RcModule {
       this.logger.info('addAfterLoggedInHandler~~');
       this.clearAgentId();
     });
-    this.auth.addBeforeLogoutHandler(() => {
+    this.auth.addBeforeLogoutHandler(async () => {
       this.logger.info('addBeforeLogoutHandler~~');
-      this.clearAgentId();
+      await this.clearAgentId();
     });
     this.evSubscription.subscribe(EvCallbackTypes.LOGOUT, async () => {
-      this._emitLogoutBefore();
       this.toast.info({
         message: t(messageTypes.FORCE_LOGOUT),
       });
+      this.logger.info('EvCallbackTypes.LOGOUT~~, newReconnect');
       await this.newReconnect();
     });
     this.evSubscription.subscribe(EvCallbackTypes.LOGIN_PHASE_1, (...args: any[]) => {
@@ -344,7 +344,7 @@ class EvAuth extends RcModule {
         accountId,
       });
     } catch (e) {
-      console.error('Error identifying user', e);
+      this.logger.error('Error identifying user', e);
     }
   }
 
@@ -356,6 +356,7 @@ class EvAuth extends RcModule {
     this.logger.info('logout~~');
     const agentId = this.agentId;
     await this.block.next(this._logout);
+    this._emitLogoutBefore();
     const logoutAgentResponse = await this.logoutAgent(agentId);
     if (!logoutAgentResponse.message || logoutAgentResponse.message !== 'OK') {
       this.logger.info('logoutAgent failed');
@@ -401,13 +402,13 @@ class EvAuth extends RcModule {
   }: AuthenticateWithTokenParams = {}) {
     this.logger.info('authenticateWithToken', shouldEmitAuthSuccess);
     try {
-      // await this.evClient.initSDK();
+      await this.evClient.initSDK();
       const authenticateResponse =
         await this.evClient.getAndHandleAuthenticateResponse(
           rcAccessToken,
           tokenType,
         );
-      console.log('authenticateResponse~~');
+      this.logger.info('authenticateWithToken authenticateResponse~~');
       const agent = { ...this.agent, authenticateResponse } as EvAgentData;
       await this.setAgent(agent);
       await this.setAuthSuccess();

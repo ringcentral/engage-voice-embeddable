@@ -354,7 +354,7 @@ class EvPresence extends RcModule {
         },
       )
       .subscribe(EvCallbackTypes.ADD_SESSION, async (data: EvAddSessionNotification) => {
-        console.log('ADD_SESSION~~', data);
+        this.logger.info('ADD_SESSION~~', data.status);
         if (data.status === 'OK') {
           await this.addNewSession(data);
           // Emit RINGING on evPresenceEvents for the public event API

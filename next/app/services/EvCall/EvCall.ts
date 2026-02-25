@@ -85,7 +85,6 @@ class EvCall extends RcModule {
 
   @action
   setActivityCallId(id: string) {
-    console.trace('setActivityCallId~~', id);
     this.activityCallId = id;
   }
 

@@ -105,7 +105,7 @@ class EvClient extends RcModule {
       this._sdk.terminateStats();
     };
     this._onClose = () => {
-      console.log('EvCallbackTypes.CLOSE_SOCKET~');
+      this.logger.info('EvCallbackTypes.CLOSE_SOCKET~');
       this.setAppStatus(evStatus.CLOSED);
       closeResponse();
       this._eventEmitter.emit(EvCallbackTypes.CLOSE_SOCKET);
@@ -182,12 +182,9 @@ class EvClient extends RcModule {
     this.initSDK();
   }
 
-  initSDK() {
+  @delegate('mainClient')
+  async initSDK() {
     if (typeof window === 'undefined' || !window.AgentSDK) {
-      return;
-    }
-    if (this._sdk) {
-      this.logger.info('initSDK already initialized');
       return;
     }
     this.logger.info('initSDK...');
@@ -449,6 +446,7 @@ class EvClient extends RcModule {
     if (!this.ifSocketExist) {
       return;
     }
+    this.logger.info('closeSocket~~');
     await this._sdk.closeSocket();
   }
 

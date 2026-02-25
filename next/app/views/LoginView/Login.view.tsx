@@ -170,11 +170,8 @@ export class LoginView extends RcViewModule {
         showMicroCore: this.showMicroCore,
       };
     });
-    console.log('syncCompleted', syncCompleted);
-    console.log('props', _props);
 
     const showSpinner = !syncCompleted || _props.showSpinner;
-
     const Component = this._loginViewOptions?.component || AuthPage;
 
     return (

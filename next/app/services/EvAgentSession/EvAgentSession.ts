@@ -191,6 +191,9 @@ class EvAgentSession extends RcModule {
   @state
   configSuccess = false;
 
+  @state
+  configuring = false;
+
   @storage
   @state
   formGroup: FormGroup = DEFAULT_FORM_GROUP;
@@ -404,6 +407,11 @@ class EvAgentSession extends RcModule {
     this.configured = status;
   }
 
+  @action
+  _setConfiguring(value: boolean) {
+    this.configuring = value;
+  }
+
   @delegate('server')
   async setConfigSuccess(status: boolean): Promise<void> {
     this._setConfigSuccess(status);
@@ -531,32 +539,40 @@ class EvAgentSession extends RcModule {
    */
   @delegate('server')
   async configureAgent({
-    config = this._checkFieldsResult(this.formGroup),
+    config: inputConfig,
     triggerEvent = true,
     needAssignFormGroupValue = false,
   }: ConfigureAgentParams = {}): Promise<void> {
-    this.logger.info('configureAgent~~', triggerEvent);
-    await this._clearCalls();
-    const connectResult = await this._connectEvServer(config);
-    let result = connectResult.result;
-    const existingLoginFound = connectResult.existingLoginFound;
-    this.logger.info('configureAgent existingLoginFound~~', existingLoginFound);
-    // Session timeout - this will occur when stay in session config page for long time
-    this.logger.info('configureAgent result.data.status~~', result.data.status);
-    if (result.data.status !== 'SUCCESS') {
-      this._navigateToSessionConfigPage();
-      await this.evAuth.newReconnect(false);
-      if (existingLoginFound) {
-        config.isForce = true;
+    this._setConfiguring(true);
+    try {
+      let config = inputConfig ?? this._checkFieldsResult(this.formGroup);
+      this.logger.info('configureAgent~~', triggerEvent);
+      await this._clearCalls();
+      const connectResult = await this._connectEvServer(config);
+      let result = connectResult.result;
+      const existingLoginFound = connectResult.existingLoginFound;
+      this.logger.info('configureAgent existingLoginFound~~', existingLoginFound);
+      // Session timeout - this will occur when stay in session config page for long time
+      this.logger.info('configureAgent result.data.status~~', result.data.status);
+      if (result.data.status !== 'SUCCESS') {
+        this.logger.info('configureAgent result.data', result.data);
+        this._navigateToSessionConfigPage();
+        this.logger.info('configureAgent newReconnect~~');
+        await this.evAuth.newReconnect(false);
+        if (existingLoginFound) {
+          config.isForce = true;
+        }
+        result = (await this._connectEvServer(config)).result;
       }
-      result = (await this._connectEvServer(config)).result;
+      await this._handleAgentResult({ config: result.data, needAssignFormGroupValue });
+      if (triggerEvent) {
+        this._emitTriggerConfig();
+        await this.setConfigSuccess(true);
+      }
+      this._emitConfigSuccess();
+    } finally {
+      this._setConfiguring(false);
     }
-    await this._handleAgentResult({ config: result.data, needAssignFormGroupValue });
-    if (triggerEvent) {
-      this._emitTriggerConfig();
-      await this.setConfigSuccess(true);
-    }
-    this._emitConfigSuccess();
   }
 
   /**
@@ -715,6 +731,7 @@ class EvAgentSession extends RcModule {
     isAgentUpdating?: boolean;
     needAssignFormGroupValue?: boolean;
   }): Promise<void> {
+    this.logger.info('handleAgentResult~~', status, message);
     if (status !== 'SUCCESS') {
       if (typeof message === 'string') {
         this.toast.danger({ message, ttl: 0 });

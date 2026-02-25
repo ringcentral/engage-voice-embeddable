@@ -185,7 +185,7 @@ class EvIntegratedSoftphoneView extends RcViewModule {
       if (this.evIntegratedSoftphone.autoAnswerCheckFn?.()) {
         return;
       }
-      console.log('SIP_RINGING~~', ringingCall);
+      this.logger.info('SIP_RINGING~~');
       const displayName = ringingCall?.data?.request?.from?._displayName ?? '';
       // TODO: only work when in main tab
       const currentCall = await this.evClient.getCurrentCall();

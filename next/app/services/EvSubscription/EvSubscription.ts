@@ -88,10 +88,8 @@ class EvSubscription extends RcModule {
     if (this._boundEvents.has(event)) return;
     if (this.portManager.isMainTab && this.clientReady) {
       this.evClient.on(event, (...args: any[]) => {
-        console.log('on~~', event, args);
         if (SIP_REQUEST_EVENTS.includes(event)) {
           const data = args[0]?.data;
-          console.log(data);
           this.emit(event, {
             message: args[0]?.message,
             data: data ? {

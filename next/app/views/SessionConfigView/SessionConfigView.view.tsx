@@ -63,15 +63,7 @@ class SessionConfigView extends RcViewModule {
   }
 
   @state
-  isLoading = false;
-
-  @state
   showInboundQueuesPanel = false;
-
-  @action
-  setIsLoading(loading: boolean) {
-    this.isLoading = loading;
-  }
 
   @action
   setShowInboundQueuesPanel(show: boolean) {
@@ -184,15 +176,12 @@ class SessionConfigView extends RcViewModule {
   }
 
   async setConfigure() {
-    this.setIsLoading(true);
     try {
       await this._evAgentSession.configureAgent({
         needAssignFormGroupValue: true,
       });
     } catch (e) {
-      console.error(e);
-    } finally {
-      this.setIsLoading(false);
+      this.logger.error('setConfigure error', e);
     }
   }
 
@@ -200,7 +189,7 @@ class SessionConfigView extends RcViewModule {
     return {
       selectedAgent: this.selectedAgent,
       showReChooseAccount: this.showReChooseAccount,
-      isLoading: this.isLoading,
+      isLoading: this._evAgentSession.configuring,
       currentLocale: this._locale.currentLocale,
       showInboundQueues: this.showInboundQueues,
       showSkillProfile: this.showSkillProfile,

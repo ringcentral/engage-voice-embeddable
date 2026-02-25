@@ -183,6 +183,7 @@ class EvIntegratedSoftphone extends RcModule {
     if (!this.portManager.isServer) {
       return;
     }
+    this.logger.info('resetAllState~~');
     await this.resetSip();
     await this.evClient.sipTerminate();
     this._eventEmitter.emit(EvSoftphoneEvents.RESET);
@@ -194,8 +195,9 @@ class EvIntegratedSoftphone extends RcModule {
 
   initialize() {
     this._bindingIntegratedSoftphone();
-    this.evAuth.beforeAgentLogout(() => {
-      this._resetAllState();
+    this.evAuth.beforeAgentLogout(async () => {
+      this.logger.info('beforeAgentLogout~~');
+      await this._resetAllState();
     });
     this.evAgentSession.onReConfigFail(() => {
       if (this.evAgentSession.isIntegratedSoftphone) {
@@ -229,8 +231,9 @@ class EvIntegratedSoftphone extends RcModule {
    * Subscribe to all SIP events from EvSubscription
    */
   private _bindingIntegratedSoftphone() {
-    console.log('_bindingIntegratedSoftphone~~');
+    this.logger.info('_bindingIntegratedSoftphone~~');
     this.evSubscription.subscribe(EvCallbackTypes.SIP_REGISTERED, () => {
+      this.logger.info('SIP_REGISTERED~~');
       this._sipConnected = true;
       this._isCloseWhenCallConnected = false;
       this.setSipRegisterSuccess(true);
@@ -239,22 +242,26 @@ class EvIntegratedSoftphone extends RcModule {
       this._emitRegistered();
     });
     this.evSubscription.subscribe(EvCallbackTypes.SIP_UNREGISTERED, () => {
+      this.logger.info('SIP_UNREGISTERED~~');
       this._sipConnected = false;
       this.setSipRegisterSuccess(false);
     });
     this.evSubscription.subscribe(
       EvCallbackTypes.SIP_REGISTRATION_FAILED,
       async() => {
+        this.logger.info('SIP_REGISTRATION_FAILED~~');
         await this.setSipRegistering(false);
         await this._resetAllState();
       },
     );
     this.evSubscription.subscribe(EvCallbackTypes.SIP_UNSTABLE_CONNECTION, () => {
+      this.logger.info('SIP_UNSTABLE_CONNECTION~~');
       this.setSipUnstableConnection(true);
     });
     this.evSubscription.subscribe(
       EvCallbackTypes.SIP_RINGING,
       (ringingCall?: EvSipRingingData) => {
+        this.logger.info('SIP_RINGING~~');
         this.evPresence.bindBeforeunload();
         this._eventEmitter.emit(EvCallbackTypes.SIP_RINGING, ringingCall);
         if (this.autoAnswerCheckFn?.()) {
@@ -263,18 +270,22 @@ class EvIntegratedSoftphone extends RcModule {
       },
     );
     this.evSubscription.subscribe(EvCallbackTypes.SIP_CONNECTED, async () => {
+      this.logger.info('SIP_CONNECTED~~');
       await this.evPresence.setOffhook(true);
       await this.resetController();
     });
     this.evSubscription.subscribe(EvCallbackTypes.SIP_ENDED, async () => {
+      this.logger.info('SIP_ENDED~~');
       await this.evPresence.setOffhook(false);
       await this.evPresence.removeBeforeunload();
       await this.evPresence.setDialoutStatus(dialoutStatuses.idle);
     });
     this.evSubscription.subscribe(EvCallbackTypes.SIP_MUTE, () => {
+      this.logger.info('SIP_MUTE~~');
       this.setMuteActive(true);
     });
     this.evSubscription.subscribe(EvCallbackTypes.SIP_UNMUTE, () => {
+      this.logger.info('SIP_UNMUTE~~');
       this.setMuteActive(false);
     });
   }
@@ -521,7 +532,7 @@ class EvIntegratedSoftphone extends RcModule {
       await this.setSipRegistering(false);
     } catch (error) {
       await this.setSipRegistering(false);
-      console.error('WebRTC connection error:', error);
+      this.logger.error('WebRTC connection error:', error);
       throw error;
     }
   }
