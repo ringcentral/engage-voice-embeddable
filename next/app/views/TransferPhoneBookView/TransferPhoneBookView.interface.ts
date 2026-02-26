@@ -1,3 +1,5 @@
+import type { EvTransferPhoneBookItem } from '../../services/EvTransferCall/EvTransferCall.interface';
+
 /**
  * Options for TransferPhoneBookView customization
  */
@@ -13,4 +15,24 @@ interface TransferPhoneBookViewProps {
   id?: string;
 }
 
-export type { TransferPhoneBookViewOptions, TransferPhoneBookViewProps };
+/**
+ * TransferPhoneBookView UI state props (returned by getUIProps)
+ */
+interface TransferPhoneBookViewUIProps {
+  phoneBook: EvTransferPhoneBookItem[];
+}
+
+/**
+ * TransferPhoneBookView UI action functions (returned by getUIFunctions)
+ */
+interface TransferPhoneBookViewUIFunctions {
+  onSelectContact: (index: number) => void;
+  onCancel: () => void;
+}
+
+export type {
+  TransferPhoneBookViewOptions,
+  TransferPhoneBookViewProps,
+  TransferPhoneBookViewUIProps,
+  TransferPhoneBookViewUIFunctions,
+};

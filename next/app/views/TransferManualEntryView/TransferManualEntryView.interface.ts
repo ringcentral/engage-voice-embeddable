@@ -13,4 +13,24 @@ interface TransferManualEntryViewProps {
   id?: string;
 }
 
-export type { TransferManualEntryViewOptions, TransferManualEntryViewProps };
+/**
+ * TransferManualEntryView UI state props (returned by getUIProps)
+ */
+interface TransferManualEntryViewUIProps {
+  initialNumber: string;
+}
+
+/**
+ * TransferManualEntryView UI action functions (returned by getUIFunctions)
+ */
+interface TransferManualEntryViewUIFunctions {
+  onNext: (phoneNumber: string) => void;
+  onCancel: () => void;
+}
+
+export type {
+  TransferManualEntryViewOptions,
+  TransferManualEntryViewProps,
+  TransferManualEntryViewUIProps,
+  TransferManualEntryViewUIFunctions,
+};

@@ -4,6 +4,8 @@ import {
   RcViewModule,
   RouterPlugin,
   useConnector,
+  type UIProps,
+  type UIFunctions,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import {
@@ -17,14 +19,17 @@ import {
   ListItem,
   ListItemText,
 } from '@ringcentral/spring-ui';
-import React, { useCallback, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 
 import { transferTypes } from '../../../enums';
 import { EvTransferCall } from '../../services/EvTransferCall';
+import type { EvTransferPhoneBookItem } from '../../services/EvTransferCall/EvTransferCall.interface';
 import { EvCall } from '../../services/EvCall';
 import type {
   TransferPhoneBookViewOptions,
   TransferPhoneBookViewProps,
+  TransferPhoneBookViewUIProps,
+  TransferPhoneBookViewUIFunctions,
 } from './TransferPhoneBookView.interface';
 import i18n from './i18n';
 
@@ -64,43 +69,46 @@ class TransferPhoneBookView extends RcViewModule {
     );
   }
 
+  /**
+   * Get UI state props for the component
+   */
+  getUIProps(): UIProps<TransferPhoneBookViewUIProps> {
+    return {
+      phoneBook: this._evTransferCall.transferPhoneBook,
+    };
+  }
+
+  /**
+   * Get UI action functions for the component
+   */
+  getUIFunctions(): UIFunctions<TransferPhoneBookViewUIFunctions> {
+    return {
+      onSelectContact: (index: number) => this.selectContact(index),
+      onCancel: () => this.cancel(),
+    };
+  }
+
   component(_props?: TransferPhoneBookViewProps) {
     const { t } = useLocale(i18n);
+    const { current: uiFunctions } = useRef(this.getUIFunctions());
+    const uiProps = useConnector(() => this.getUIProps());
     const [searchTerm, setSearchTerm] = useState('');
 
-    const { phoneBook } = useConnector(() => ({
-      phoneBook: this._evTransferCall.transferPhoneBook,
-    }));
-
-    const filteredContacts = phoneBook.filter((contact) => {
-      if (!searchTerm) return true;
+    const filteredContacts = useMemo(() => {
+      if (!searchTerm) return uiProps.phoneBook;
       const text = searchTerm.toLowerCase();
-      return (
-        contact.phoneBookName?.toLowerCase().includes(text) ||
-        contact.destination?.includes(text) ||
-        contact.parsedDestination?.includes(text)
+      return uiProps.phoneBook.filter(
+        (contact) =>
+          contact.phoneBookName?.toLowerCase().includes(text) ||
+          contact.destination?.includes(text) ||
+          contact.parsedDestination?.includes(text),
       );
-    });
-
-    const handleSearchChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setSearchTerm(e.target.value);
-      },
-      [],
-    );
-
-    const handleSelectContact = useCallback((index: number) => {
-      this.selectContact(index);
-    }, []);
-
-    const handleCancel = useCallback(() => {
-      this.cancel();
-    }, []);
+    }, [uiProps.phoneBook, searchTerm]);
 
     return (
       <>
         <AppHeaderNav override>
-          <PageHeader onBackClick={handleCancel}>
+          <PageHeader onBackClick={uiFunctions.onCancel}>
             {t('phoneBookTransfer')}
           </PageHeader>
         </AppHeaderNav>
@@ -111,7 +119,7 @@ class TransferPhoneBookView extends RcViewModule {
               data-sign="searchContacts"
               type="search"
               value={searchTerm}
-              onChange={handleSearchChange}
+              onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={t('searchContacts')}
               fullWidth
               size="medium"
@@ -124,7 +132,7 @@ class TransferPhoneBookView extends RcViewModule {
                 {t('noContacts')}
               </div>
             ) : (
-              <VirtualizedList
+              <VirtualizedList<EvTransferPhoneBookItem>
                 data={filteredContacts}
                 computeItemKey={(_index, contact) =>
                   String(contact.phoneBookItemIndex)
@@ -134,7 +142,7 @@ class TransferPhoneBookView extends RcViewModule {
                   <ListItem
                     data-sign="phoneContact"
                     onClick={() =>
-                      handleSelectContact(contact.phoneBookItemIndex)
+                      uiFunctions.onSelectContact(contact.phoneBookItemIndex)
                     }
                     size="large"
                   >

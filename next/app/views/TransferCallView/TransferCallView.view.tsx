@@ -5,6 +5,8 @@ import {
   RcViewModule,
   RouterPlugin,
   useConnector,
+  type UIProps,
+  type UIFunctions,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import {
@@ -14,11 +16,13 @@ import {
 import { PageHeader } from '@ringcentral-integration/next-widgets/components';
 import {
   Select,
+  Option,
+  MenuItemText,
   TextField,
   Switch,
   Button,
 } from '@ringcentral/spring-ui';
-import React, { useCallback } from 'react';
+import React, { useRef } from 'react';
 
 import type { EvTransferType } from '../../../enums';
 import { transferTypes } from '../../../enums';
@@ -29,8 +33,11 @@ import { EvRequeueCall } from '../../services/EvRequeueCall';
 import type {
   TransferCallViewOptions,
   TransferCallViewProps,
+  TransferCallViewUIProps,
+  TransferCallViewUIFunctions,
+  TransferTypeOption,
 } from './TransferCallView.interface';
-import i18n from './i18n';
+import i18n, { t as translate } from './i18n';
 
 const TRANSFER_TYPE_LABELS: Record<string, string> = {
   [transferTypes.internal]: 'internal',
@@ -183,8 +190,62 @@ class TransferCallView extends RcViewModule {
     }
   }
 
+  private buildTypeOptions(): TransferTypeOption[] {
+    return [
+      ...(this._evTransferCall.allowInternalTransfer
+        ? [{ value: transferTypes.internal as EvTransferType, label: translate('internal') }]
+        : []),
+      ...(this._evTransferCall.transferPhoneBook.length > 0
+        ? [{ value: transferTypes.phoneBook as EvTransferType, label: translate('phoneBook') }]
+        : []),
+      { value: transferTypes.manualEntry as EvTransferType, label: translate('manualEntry') },
+      { value: transferTypes.queue as EvTransferType, label: translate('queue') },
+    ];
+  }
+
+  /**
+   * Get UI state props for the component
+   */
+  getUIProps(): UIProps<TransferCallViewUIProps> {
+    return {
+      transferType: this._evTransferCall.transferType,
+      selectedRecipient: this.selectedCallRecipient,
+      recipientNumber: this._evTransferCall.getNumber(),
+      isStayOnCall: this._evTransferCall.stayOnCall,
+      isDisabled: this.transferCallDisabled,
+      isTransferring:
+        this._evTransferCall.transferring ||
+        this._evRequeueCall.requeuing,
+      typeOptions: this.buildTypeOptions(),
+    };
+  }
+
+  /**
+   * Get UI action functions for the component
+   */
+  getUIFunctions(): UIFunctions<TransferCallViewUIFunctions> {
+    return {
+      onTransferTypeChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newType = e.target.value as EvTransferType;
+        this._evTransferCall.changeTransferType(newType);
+        this.navigateToRecipientPage(newType);
+      },
+      onStayOnCallChange: () => {
+        this._evTransferCall.changeStayOnCall(this._evTransferCall.stayOnCall);
+      },
+      onRecipientClick: () => {
+        this.navigateToRecipientPage(this._evTransferCall.transferType);
+      },
+      onTransfer: () => this.executeTransfer(),
+      onCancel: () => this.cancelTransfer(),
+      onBack: () => this.goBack(),
+    };
+  }
+
   component(_props?: TransferCallViewProps) {
     const { t } = useLocale(i18n);
+    const { current: uiFunctions } = useRef(this.getUIFunctions());
+    const uiProps = useConnector(() => this.getUIProps());
 
     const {
       transferType,
@@ -193,65 +254,18 @@ class TransferCallView extends RcViewModule {
       isStayOnCall,
       isDisabled,
       isTransferring,
-      allowInternalTransfer,
-      hasPhoneBook,
-    } = useConnector(() => ({
-      transferType: this._evTransferCall.transferType,
-      selectedRecipient: this.selectedCallRecipient,
-      recipientNumber: this._evTransferCall.getNumber(),
-      isStayOnCall: this._evTransferCall.stayOnCall,
-      isDisabled: this.transferCallDisabled,
-      isTransferring: this._evTransferCall.transferring || this._evRequeueCall.requeuing,
-      allowInternalTransfer: this._evTransferCall.allowInternalTransfer,
-      hasPhoneBook: this._evTransferCall.transferPhoneBook.length > 0,
-    }));
+      typeOptions,
+    } = uiProps;
 
-    const handleStayOnCallChange = useCallback(() => {
-      this._evTransferCall.changeStayOnCall(isStayOnCall);
-    }, [isStayOnCall]);
-
-    const handleTransfer = useCallback(async () => {
-      await this.executeTransfer();
-    }, []);
-
-    const handleCancel = useCallback(() => {
-      this.cancelTransfer();
-    }, []);
-
-    const handleGoBack = useCallback(() => {
-      this.goBack();
-    }, []);
-
-    const handleRecipientClick = useCallback(() => {
-      this.navigateToRecipientPage(transferType);
-    }, [transferType]);
-
-    const handleTransferTypeChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newType = e.target.value as EvTransferType;
-        this._evTransferCall.changeTransferType(newType);
-        this.navigateToRecipientPage(newType);
-      },
-      [],
-    );
-
-    const typeOptions = [
-      ...(allowInternalTransfer
-        ? [{ value: transferTypes.internal, label: t('internal') }]
-        : []),
-      ...(hasPhoneBook
-        ? [{ value: transferTypes.phoneBook, label: t('phoneBook') }]
-        : []),
-      { value: transferTypes.manualEntry, label: t('manualEntry') },
-      { value: transferTypes.queue, label: t('queue') },
-    ];
-
-    const typeLabel = t(TRANSFER_TYPE_LABELS[transferType] ?? 'manualEntry');
+    const renderTypeValue = (value: string | number): React.ReactNode => {
+      const matched = typeOptions.find((opt) => opt.value === value);
+      return matched?.label ?? '';
+    };
 
     return (
       <>
         <AppHeaderNav override>
-          <PageHeader onBackClick={handleGoBack}>
+          <PageHeader onBackClick={uiFunctions.onBack}>
             {t('transfer')}
           </PageHeader>
         </AppHeaderNav>
@@ -262,14 +276,15 @@ class TransferCallView extends RcViewModule {
               data-sign="transferType"
               label={t('transferType')}
               value={transferType}
-              onChange={handleTransferTypeChange}
+              onChange={uiFunctions.onTransferTypeChange}
+              renderValue={renderTypeValue}
               variant="outlined"
               size="medium"
             >
               {typeOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
+                <Option key={opt.value} value={opt.value}>
+                  <MenuItemText primary={opt.label} />
+                </Option>
               ))}
             </Select>
           </div>
@@ -283,7 +298,7 @@ class TransferCallView extends RcViewModule {
               fullWidth
               clearBtn={false}
               inputProps={{ readOnly: true }}
-              onClick={handleRecipientClick}
+              onClick={uiFunctions.onRecipientClick}
             />
           </div>
 
@@ -304,7 +319,7 @@ class TransferCallView extends RcViewModule {
             <Switch
               data-sign="stayOnCall"
               checked={isStayOnCall}
-              onChange={handleStayOnCallChange}
+              onChange={uiFunctions.onStayOnCallChange}
             />
             <span className="typography-mainText">{t('stayOnCall')}</span>
           </div>
@@ -317,7 +332,7 @@ class TransferCallView extends RcViewModule {
               variant="outlined"
               color="neutral"
               fullWidth
-              onClick={handleCancel}
+              onClick={uiFunctions.onCancel}
             >
               {t('cancel')}
             </Button>
@@ -328,7 +343,7 @@ class TransferCallView extends RcViewModule {
               fullWidth
               disabled={isDisabled}
               loading={isTransferring}
-              onClick={handleTransfer}
+              onClick={uiFunctions.onTransfer}
             >
               {t('transfer')}
             </Button>

@@ -4,6 +4,8 @@ import {
   RcViewModule,
   RouterPlugin,
   useConnector,
+  type UIProps,
+  type UIFunctions,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import {
@@ -17,14 +19,17 @@ import {
   ListItem,
   ListItemText,
 } from '@ringcentral/spring-ui';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { transferTypes } from '../../../enums';
 import { EvTransferCall } from '../../services/EvTransferCall';
+import type { EvDirectAgentListItem } from '../../services/EvTransferCall/EvTransferCall.interface';
 import { EvCall } from '../../services/EvCall';
 import type {
   TransferInternalViewOptions,
   TransferInternalViewProps,
+  TransferInternalViewUIProps,
+  TransferInternalViewUIFunctions,
 } from './TransferInternalView.interface';
 import i18n from './i18n';
 
@@ -66,48 +71,54 @@ class TransferInternalView extends RcViewModule {
     );
   }
 
+  /**
+   * Get UI state props for the component
+   */
+  getUIProps(): UIProps<TransferInternalViewUIProps> {
+    return {
+      agentList: this._evTransferCall.transferAgentList,
+    };
+  }
+
+  /**
+   * Get UI action functions for the component
+   */
+  getUIFunctions(): UIFunctions<TransferInternalViewUIFunctions> {
+    return {
+      onSelectAgent: (agentId: string) => this.selectAgent(agentId),
+      onCancel: () => this.cancel(),
+      fetchAgentList: () => this._evTransferCall.fetchAgentList(),
+    };
+  }
+
   component(_props?: TransferInternalViewProps) {
     const { t } = useLocale(i18n);
+    const { current: uiFunctions } = useRef(this.getUIFunctions());
+    const uiProps = useConnector(() => this.getUIProps());
     const [searchTerm, setSearchTerm] = useState('');
 
-    const { agentList } = useConnector(() => ({
-      agentList: this._evTransferCall.transferAgentList,
-    }));
-
     useEffect(() => {
-      this._evTransferCall.fetchAgentList();
-      const timerId = setInterval(() => {
-        this._evTransferCall.fetchAgentList();
-      }, AGENT_LIST_POLL_INTERVAL);
+      uiFunctions.fetchAgentList();
+      const timerId = setInterval(
+        uiFunctions.fetchAgentList,
+        AGENT_LIST_POLL_INTERVAL,
+      );
       return () => clearInterval(timerId);
-    }, []);
+    }, [uiFunctions]);
 
-    const filteredAgents = agentList.filter((agent) => {
-      if (!searchTerm) return true;
-      const name = `${agent.firstName} ${agent.lastName}`.toLowerCase();
+    const filteredAgents = useMemo(() => {
+      if (!searchTerm) return uiProps.agentList;
       const keywords = searchTerm.toLowerCase().trim().split(/\s+/);
-      return keywords.every((kw) => name.includes(kw));
-    });
-
-    const handleSearchChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setSearchTerm(e.target.value);
-      },
-      [],
-    );
-
-    const handleSelectAgent = useCallback((agentId: string) => {
-      this.selectAgent(agentId);
-    }, []);
-
-    const handleCancel = useCallback(() => {
-      this.cancel();
-    }, []);
+      return uiProps.agentList.filter((agent) => {
+        const name = `${agent.firstName} ${agent.lastName}`.toLowerCase();
+        return keywords.every((kw) => name.includes(kw));
+      });
+    }, [uiProps.agentList, searchTerm]);
 
     return (
       <>
         <AppHeaderNav override>
-          <PageHeader onBackClick={handleCancel}>
+          <PageHeader onBackClick={uiFunctions.onCancel}>
             {t('internalTransfer')}
           </PageHeader>
         </AppHeaderNav>
@@ -118,7 +129,7 @@ class TransferInternalView extends RcViewModule {
               data-sign="searchAgents"
               type="search"
               value={searchTerm}
-              onChange={handleSearchChange}
+              onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={t('searchAgents')}
               fullWidth
               size="medium"
@@ -131,14 +142,14 @@ class TransferInternalView extends RcViewModule {
                 {t('noAgents')}
               </div>
             ) : (
-              <VirtualizedList
+              <VirtualizedList<EvDirectAgentListItem>
                 data={filteredAgents}
                 computeItemKey={(_index, agent) => agent.agentId}
               >
                 {(_index, agent) => (
                   <ListItem
                     data-sign="agentItem"
-                    onClick={() => handleSelectAgent(agent.agentId)}
+                    onClick={() => uiFunctions.onSelectAgent(agent.agentId)}
                     size="large"
                   >
                     <div

@@ -4,6 +4,8 @@ import {
   RcViewModule,
   RouterPlugin,
   useConnector,
+  type UIProps,
+  type UIFunctions,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import {
@@ -18,7 +20,7 @@ import {
   Button,
 } from '@ringcentral/spring-ui';
 import { BackspaceMd } from '@ringcentral/spring-icon';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { transferTypes } from '../../../enums';
 import { EvTransferCall } from '../../services/EvTransferCall';
@@ -26,13 +28,15 @@ import { EvCall } from '../../services/EvCall';
 import type {
   TransferManualEntryViewOptions,
   TransferManualEntryViewProps,
+  TransferManualEntryViewUIProps,
+  TransferManualEntryViewUIFunctions,
 } from './TransferManualEntryView.interface';
 import i18n from './i18n';
 
 /**
  * TransferManualEntryView - Manual phone number entry for transfer.
  * Presents a DialTextField for entering a number, then navigates
- * back to the transfer page on "Next" (two-step flow).
+ * to the transfer confirmation page on "Next" (two-step flow).
  */
 @injectable({
   name: 'TransferManualEntryView',
@@ -68,22 +72,36 @@ class TransferManualEntryView extends RcViewModule {
     );
   }
 
+  /**
+   * Get UI state props for the component
+   */
+  getUIProps(): UIProps<TransferManualEntryViewUIProps> {
+    return {
+      initialNumber: this._evTransferCall.transferRecipientNumber,
+    };
+  }
+
+  /**
+   * Get UI action functions for the component
+   */
+  getUIFunctions(): UIFunctions<TransferManualEntryViewUIFunctions> {
+    return {
+      onNext: (phoneNumber: string) => this.next(phoneNumber),
+      onCancel: () => this.cancel(),
+    };
+  }
+
   component(_props?: TransferManualEntryViewProps) {
     const { t } = useLocale(i18n);
+    const { current: uiFunctions } = useRef(this.getUIFunctions());
+    const uiProps = useConnector(() => this.getUIProps());
+    const inputRef = useRef<HTMLInputElement>(null);
 
-    const { initialNumber } = useConnector(() => ({
-      initialNumber: this._evTransferCall.transferRecipientNumber,
-    }));
+    const [inputValue, setInputValue] = useState(uiProps.initialNumber);
 
-    const [inputValue, setInputValue] = useState(initialNumber);
-
-    const handleCancel = useCallback(() => {
-      this.cancel();
+    useEffect(() => {
+      inputRef.current?.focus();
     }, []);
-
-    const handleNext = useCallback(() => {
-      this.next(inputValue);
-    }, [inputValue]);
 
     const handleDelete = useCallback(() => {
       setInputValue((prev) => prev.slice(0, -1));
@@ -98,7 +116,7 @@ class TransferManualEntryView extends RcViewModule {
     return (
       <>
         <AppHeaderNav override>
-          <PageHeader onBackClick={handleCancel}>
+          <PageHeader onBackClick={uiFunctions.onCancel}>
             {t('callRecipient')}
           </PageHeader>
         </AppHeaderNav>
@@ -112,6 +130,7 @@ class TransferManualEntryView extends RcViewModule {
               placeholder={t('dialPlaceholder')}
               fullWidth
               onlyAllowKeypadValue
+              inputRef={inputRef}
               endAdornment={
                 isValid ? (
                   <DialDelete onDelete={handleDelete} onClear={handleClear}>
@@ -135,7 +154,7 @@ class TransferManualEntryView extends RcViewModule {
               color="primary"
               fullWidth
               disabled={!isValid}
-              onClick={handleNext}
+              onClick={() => uiFunctions.onNext(inputValue)}
             >
               {t('next')}
             </Button>
