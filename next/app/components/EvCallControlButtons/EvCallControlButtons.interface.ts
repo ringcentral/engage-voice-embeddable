@@ -7,7 +7,7 @@ export interface CallControlButtonProps {
   /** Whether the button is disabled */
   disabled?: boolean;
   /** Click handler */
-  onClick?: () => void;
+  onClick?: React.MouseEventHandler<HTMLElement>;
   /** Data sign for testing */
   'data-sign'?: string;
   /** Size of the button */
@@ -38,6 +38,8 @@ export interface RecordButtonProps extends CallControlButtonProps {
   isRecording: boolean;
   /** Whether recording is paused */
   isPaused?: boolean;
+  /** Whether auto-recording is enabled by default (shows red even when disabled) */
+  isDefaultRecord?: boolean;
 }
 
 /**
@@ -52,6 +54,8 @@ export interface EvCallControlButtonsProps {
   isRecording?: boolean;
   /** Whether recording is paused */
   isRecordingPaused?: boolean;
+  /** Whether auto-recording is enabled by default */
+  isDefaultRecord?: boolean;
   /** Whether to show mute button */
   showMuteButton?: boolean;
   /** Whether to show hold button */

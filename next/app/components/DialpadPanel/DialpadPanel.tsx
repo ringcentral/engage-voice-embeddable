@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import type { FunctionComponent } from 'react';
 import { DialPad, DialTextField, IconButton, Drawer } from '@ringcentral/spring-ui';
 import { Xmd, DialpadMd } from '@ringcentral/spring-icon';
@@ -24,6 +24,13 @@ export const DialpadPanel: FunctionComponent<DialpadPanelProps> = ({
   'data-sign': dataSign = 'dialpadPanel',
 }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [isOpen]);
 
   const handleDialPadChange = useCallback(
     (digit: string) => {
@@ -90,6 +97,7 @@ export const DialpadPanel: FunctionComponent<DialpadPanelProps> = ({
         </div>
         <div className="px-4">
           <DialTextField
+            inputRef={inputRef}
             value={value}
             onChange={handleTextFieldChange}
             keypadMode

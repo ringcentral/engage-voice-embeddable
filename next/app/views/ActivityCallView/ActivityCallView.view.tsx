@@ -1153,6 +1153,7 @@ class ActivityCallView extends RcViewModule {
                     isMuted={isMuted}
                     isOnHold={isOnHold}
                     isRecording={isRecording}
+                    isDefaultRecord={isDefaultRecord}
                     showMuteButton={isIntegratedSoftphone}
                     showHoldButton={callControlPermissions.allowHoldCall}
                     showTransferButton={allowTransfer}
@@ -1211,6 +1212,7 @@ class ActivityCallView extends RcViewModule {
                 isMuted={isMuted}
                 isOnHold={isOnHold}
                 isRecording={isRecording}
+                isDefaultRecord={isDefaultRecord}
                 showMuteButton={isIntegratedSoftphone}
                 showHoldButton={callControlPermissions.allowHoldCall}
                 showTransferButton={allowTransfer}

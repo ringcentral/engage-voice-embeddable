@@ -1,4 +1,4 @@
-import { IconButton, CallButton } from '@ringcentral/spring-ui';
+import { IconButton, CallButton, Tooltip } from '@ringcentral/spring-ui';
 import {
   MuteMd,
   MicrophoneMd,
@@ -19,9 +19,44 @@ import type {
   CallControlButtonProps,
 } from './EvCallControlButtons.interface';
 
+function getMuteTooltip(isMuted: boolean): string {
+  return isMuted ? 'Unmute' : 'Mute';
+}
+
+function getHoldTooltip(isOnHold: boolean): string {
+  return isOnHold ? 'Unhold' : 'Hold';
+}
+
+function getRecordTooltip({
+  disabled,
+  isRecording,
+  isPaused,
+  isDefaultRecord,
+}: Pick<RecordButtonProps, 'disabled' | 'isRecording' | 'isPaused' | 'isDefaultRecord'>): string {
+  if (disabled && isDefaultRecord) return 'Recording';
+  if (disabled) return 'Recording disabled';
+  if (isRecording && !isPaused) return 'Pause Recording';
+  if (isPaused) return 'Resume Recording';
+  return 'Start Recording';
+}
+
 /**
- * MuteButton - Toggle mute/unmute
+ * Determine the record button color based on recording state.
+ *
+ * In the old project, when the agent has no record control but auto-recording
+ * is enabled (isDefaultRecord), the RecordingButton is shown in danger color
+ * even when disabled, to indicate the call is being recorded automatically.
  */
+function getRecordColor({
+  isRecording,
+  isPaused,
+  isDefaultRecord,
+}: Pick<RecordButtonProps, 'isRecording' | 'isPaused' | 'isDefaultRecord'>): 'danger' | 'neutral' {
+  if (isDefaultRecord) return 'danger';
+  if (isRecording && !isPaused) return 'danger';
+  return 'neutral';
+}
+
 export const MuteButton: FunctionComponent<MuteButtonProps> = ({
   isMuted,
   disabled = false,
@@ -38,15 +73,12 @@ export const MuteButton: FunctionComponent<MuteButtonProps> = ({
       variant="inverted"
       color={isMuted ? 'danger' : 'neutral'}
       TooltipProps={{
-        title: isMuted ? 'Unmute' : 'Mute',
+        title: getMuteTooltip(isMuted),
       }}
     />
   );
 };
 
-/**
- * HoldButton - Toggle hold/unhold
- */
 export const HoldButton: FunctionComponent<HoldButtonProps> = ({
   isOnHold,
   disabled = false,
@@ -63,20 +95,16 @@ export const HoldButton: FunctionComponent<HoldButtonProps> = ({
       variant="inverted"
       color={isOnHold ? 'warning' : 'neutral'}
       TooltipProps={{
-        title: isOnHold ? 'Unhold' : 'Hold',
+        title: getHoldTooltip(isOnHold),
       }}
     />
   );
 };
 
-/**
- * TransferButton - Transfer call
- */
 export const TransferButton: FunctionComponent<CallControlButtonProps> = ({
   disabled = false,
   onClick,
   'data-sign': dataSign = 'transferButton',
-  size = 'medium',
 }) => {
   return (
     <IconButton
@@ -94,23 +122,34 @@ export const TransferButton: FunctionComponent<CallControlButtonProps> = ({
   );
 };
 
-/**
- * RecordButton - Toggle recording
- */
 export const RecordButton: FunctionComponent<RecordButtonProps> = ({
   isRecording,
   isPaused = false,
+  isDefaultRecord = false,
   disabled = false,
   onClick,
   'data-sign': dataSign = 'recordButton',
-  size = 'medium',
 }) => {
-  const getTooltip = () => {
-    if (disabled) return 'Recording disabled';
-    if (isRecording && !isPaused) return 'Pause Recording';
-    if (isPaused) return 'Resume Recording';
-    return 'Start Recording';
-  };
+  // When auto-recording is active but agent has no record control,
+  // render as a non-interactive red indicator instead of a disabled grey button.
+  // This matches the old project's RecordingButton behavior.
+  const isAutoRecordIndicator = disabled && isDefaultRecord;
+  if (isAutoRecordIndicator) {
+    return (
+      <Tooltip title={getRecordTooltip({ disabled, isRecording, isPaused, isDefaultRecord })}>
+        <span className="inline-flex">
+          <IconButton
+            symbol={RecordMd}
+            data-sign={dataSign}
+            size="large"
+            variant="inverted"
+            color="danger"
+            className="pointer-events-none"
+          />
+        </span>
+      </Tooltip>
+    );
+  }
   return (
     <IconButton
       symbol={RecordMd}
@@ -119,17 +158,14 @@ export const RecordButton: FunctionComponent<RecordButtonProps> = ({
       data-sign={dataSign}
       size="large"
       variant="inverted"
-      color={isRecording && !isPaused ? 'danger' : 'neutral'}
+      color={getRecordColor({ isRecording, isPaused, isDefaultRecord })}
       TooltipProps={{
-        title: getTooltip(),
+        title: getRecordTooltip({ disabled, isRecording, isPaused, isDefaultRecord }),
       }}
     />
   );
 };
 
-/**
- * HangupButton - End call
- */
 export const HangupButton: FunctionComponent<CallControlButtonProps> = ({
   disabled = false,
   onClick,
@@ -142,14 +178,13 @@ export const HangupButton: FunctionComponent<CallControlButtonProps> = ({
       disabled={disabled}
       data-sign={dataSign}
       size="small"
-      title="End Call"
+      TooltipProps={{
+        title: 'End Call',
+      }}
     />
   );
 };
 
-/**
- * ActiveCallButton - Switch to active call list
- */
 export const ActiveCallButton: FunctionComponent<CallControlButtonProps> = ({
   disabled = false,
   onClick,
@@ -164,25 +199,22 @@ export const ActiveCallButton: FunctionComponent<CallControlButtonProps> = ({
       size="large"
       variant="inverted"
       color="success"
+      TooltipProps={{
+        title: 'Active Calls',
+      }}
     />
   );
 };
 
 /**
  * EvCallControlButtons - Container for Engage Voice call control buttons
- *
- * Provides a consistent layout for call control buttons including:
- * - Hold/Unhold
- * - Mute/Unmute
- * - Transfer
- * - Record
- * - Hangup / Active Call
  */
 export const EvCallControlButtons: FunctionComponent<EvCallControlButtonsProps> = ({
   isMuted = false,
   isOnHold = false,
   isRecording = false,
   isRecordingPaused = false,
+  isDefaultRecord = false,
   showMuteButton = true,
   showHoldButton = true,
   showTransferButton = true,
@@ -198,7 +230,6 @@ export const EvCallControlButtons: FunctionComponent<EvCallControlButtonsProps> 
   disabled = false,
   disableTransfer = false,
   disableRecord = false,
-  size = 'medium',
   className,
   'data-sign': dataSign = 'evCallControlButtons',
 }) => {
@@ -214,7 +245,6 @@ export const EvCallControlButtons: FunctionComponent<EvCallControlButtonsProps> 
           onClick={onHold}
         />
       )}
-
       {showMuteButton && (
         <MuteButton
           isMuted={isMuted}
@@ -222,23 +252,21 @@ export const EvCallControlButtons: FunctionComponent<EvCallControlButtonsProps> 
           onClick={onMute}
         />
       )}
-
       {showTransferButton && (
         <TransferButton
           disabled={disabled || disableTransfer}
           onClick={onTransfer}
         />
       )}
-
       {showRecordButton && (
         <RecordButton
           isRecording={isRecording}
           isPaused={isRecordingPaused}
+          isDefaultRecord={isDefaultRecord}
           disabled={disabled || disableRecord}
           onClick={onRecord}
         />
       )}
-
       {showActiveCallButton ? (
         <ActiveCallButton
           disabled={disabled}
