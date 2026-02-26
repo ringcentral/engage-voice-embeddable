@@ -605,7 +605,7 @@ class ActivityCallView extends RcViewModule {
   goToTransferCallPage = (type: string) => {
     this.evTransferCall.resetTransferStatus();
     this.evTransferCall.fetchAgentList();
-    this.router.push(`/activityCallLog/${this.callId}/transferCall/${type}`);
+    this.router.replace(`/activityCallLog/${this.callId}/transferCall/${type}`);
   };
 
   goToRequeueCallPage = () => {
@@ -619,7 +619,7 @@ class ActivityCallView extends RcViewModule {
       });
     }
     this.evTransferCall.changeTransferType(transferTypes.queue);
-    this.router.push(`/activityCallLog/${this.callId}/transferCall`);
+    this.router.replace(`/activityCallLog/${this.callId}/transferCall`);
   };
 
   goToActiveCallList = () => {
@@ -986,7 +986,6 @@ class ActivityCallView extends RcViewModule {
 
     // Transfer menu state
     const [transferAnchorEl, setTransferAnchorEl] = useState<HTMLElement | null>(null);
-    const transferRef = useRef<HTMLButtonElement>(null);
     const isTransferMenuOpen = Boolean(transferAnchorEl);
 
     // Sync route param :id to viewCallId, and only set evCall.activityCallId for active calls
@@ -1010,8 +1009,8 @@ class ActivityCallView extends RcViewModule {
       }
     }, [activityCallId, viewCallId]);
 
-    const handleTransferClick = useCallback(() => {
-      setTransferAnchorEl(transferRef.current);
+    const handleTransferClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
+      setTransferAnchorEl(event.currentTarget);
     }, []);
 
     const handleTransferClose = useCallback(() => {

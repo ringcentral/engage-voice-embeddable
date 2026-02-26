@@ -335,6 +335,108 @@ class EvTransferCall extends RcModule {
     }
   }
 
+  /**
+   * Parse number based on current transfer type.
+   * Dispatches to parseManualEntryNumber or parsePhoneBookNumber.
+   */
+  parseNumber(): TransferCallParams | undefined {
+    switch (this.transferType) {
+      case transferTypes.phoneBook:
+        return this.parsePhoneBookNumber();
+      case transferTypes.manualEntry:
+        return this.parseManualEntryNumber();
+      default:
+        return undefined;
+    }
+  }
+
+  /**
+   * Get the raw destination number for the current transfer type.
+   */
+  getNumber(): string {
+    switch (this.transferType) {
+      case transferTypes.phoneBook:
+        return this.transferPhoneBook[this.transferPhoneBookSelectedIndex!]
+          ?.destination ?? '';
+      case transferTypes.manualEntry:
+        return this.transferRecipientNumber;
+      default:
+        return '';
+    }
+  }
+
+  /**
+   * Route a transfer call as warm or cold based on stayOnCall setting.
+   */
+  async transferCall({ dialDest, countryId }: TransferCallParams): Promise<void> {
+    if (this.stayOnCall) {
+      await this.warmTransferCall({ dialDest, countryId });
+    } else {
+      await this.coldTransferCall({ dialDest, countryId });
+    }
+  }
+
+  /**
+   * Perform an internal (direct agent) transfer, warm or cold based on stayOnCall.
+   */
+  async internalTransferCall(): Promise<void> {
+    if (!this.transferAgentId) {
+      throw new EvTypeError({
+        type: transferErrors.AGENT_ID_ERROR,
+        data: `Abnormal Transfer: this.transferAgentId -> ${this.transferAgentId}`,
+      });
+    }
+    try {
+      await this.fetchAgentList();
+    } catch (e) {
+      console.warn('fetch agent list error');
+      console.error(e);
+    }
+    if (this.stayOnCall) {
+      await this.evClient.warmDirectAgentTransfer(this.transferAgentId);
+    } else {
+      await this.evClient.coldDirectAgentTransfer(this.transferAgentId);
+    }
+  }
+
+  /**
+   * Orchestrate the full transfer flow: parse number, set status, dispatch by type.
+   */
+  async transfer(): Promise<void> {
+    try {
+      const parsed = this.parseNumber();
+      this._eventEmitter.emit(transferEvents.START);
+      this.setTransferStatus(transferStatuses.loading);
+      switch (this.transferType) {
+        case transferTypes.internal:
+          await this.internalTransferCall();
+          break;
+        case transferTypes.phoneBook:
+        case transferTypes.manualEntry:
+          if (!parsed) {
+            throw new EvTypeError({
+              type: transferErrors.TYPE_ERROR,
+              data: `Abnormal Transfer: failed to parse number for type ${this.transferType}`,
+            });
+          }
+          await this.transferCall(parsed);
+          break;
+        default:
+          throw new EvTypeError({
+            type: transferErrors.TYPE_ERROR,
+            data: `Abnormal Transfer: this.transferType -> ${this.transferType}`,
+          });
+      }
+      this._eventEmitter.emit(transferEvents.SUCCESS);
+    } catch (e) {
+      this._eventEmitter.emit(transferEvents.ERROR, e);
+      throw e;
+    } finally {
+      this.setTransferStatus(transferStatuses.idle);
+      this._eventEmitter.emit(transferEvents.END);
+    }
+  }
+
   rejectTransferCall(): void {
     if (!this.receivedCall) return;
     this.evClient.rejectDirectAgentTransferCall(this.receivedCall.uii);

@@ -1,3 +1,5 @@
+import type React from 'react';
+
 /**
  * Props for individual call control buttons
  */
@@ -66,8 +68,8 @@ export interface EvCallControlButtonsProps {
   onMute?: () => void;
   /** Hold button click handler */
   onHold?: () => void;
-  /** Transfer button click handler */
-  onTransfer?: () => void;
+  /** Transfer button click handler (event used for menu anchor positioning) */
+  onTransfer?: (event: React.MouseEvent<HTMLElement>) => void;
   /** Record button click handler */
   onRecord?: () => void;
   /** Hangup button click handler */

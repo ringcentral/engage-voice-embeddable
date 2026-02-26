@@ -170,10 +170,13 @@ class Redirect extends RcModule {
       this.logger.info('onCallEnded~~');
       this._redirectOnCallEnded();
       if (!this._activityCallView.showSubmitStep) {
-        this._router.push(this._dialerPath);
+        this._router.replace(this._dialerPath);
       } else {
         const id = this._evClient.encodeUii(call.session);
-        this.gotoActivityCallPage(id);
+        const path = `/activityCallLog/${id}`;
+        if (this._router.currentPath !== path) {
+          this._router.replace(path);
+        }
       }
     });
   }
@@ -181,14 +184,15 @@ class Redirect extends RcModule {
   /**
    * Handle routing when a call ends.
    * If on a sub-path of /activityCallLog/{id}/..., redirect back to
-   * the parent activity call log page.
+   * the parent activity call log page using replace to avoid
+   * polluting the history stack.
    */
   private _redirectOnCallEnded(): void {
     const subPathRegex = /^\/activityCallLog\/([^/]+)\//;
     const match = this.currentPath.match(subPathRegex);
     if (match) {
       const id = match[1];
-      this.gotoActivityCallPage(id);
+      this._router.replace(`/activityCallLog/${id}`);
     }
   }
 

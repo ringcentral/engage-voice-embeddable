@@ -277,6 +277,7 @@ class EvAuth extends RcModule {
         message: t(messageTypes.FORCE_LOGOUT),
       });
       this.logger.info('EvCallbackTypes.LOGOUT~~, newReconnect');
+      this._emitLogoutBefore();
       await this.newReconnect();
     });
     this.evSubscription.subscribe(EvCallbackTypes.LOGIN_PHASE_1, (...args: any[]) => {

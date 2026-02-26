@@ -6,19 +6,34 @@ import {
   useConnector,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
+import {
+  AppFooterNav,
+  AppHeaderNav,
+} from '@ringcentral-integration/micro-core/src/app/components';
+import { PageHeader } from '@ringcentral-integration/next-widgets/components';
+import {
+  TextField,
+  VirtualizedList,
+  ListItem,
+  ListItemText,
+} from '@ringcentral/spring-ui';
 import React, { useCallback, useEffect, useState } from 'react';
 
+import { transferTypes } from '../../../enums';
 import { EvTransferCall } from '../../services/EvTransferCall';
-import { EvClient } from '../../services/EvClient';
+import { EvCall } from '../../services/EvCall';
 import type {
   TransferInternalViewOptions,
   TransferInternalViewProps,
 } from './TransferInternalView.interface';
 import i18n from './i18n';
 
+const AGENT_LIST_POLL_INTERVAL = 3000;
+
 /**
- * TransferInternalView - Internal agent transfer view
- * Allows selecting an agent for warm or cold transfer
+ * TransferInternalView - Internal agent selection for transfer.
+ * Selecting an agent saves the selection and navigates to the
+ * transfer confirmation page (two-step flow).
  */
 @injectable({
   name: 'TransferInternalView',
@@ -26,7 +41,7 @@ import i18n from './i18n';
 class TransferInternalView extends RcViewModule {
   constructor(
     private _evTransferCall: EvTransferCall,
-    private _evClient: EvClient,
+    private _evCall: EvCall,
     private _router: RouterPlugin,
     @optional('TransferInternalViewOptions')
     private _options?: TransferInternalViewOptions,
@@ -34,57 +49,48 @@ class TransferInternalView extends RcViewModule {
     super();
   }
 
-  async fetchAgentList() {
-    await this._evTransferCall.fetchAgentList();
-  }
-
-  selectAgent(agentId: string) {
+  /**
+   * Save the selected agent and navigate to the transfer confirmation page.
+   */
+  selectAgent(agentId: string): void {
     this._evTransferCall.changeTransferAgentId(agentId);
+    this._evTransferCall.changeTransferType(transferTypes.internal);
+    this._router.replace(
+      `/activityCallLog/${this._evCall.activityCallId}/transferCall`,
+    );
   }
 
-  async warmTransfer() {
-    const agentId = this._evTransferCall.transferAgentId;
-    if (!agentId) return;
-    await this._evClient.directAgentTransfer(agentId, true);
-    this._options?.onTransferComplete?.();
-    this._router.push('/calls');
-  }
-
-  async coldTransfer() {
-    const agentId = this._evTransferCall.transferAgentId;
-    if (!agentId) return;
-    await this._evClient.directAgentTransfer(agentId, false);
-    this._options?.onTransferComplete?.();
-    this._router.push('/calls');
-  }
-
-  cancel() {
-    this._evTransferCall.resetTransferStatus();
-    this._options?.onCancel?.();
-    this._router.goBack();
+  cancel(): void {
+    this._router.replace(
+      `/activityCallLog/${this._evCall.activityCallId}`,
+    );
   }
 
   component(_props?: TransferInternalViewProps) {
     const { t } = useLocale(i18n);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const { agentList, selectedAgentId, transferring } = useConnector(() => ({
+    const { agentList } = useConnector(() => ({
       agentList: this._evTransferCall.transferAgentList,
-      selectedAgentId: this._evTransferCall.transferAgentId,
-      transferring: this._evTransferCall.transferring,
     }));
 
     useEffect(() => {
-      this.fetchAgentList();
+      this._evTransferCall.fetchAgentList();
+      const timerId = setInterval(() => {
+        this._evTransferCall.fetchAgentList();
+      }, AGENT_LIST_POLL_INTERVAL);
+      return () => clearInterval(timerId);
     }, []);
 
     const filteredAgents = agentList.filter((agent) => {
+      if (!searchTerm) return true;
       const name = `${agent.firstName} ${agent.lastName}`.toLowerCase();
-      return name.includes(searchTerm.toLowerCase());
+      const keywords = searchTerm.toLowerCase().trim().split(/\s+/);
+      return keywords.every((kw) => name.includes(kw));
     });
 
     const handleSearchChange = useCallback(
-      (e: React.ChangeEvent<HTMLInputElement>) => {
+      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         setSearchTerm(e.target.value);
       },
       [],
@@ -94,92 +100,67 @@ class TransferInternalView extends RcViewModule {
       this.selectAgent(agentId);
     }, []);
 
-    const handleWarmTransfer = useCallback(async () => {
-      await this.warmTransfer();
-    }, []);
-
-    const handleColdTransfer = useCallback(async () => {
-      await this.coldTransfer();
-    }, []);
-
     const handleCancel = useCallback(() => {
       this.cancel();
     }, []);
 
     return (
-      <div className="flex flex-col h-full bg-neutral-base p-4 overflow-hidden">
-        <h1 className="typography-title mb-2">{t('internalTransfer')}</h1>
-        <p className="typography-descriptor text-neutral-b2 mb-4">
-          {t('selectAgent')}
-        </p>
+      <>
+        <AppHeaderNav override>
+          <PageHeader onBackClick={handleCancel}>
+            {t('internalTransfer')}
+          </PageHeader>
+        </AppHeaderNav>
 
-        {/* Search */}
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={handleSearchChange}
-          placeholder={t('searchAgents')}
-          className="w-full p-3 mb-4 border border-neutral-b4 rounded-lg bg-neutral-base typography-mainText"
-        />
+        <div className="flex flex-col flex-1 bg-neutral-base overflow-hidden">
+          <div className="px-4 pt-4 pb-2">
+            <TextField
+              data-sign="searchAgents"
+              type="search"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              placeholder={t('searchAgents')}
+              fullWidth
+              size="medium"
+            />
+          </div>
 
-        {/* Agent List */}
-        <div className="flex-1 overflow-y-auto mb-4">
-          {filteredAgents.length === 0 ? (
-            <div className="text-center text-neutral-b2 py-8">
-              {t('noAgents')}
-            </div>
-          ) : (
-            filteredAgents.map((agent) => (
-              <button
-                key={agent.agentId}
-                type="button"
-                onClick={() => handleSelectAgent(agent.agentId)}
-                className={`w-full p-3 mb-2 border rounded-lg text-left transition-colors ${
-                  selectedAgentId === agent.agentId
-                    ? 'border-primary-b bg-primary-t10'
-                    : 'border-neutral-b4 bg-neutral-base hover:bg-neutral-b5'
-                }`}
+          <div className="flex-1 overflow-hidden">
+            {filteredAgents.length === 0 ? (
+              <div className="text-center text-neutral-b2 py-8 typography-mainText">
+                {t('noAgents')}
+              </div>
+            ) : (
+              <VirtualizedList
+                data={filteredAgents}
+                computeItemKey={(_index, agent) => agent.agentId}
               >
-                <div className="typography-subtitle truncate">
-                  {agent.firstName} {agent.lastName}
-                </div>
-                <div className="typography-descriptor text-neutral-b2">
-                  {agent.available ? t('available') : t('busy')}
-                </div>
-              </button>
-            ))
-          )}
+                {(_index, agent) => (
+                  <ListItem
+                    data-sign="agentItem"
+                    onClick={() => handleSelectAgent(agent.agentId)}
+                    size="large"
+                  >
+                    <div
+                      className={`w-2 h-2 rounded-full flex-shrink-0 mr-3 ${
+                        agent.available ? 'bg-success' : 'bg-neutral-b3'
+                      }`}
+                    />
+                    <ListItemText
+                      primary={`${agent.firstName} ${agent.lastName}`}
+                      secondary={t(
+                        agent.available ? 'available' : 'unavailable',
+                      )}
+                    />
+                  </ListItem>
+                )}
+              </VirtualizedList>
+            )}
+          </div>
         </div>
 
-        {/* Transfer Buttons */}
-        <div className="flex gap-2 mb-2">
-          <button
-            type="button"
-            onClick={handleWarmTransfer}
-            disabled={!selectedAgentId || transferring}
-            className="flex-1 py-3 bg-primary-b text-neutral-w0 rounded-lg typography-subtitle hover:bg-primary-f transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {t('warmTransfer')}
-          </button>
-          <button
-            type="button"
-            onClick={handleColdTransfer}
-            disabled={!selectedAgentId || transferring}
-            className="flex-1 py-3 bg-success text-neutral-w0 rounded-lg typography-subtitle hover:bg-success-f transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {t('coldTransfer')}
-          </button>
-        </div>
-
-        {/* Cancel Button */}
-        <button
-          type="button"
-          onClick={handleCancel}
-          className="w-full py-3 border border-neutral-b4 text-neutral-b1 rounded-lg typography-subtitle hover:bg-neutral-b5 transition-colors"
-        >
-          {t('cancel')}
-        </button>
-      </div>
+        <AppFooterNav />
+      </>
     );
   }
 }
