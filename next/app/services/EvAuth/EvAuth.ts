@@ -73,6 +73,13 @@ class EvAuth extends RcModule {
     if (this.portManager?.shared) {
       this.portManager.onServer(() => {
         this.initialize();
+        this.portManager.onMainTabChange(async () => {
+          this.logger.info('onMainTabChange~~');
+          if (!this.auth.loggedIn || this.connecting) {
+            return;
+          }
+          await this._connectOrReauthenticate();
+        });
       });
     } else {
       this.initialize();
@@ -305,20 +312,24 @@ class EvAuth extends RcModule {
           !isConnecting &&
           !jwtOwnerChanged
         ) {
-          this.connecting = true;
-          this.logger.info('auto-login block~~');
-          await this.block.next(async () => {
-            this.logger.info('auto-login block next~~, agentId', this.agentId);
-            if (this.agentId) {
-              await this.loginAgent();
-            } else {
-              await this.authenticateWithToken();
-            }
-          });
+          this.logger.info('auto-login~~');
+          await this._connectOrReauthenticate();
         }
       },
       { multiple: true },
     );
+  }
+
+  private async _connectOrReauthenticate(): Promise<void> {
+    this.connecting = true;
+    await this.block.next(async () => {
+      this.logger.info('connectOrReauthenticate~~, agentId', this.agentId);
+      if (this.agentId) {
+        await this.loginAgent();
+      } else {
+        await this.authenticateWithToken();
+      }
+    });
   }
 
   private _logout = async () => {
@@ -482,6 +493,7 @@ class EvAuth extends RcModule {
       }
       this.logger.info('openSocketWithSelectedAgentId getAgentConfig~~');
       const agentConfig = await getAgentConfig;
+      this.logger.info('openSocketWithSelectedAgentId getAgentConfig done~~');
       const agent = { ...this.agent, agentConfig } as EvAgentData;
       await this.setConnectionData({ agent, connected: true });
       this.connecting = false;

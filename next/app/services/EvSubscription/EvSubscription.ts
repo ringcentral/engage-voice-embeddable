@@ -73,7 +73,8 @@ class EvSubscription extends RcModule {
     this.evClient.addListener(EvCallbackTypes.OPEN_SOCKET, async () => {
       this.clientReady = true;
       const events = Array.from(this._subscribedEvents);
-      await this._bindEventsToClient(events as string[]);
+      const serverEvents = await this.getSubscribedEventsFromServer();
+      await this._bindEventsToClient([...events, ...serverEvents] as string[]);
     });
     this.evClient.addListener(EvCallbackTypes.CLOSE_SOCKET, () => {
       this.clientReady = false;
@@ -121,6 +122,12 @@ class EvSubscription extends RcModule {
     ...args: K[]
   ) {
     this.eventEmitters.emit(event, ...args);
+  }
+
+  @delegate('server')
+  async getSubscribedEventsFromServer() {
+    // get from eventEmitters
+    return Array.from(this.eventEmitters.eventNames() as EvClientCallBackValueType[]);
   }
 
   /**

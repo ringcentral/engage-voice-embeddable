@@ -65,6 +65,15 @@ class EvIntegratedSoftphone extends RcModule {
     if (this.portManager?.shared) {
       this.portManager.onServer(() => {
         this.initialize();
+        this.portManager.onMainTabChange(async () => {
+          // We only run sip instance on main tab,
+          // so when main tab is changed, we need to reset the sip state.
+          // So it can reconnect at new main tab
+          this.logger.info('onMainTabChange~~');
+          this._sipConnected = false;
+          this._resetSip();
+          this._eventEmitter.emit(EvSoftphoneEvents.RESET);
+        });
       });
       this.portManager.onClient(() => {
         this._initAudio();
