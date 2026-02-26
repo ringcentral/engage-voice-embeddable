@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import {
   action,
   computed,
@@ -9,6 +9,7 @@ import {
   state,
   useConnector,
 } from '@ringcentral-integration/next-core';
+import type { UIFunctions, UIProps } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import { CallsListPage } from '@ringcentral-integration/micro-phone/src/app/views/CallsListViewSpring/CallsListPage';
 import type { ViewCallsFilterType } from '@ringcentral-integration/micro-phone/src/app/views/CallsListViewSpring/CallsList.view.interface';
@@ -23,18 +24,15 @@ import type { StateSnapshot } from 'react-virtuoso';
 import dayjs from 'dayjs';
 
 import { EvCallHistory } from '../../services/EvCallHistory';
-import { EvCallDisposition } from '../../services/EvCallDisposition';
 import { ActivityCallView } from '../ActivityCallView';
 import { callDirection } from '../../../enums';
 import type { FormattedCall } from '../../services/EvCallHistory/EvCallHistory.interface';
+import type {
+  CallHistoryViewOptions,
+  CallHistoryViewUIProps,
+  CallHistoryViewUIFunctions,
+} from './CallHistoryView.interface';
 import i18n from './i18n';
-
-/**
- * CallHistoryView options for configuration
- */
-export interface CallHistoryViewOptions {
-  // Optional configuration options
-}
 
 /**
  * CallHistoryView module - Call history display
@@ -46,7 +44,6 @@ export interface CallHistoryViewOptions {
 class CallHistoryView extends RcViewModule {
   constructor(
     private evCallHistory: EvCallHistory,
-    private evCallDisposition: EvCallDisposition,
     private activityCallView: ActivityCallView,
     private _router: RouterPlugin,
     @optional('CallHistoryViewOptions')
@@ -82,7 +79,6 @@ class CallHistoryView extends RcViewModule {
 
   /**
    * Get calls with first call name updated from activity call if call ended
-   * This matches the old EvCallHistoryUI behavior
    */
   @computed((that: CallHistoryView) => [
     that.evCallHistory.latestCalls,
@@ -92,7 +88,6 @@ class CallHistoryView extends RcViewModule {
   get callsWithActivityUpdate(): FormattedCall[] {
     const calls = this.evCallHistory.latestCalls ?? [];
     if (calls.length === 0) return calls;
-    // Update first call's name from activity call contact when call ends
     const { callStatus, callId } = this.activityCallView;
     if (callStatus === 'callEnd' && callId && calls[0]?.id === callId) {
       const currentCall = this.activityCallView.currentCall;
@@ -137,7 +132,7 @@ class CallHistoryView extends RcViewModule {
   }
 
   /**
-   * Navigate to call history detail page (read-only details)
+   * Navigate to call history detail page
    */
   goToCallDetail(callId: string) {
     this._router.push(`/history/${callId}/detail`);
@@ -145,7 +140,6 @@ class CallHistoryView extends RcViewModule {
 
   /**
    * Navigate to activity call page for creating/updating call log
-   * Matches old project pattern: EvCallHistoryUI.goCreateCallLogPage
    */
   goToCallLogPage(callId: string, method: 'create' | 'update') {
     this._router.push(`/history/${callId}/callLog/${method}`);
@@ -164,8 +158,6 @@ class CallHistoryView extends RcViewModule {
     const phoneNumber = isOutbound
       ? call.to?.phoneNumber
       : call.from?.phoneNumber;
-
-    // Format start time
     const startTime = useMemo(() => {
       if (!call.startTime) return '';
       const now = dayjs();
@@ -178,22 +170,18 @@ class CallHistoryView extends RcViewModule {
       }
       return callTime.format('MM/DD/YYYY');
     }, [call.startTime, t]);
-
-    // Avatar component showing call direction - accepts size prop for compatibility
     const Avatar = useMemo(
       () =>
         function CallAvatar({ size = 'small' }: { size?: 'small' | 'medium' | 'large' }) {
           const IconSymbol = isOutbound ? OutgoingCallMd : IncomingCallMd;
           return (
-            <SpringAvatar size={size} classes={{ content: 'bg-neutral-b5 text-neutral-b2' }}>
+            <SpringAvatar size={size} classes={{ content: 'bg-transparent text-neutral-b2' }}>
               <IconSymbol />
             </SpringAvatar>
           );
         },
       [isOutbound],
     );
-
-    // DisplayName component
     const DisplayName = useMemo(
       () =>
         function CallDisplayName() {
@@ -205,8 +193,6 @@ class CallHistoryView extends RcViewModule {
         },
       [displayName, phoneNumber, t],
     );
-
-    // Status component showing call direction
     const Status = useMemo(() => {
       return function CallStatus({ mode }: { mode: 'icon' | 'text' }) {
         if (mode === 'icon') {
@@ -224,8 +210,6 @@ class CallHistoryView extends RcViewModule {
         );
       };
     }, [isOutbound, t]);
-
-    // Logged indicator
     const logged = useMemo(() => {
       if (!call.isDisposed) return null;
       return (
@@ -234,8 +218,6 @@ class CallHistoryView extends RcViewModule {
         </span>
       );
     }, [call.isDisposed, t]);
-
-    // Build actions array - only viewLog/createLog action
     const actions: HistoryAction[] = useMemo(() => {
       return [
         {
@@ -244,7 +226,6 @@ class CallHistoryView extends RcViewModule {
         },
       ];
     }, [call.isDisposed, t]);
-
     const info = {
       Avatar,
       DisplayName,
@@ -268,7 +249,6 @@ class CallHistoryView extends RcViewModule {
       }),
       copyNumber: () => null,
     };
-
     return { info, actions };
   };
 
@@ -297,52 +277,69 @@ class CallHistoryView extends RcViewModule {
     };
   };
 
+  /**
+   * Get reactive UI state props for the component
+   */
+  getUIProps(t: (key: string) => string): UIProps<CallHistoryViewUIProps> {
+    const index = this.viewCallsFilter || 'undefined';
+    return {
+      viewCalls: this.viewCalls,
+      searchInput: this.evCallHistory.searchInput,
+      viewCallsFilter: this.viewCallsFilter,
+      lastPosition: this.lastPositions[index],
+      viewCallsFilterSelections: [
+        { label: t('callsFilterAll'), value: 'all' },
+        { label: t('callsFilterOutgoing'), value: 'outgoing' },
+        { label: t('callsFilterIncoming'), value: 'incoming' },
+      ],
+    };
+  }
+
+  /**
+   * Get stable UI action functions for the component
+   */
+  getUIFunctions(): UIFunctions<CallHistoryViewUIFunctions> {
+    return {
+      onSearchInputChange: (value: string) => {
+        this.evCallHistory.updateSearchInput(value);
+        this.evCallHistory.debouncedSearch();
+      },
+      setViewCallsFilter: this.setViewCallsFilter,
+      setLastPosition: this.setLastPosition,
+      onFocus: () => {
+        this.evCallHistory.updateLastCheckTimeStamp();
+      },
+      useCallHistoryItemInfo: this.useCallHistoryItemInfo as any,
+      useActionsHandler: this.useActionsHandler as any,
+    };
+  }
+
   component() {
     const { t } = useLocale(i18n);
+    const { current: uiFunctions } = useRef(this.getUIFunctions());
 
     const {
       viewCalls,
       searchInput,
       viewCallsFilter,
       lastPosition,
-    } = useConnector(() => {
-      const index = this.viewCallsFilter || 'undefined';
-      return {
-        viewCalls: this.viewCalls,
-        searchInput: this.evCallHistory.searchInput,
-        viewCallsFilter: this.viewCallsFilter,
-        lastPosition: this.lastPositions[index],
-      };
-    });
-
-    const viewCallsFilterSelections = useMemo(
-      () => [
-        { label: t('callsFilterAll'), value: 'all' },
-        { label: t('callsFilterOutgoing'), value: 'outgoing' },
-        { label: t('callsFilterIncoming'), value: 'incoming' },
-      ],
-      [t],
-    );
+      viewCallsFilterSelections,
+    } = useConnector(() => this.getUIProps(t));
 
     return (
       <div className="flex flex-col h-full bg-neutral-base">
         <CallsListPage
           calls={viewCalls as any}
           searchInput={searchInput}
-          onSearchInputChange={(value) => {
-            this.evCallHistory.updateSearchInput(value);
-            this.evCallHistory.debouncedSearch();
-          }}
+          onSearchInputChange={uiFunctions.onSearchInputChange}
           viewCallsFilter={viewCallsFilter}
-          setViewCallsFilter={this.setViewCallsFilter}
+          setViewCallsFilter={uiFunctions.setViewCallsFilter}
           viewCallsFilterSelections={viewCallsFilterSelections}
-          useCallHistoryItemInfo={this.useCallHistoryItemInfo as any}
-          useActionsHandler={this.useActionsHandler as any}
-          setLastPosition={this.setLastPosition}
+          useCallHistoryItemInfo={uiFunctions.useCallHistoryItemInfo}
+          useActionsHandler={uiFunctions.useActionsHandler}
+          setLastPosition={uiFunctions.setLastPosition}
           lastPosition={lastPosition}
-          onFocus={() => {
-            this.evCallHistory.updateLastCheckTimeStamp();
-          }}
+          onFocus={uiFunctions.onFocus}
         />
       </div>
     );
