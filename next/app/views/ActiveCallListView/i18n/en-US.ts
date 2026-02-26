@@ -1,10 +1,8 @@
 export default {
-  activeCalls: 'Active Calls',
-  noCalls: 'No active calls',
-  inbound: 'Inbound',
-  outbound: 'Outbound',
-  onHold: 'On Hold',
-  active: 'Active',
-  selectCall: 'Select a call to view details',
-  back: 'Back',
+  activeCall: 'Active call',
+  everyone: 'Everyone',
+  me: 'Me',
+  caller: 'Caller',
+  callee: 'Callee',
+  unknown: 'Unknown',
 };

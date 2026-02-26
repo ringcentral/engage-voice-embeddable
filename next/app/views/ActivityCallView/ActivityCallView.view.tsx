@@ -623,7 +623,7 @@ class ActivityCallView extends RcViewModule {
   };
 
   goToActiveCallList = () => {
-    this.router.push(`/activityCallLog/${this.callId}/activeCallList`);
+    this.router.replace(`/activityCallLog/${this.callId}/activeCallList`);
   };
 
   /**

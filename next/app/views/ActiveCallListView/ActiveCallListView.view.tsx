@@ -1,41 +1,62 @@
 import {
+  computed,
   injectable,
   optional,
   RcViewModule,
   RouterPlugin,
   useConnector,
+  useParams,
+  type UIFunctions,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
-import { Button } from '@ringcentral/spring-ui';
-import { CallListMd } from '@ringcentral/spring-icon';
-import React, { useCallback } from 'react';
-
-import { EvPresence } from '../../services/EvPresence';
-import { EvCall } from '../../services/EvCall';
-import { EvCallMonitor } from '../../services/EvCallMonitor';
 import {
-  SelectableListItem,
-  EmptyState,
-  StatusBadge,
-} from '../../components';
+  AppHeaderNav,
+} from '@ringcentral-integration/micro-core/src/app/components';
+import { PageHeader } from '@ringcentral-integration/next-widgets/components';
+import {
+  IconButton,
+  ListItem,
+  ListItemText,
+} from '@ringcentral/spring-ui';
+import {
+  HoldMd,
+  MuteMd,
+  MicrophoneMd,
+  CallOffMd,
+} from '@ringcentral/spring-icon';
+import React, { useRef } from 'react';
+
+import { EvCall } from '../../services/EvCall';
+import { EvAuth } from '../../services/EvAuth';
+import { EvCallMonitor } from '../../services/EvCallMonitor';
+import { EvActiveCallControl } from '../../services/EvActiveCallControl';
+import { EvIntegratedSoftphone } from '../../services/EvIntegratedSoftphone';
+import { EvAgentSession } from '../../services/EvAgentSession';
+import type { EvCallData } from '../../services/EvCallDataSource';
+import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber';
 import type {
   ActiveCallListViewOptions,
-  ActiveCallListViewProps,
+  ActiveCallListViewUIProps,
+  ActiveCallListViewUIFunctions,
 } from './ActiveCallListView.interface';
 import i18n from './i18n';
 
 /**
- * ActiveCallListView - Display list of active calls
- * Shows all currently active calls for multi-call scenarios
+ * ActiveCallListView - Display active call sessions during warm transfer
+ * Shows all participants (everyone, caller/callee, agent, transfer targets)
+ * with per-session call controls (hangup, hold, mute)
  */
 @injectable({
   name: 'ActiveCallListView',
 })
 class ActiveCallListView extends RcViewModule {
   constructor(
-    private _evPresence: EvPresence,
     private _evCall: EvCall,
+    private _evAuth: EvAuth,
     private _evCallMonitor: EvCallMonitor,
+    private _evActiveCallControl: EvActiveCallControl,
+    private _evIntegratedSoftphone: EvIntegratedSoftphone,
+    private _evAgentSession: EvAgentSession,
     private _router: RouterPlugin,
     @optional('ActiveCallListViewOptions')
     private _options?: ActiveCallListViewOptions,
@@ -43,122 +64,222 @@ class ActiveCallListView extends RcViewModule {
     super();
   }
 
-  /**
-   * Get contact name from matches or fallback to phone number
-   */
-  getContactName(call: any): string {
-    if (!call) return '';
-    const contactMatches = call.contactMatches || [];
-    if (contactMatches.length > 0) {
-      return contactMatches[0].name || call.ani || call.dnis || '';
-    }
-    return call.ani || call.dnis || '';
+  get callId(): string {
+    return this._evCall.activityCallId;
   }
 
-  selectCall(callId: string) {
-    this._options?.onCallSelect?.(callId);
-    this._router.push('/calls');
+  @computed((that: ActiveCallListView) => [
+    that.callId,
+    that._evCallMonitor.callIds,
+    that._evCallMonitor.otherCallIds,
+    that._evCallMonitor.callsMapping,
+    that._evAuth.agentId,
+  ])
+  get callList(): EvCallData[] {
+    const { callIds, otherCallIds, callsMapping } = this._evCallMonitor;
+    return this._evCallMonitor.getActiveCallList(
+      callIds,
+      otherCallIds,
+      callsMapping,
+      this.callId,
+    ) as unknown as EvCallData[];
   }
 
-  goBack() {
-    this._router.goBack();
+  onHangup(call: EvCallData): void {
+    this._evActiveCallControl.hangupSession({
+      sessionId: call.session!.sessionId,
+    });
   }
 
-  component(_props?: ActiveCallListViewProps) {
-    const { t } = useLocale(i18n);
+  onHold(call: EvCallData): void {
+    this._evActiveCallControl.holdSession({
+      sessionId: call.session!.sessionId,
+      state: true,
+    });
+  }
 
-    const { callsMapping, calls, currentCall } = useConnector(() => ({
-      callsMapping: this._evCallMonitor.callsMapping,
-      calls: this._evCallMonitor.calls,
-      currentCall: this._evCall.currentCall,
-    }));
+  onUnHold(call: EvCallData): void {
+    this._evActiveCallControl.holdSession({
+      sessionId: call.session!.sessionId,
+      state: false,
+    });
+  }
 
-    const handleSelectCall = useCallback((callId: string) => {
-      this.selectCall(callId);
-    }, []);
-
-    const handleBack = useCallback(() => {
-      this.goBack();
-    }, []);
-
-    // Get enriched call data from callsMapping
-    const getEnrichedCall = (call: any) => {
-      const callId = this._evCallMonitor.getCallId(call.session || {});
-      return callsMapping[callId] || call;
+  getUIProps(callId: string): ActiveCallListViewUIProps {
+    this._evCall.activityCallId = callId;
+    return {
+      callList: this.callList,
+      isOnMute: this._evIntegratedSoftphone.muteActive,
+      showMuteButton: this._evAgentSession.isIntegratedSoftphone,
+      userName: this._evAuth.agentSettings?.username ?? '',
+      isInbound: this._evCall.isInbound,
     };
+  }
+
+  getUIFunctions(): UIFunctions<ActiveCallListViewUIFunctions> {
+    return {
+      goBack: () => this._router.replace(`/activityCallLog/${this.callId}`),
+      onHangup: (call: EvCallData) => this.onHangup(call),
+      onHold: (call: EvCallData) => this.onHold(call),
+      onUnHold: (call: EvCallData) => this.onUnHold(call),
+      onMute: () => this._evActiveCallControl.mute(),
+      onUnmute: () => this._evActiveCallControl.unmute(),
+    };
+  }
+
+  component() {
+    const params = useParams<{ id?: string }>();
+    const callId = params?.id ?? '';
+    const { t } = useLocale(i18n);
+    const { current: uiFunctions } = useRef(this.getUIFunctions());
+
+    const {
+      callList,
+      isOnMute,
+      showMuteButton,
+      userName,
+      isInbound,
+    } = useConnector(() => this.getUIProps(callId));
+
+    if (callList.length < 2) {
+      return (
+        <>
+          <AppHeaderNav override>
+            <PageHeader onBackClick={uiFunctions.goBack}>
+              {t('activeCall')}
+            </PageHeader>
+          </AppHeaderNav>
+          <div className="flex-1" />
+        </>
+      );
+    }
+
+    const [everyoneCaller, ownCall, ...transferCalls] = callList;
 
     return (
-      <div className="flex flex-col h-full bg-neutral-base overflow-hidden">
-        {/* Header */}
-        <div className="p-4 border-b border-neutral-b4">
-          <h1 className="typography-title mb-1">{t('activeCalls')}</h1>
-          <p className="typography-descriptor text-neutral-b2">
-            {t('selectCall')}
-          </p>
-        </div>
+      <>
+        <AppHeaderNav override>
+          <PageHeader onBackClick={uiFunctions.goBack}>
+            {t('activeCall')}
+          </PageHeader>
+        </AppHeaderNav>
 
-        {/* Active Call List */}
         <div className="flex-1 overflow-y-auto">
-          {calls.length === 0 ? (
-            <EmptyState
-              icon={CallListMd}
-              title={t('noCalls')}
-              data-sign="emptyCallList"
+          {/* Everyone row */}
+          <ListItem hoverable={false} data-sign="callItem" size="large">
+            <ListItemText primary={t('everyone')} />
+            <IconButton
+              className="mr-1"
+              symbol={CallOffMd}
+              onClick={() => uiFunctions.onHangup(everyoneCaller)}
+              size="small"
+              variant="contained"
+              color="danger"
+              data-sign="hangupEveryone"
             />
-          ) : (
-            calls.map((rawCall: any) => {
-              const call = getEnrichedCall(rawCall);
-              const isCurrentCall = currentCall?.uii === call.uii;
-              const isOnHold = call.isHold || call.hold;
-              const isInbound = call.callType === 'INBOUND';
-              const contactName = this.getContactName(call);
-              const phoneNumber = call.ani || call.dnis || '';
-              const displayName = contactName || t('unknown');
-              const showPhoneNumber = contactName && contactName !== phoneNumber;
+          </ListItem>
 
-              return (
-                <SelectableListItem
-                  key={call.uii}
-                  primary={
-                    <div className="flex items-center gap-2">
-                      <span className="truncate">{displayName}</span>
-                      <StatusBadge
-                        status={isOnHold ? 'onHold' : 'active'}
-                      />
-                    </div>
-                  }
-                  secondary={
-                    <div>
-                      {showPhoneNumber && (
-                        <div className="text-neutral-b2 truncate">{phoneNumber}</div>
-                      )}
-                      <div className="text-neutral-b3">
-                        {isInbound ? t('inbound') : t('outbound')}
-                      </div>
-                    </div>
-                  }
-                  selected={isCurrentCall}
-                  onClick={() => handleSelectCall(call.uii)}
-                  data-sign={`callItem-${call.uii}`}
+          {/* Caller/Callee row */}
+          <ListItem hoverable={false} data-sign="callItem" size="large" className="pl-8">
+            <ListItemText
+              primary={`${formatPhoneNumber({ phoneNumber: everyoneCaller.session?.phone ?? '' })}(${t(isInbound ? 'caller' : 'callee')})`}
+            />
+            <IconButton
+              className="mr-1"
+              symbol={HoldMd}
+              onClick={() =>
+                everyoneCaller.isHold
+                  ? uiFunctions.onUnHold(everyoneCaller)
+                  : uiFunctions.onHold(everyoneCaller)
+              }
+              size="small"
+              variant="inverted"
+              color={everyoneCaller.isHold ? 'warning' : 'neutral'}
+              data-sign="holdCaller"
+            />
+            <IconButton
+              className="mr-1"
+              symbol={CallOffMd}
+              onClick={() => uiFunctions.onHangup(everyoneCaller)}
+              size="small"
+              variant="contained"
+              color="danger"
+              data-sign="hangupCaller"
+            />
+          </ListItem>
+
+          {/* Agent (Me) row */}
+          <ListItem hoverable={false} data-sign="callItem" size="large" className="pl-8">
+            <ListItemText
+              primary={`${(ownCall as any).agentName || userName || ''}(${t('me')})`}
+            />
+            {showMuteButton && (
+              <IconButton
+                symbol={isOnMute ? MuteMd : MicrophoneMd}
+                onClick={() =>
+                  isOnMute ? uiFunctions.onUnmute() : uiFunctions.onMute()
+                }
+                size="small"
+                variant="inverted"
+                color={isOnMute ? 'danger' : 'neutral'}
+                data-sign="muteButton"
+                className="mr-1"
+              />
+            )}
+            <IconButton
+              className="mr-1"
+              symbol={CallOffMd}
+              onClick={() => uiFunctions.onHangup(ownCall)}
+              size="small"
+              variant="contained"
+              color="danger"
+              data-sign="hangupMe"
+            />
+          </ListItem>
+
+          {/* Transfer call rows */}
+          {transferCalls.map((callItem, index) => {
+            const destination =
+              callItem.session?.transferSessions?.[callItem.session.sessionId]
+                ?.destination;
+            return (
+              <ListItem
+                key={callItem.session?.sessionId ?? index}
+                hoverable={false}
+                data-sign="callItem"
+                size="large"
+                className="pl-8"
+              >
+                <ListItemText
+                  primary={formatPhoneNumber({ phoneNumber: destination ?? '' })}
                 />
-              );
-            })
-          )}
+                <IconButton
+                  className="mr-1"
+                  symbol={HoldMd}
+                  onClick={() =>
+                    callItem.isHold
+                      ? uiFunctions.onUnHold(callItem)
+                      : uiFunctions.onHold(callItem)
+                  }
+                  size="small"
+                  variant="inverted"
+                  color={callItem.isHold ? 'warning' : 'neutral'}
+                  data-sign="holdTransfer"
+                />
+                <IconButton
+                  className="mr-1"
+                  symbol={CallOffMd}
+                  onClick={() => uiFunctions.onHangup(callItem)}
+                  size="small"
+                  variant="contained"
+                  color="danger"
+                  data-sign="hangupTransfer"
+                />
+              </ListItem>
+            );
+          })}
         </div>
-
-        {/* Back Button */}
-        <div className="p-4 border-t border-neutral-b4">
-          <Button
-            variant="outlined"
-            color="neutral"
-            fullWidth
-            onClick={handleBack}
-            data-sign="backButton"
-          >
-            {t('back')}
-          </Button>
-        </div>
-      </div>
+      </>
     );
   }
 }
