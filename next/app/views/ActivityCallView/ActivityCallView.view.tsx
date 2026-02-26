@@ -1119,31 +1119,28 @@ class ActivityCallView extends RcViewModule {
           />
         )}
 
-        {/* Scrollable middle: Call log form */}
-        {showSubmitStep ? (
-          <div className="flex-1 p-4 overflow-auto">
-            <DispositionForm
-              dispositionPickList={dispositionPickList}
-              dispositionData={dispositionData}
-              validated={validated}
-              required={required}
-              hideCallNote={hideCallNote}
-              onFieldChange={uiFunctions.onUpdateCallLog}
-              selectPlaceholder={t('pleaseSelect')}
-              dispositionErrorText={t('dispositionError')}
-              notesErrorText={t('notesRequired')}
-              dispositionLabel={t('disposition')}
-              notesLabel={t('notes')}
-              notesPlaceholder={t('enterNotes')}
-            />
-          </div>
-        ) : (
-          <div className="flex-1" />
-        )}
-
-        {/* Pinned bottom section */}
-        <div className="flex-shrink-0">
-          {/* Keypad Panel */}
+        {/* Content area with keypad overlay */}
+        <div className="flex-1 flex flex-col relative overflow-hidden">
+          {showSubmitStep ? (
+            <div className="flex-1 p-4 overflow-auto">
+              <DispositionForm
+                dispositionPickList={dispositionPickList}
+                dispositionData={dispositionData}
+                validated={validated}
+                required={required}
+                hideCallNote={hideCallNote}
+                onFieldChange={uiFunctions.onUpdateCallLog}
+                selectPlaceholder={t('pleaseSelect')}
+                dispositionErrorText={t('dispositionError')}
+                notesErrorText={t('notesRequired')}
+                dispositionLabel={t('disposition')}
+                notesLabel={t('notes')}
+                notesPlaceholder={t('enterNotes')}
+              />
+            </div>
+          ) : (
+            <div className="flex-1" />
+          )}
           {!showCallEnded && (
             <DialpadPanel
               isOpen={isKeypadOpen}
@@ -1151,9 +1148,52 @@ class ActivityCallView extends RcViewModule {
               onToggle={uiFunctions.setKeypadOpen}
               onChange={uiFunctions.handleKeypadChange}
               onKeyPress={uiFunctions.handleKeypadKeyPress}
+              footer={
+                <div className="border-t border-neutral-b4 px-4 py-3">
+                  <EvCallControlButtons
+                    isMuted={isMuted}
+                    isOnHold={isOnHold}
+                    isRecording={isRecording}
+                    showMuteButton={isIntegratedSoftphone}
+                    showHoldButton={callControlPermissions.allowHoldCall}
+                    showTransferButton={allowTransfer}
+                    showRecordButton={showRecordButton}
+                    showHangupButton={!isOnActive}
+                    showActiveCallButton={isOnActive}
+                    onMute={handleMuteToggle}
+                    onHold={handleHoldToggle}
+                    onTransfer={handleTransferClick}
+                    onRecord={handleRecordClick}
+                    onHangup={uiFunctions.onHangup}
+                    onActiveCall={uiFunctions.onActiveCall}
+                    disabled={isInComingCall}
+                    disableTransfer={isInComingCall || !allowTransfer}
+                    disableRecord={!callControlPermissions.allowRecordControl}
+                    size="small"
+                  />
+                  <TransferMenu
+                    anchorEl={transferAnchorEl}
+                    isOpen={isTransferMenuOpen}
+                    onClose={handleTransferClose}
+                    onSelect={uiFunctions.onTransferSelect}
+                    allowTransferCall={callControlPermissions.allowTransferCall}
+                    allowRequeueCall={callControlPermissions.allowRequeueCall}
+                    disableInternalTransfer={disableInternalTransfer}
+                    labels={{
+                      internalTransfer: t('internalTransfer'),
+                      phoneBookTransfer: t('phoneBookTransfer'),
+                      queueTransfer: t('queueTransfer'),
+                      enterANumber: t('enterANumber'),
+                    }}
+                  />
+                </div>
+              }
             />
           )}
+        </div>
 
+        {/* Pinned bottom section */}
+        <div className="flex-shrink-0">
           {/* Record Countdown */}
           {!showCallEnded && showCountdown && (
             <div className="flex justify-center py-2">
@@ -1165,7 +1205,6 @@ class ActivityCallView extends RcViewModule {
               />
             </div>
           )}
-
           {/* Call Controls - pinned at bottom when active */}
           {!showCallEnded && (
             <div className="border-t border-neutral-b4 px-4 py-3">
@@ -1190,7 +1229,6 @@ class ActivityCallView extends RcViewModule {
                 disableRecord={!callControlPermissions.allowRecordControl}
                 size="small"
               />
-              {/* Transfer Menu */}
               <TransferMenu
                 anchorEl={transferAnchorEl}
                 isOpen={isTransferMenuOpen}

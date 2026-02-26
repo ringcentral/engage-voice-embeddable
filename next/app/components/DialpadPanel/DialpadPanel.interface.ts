@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react';
+
 /**
  * Props for DialpadPanel component
  */
@@ -12,6 +14,8 @@ export interface DialpadPanelProps {
   onChange: (value: string) => void;
   /** Called when a single key is pressed (for DTMF) */
   onKeyPress?: (digit: string) => void;
+  /** Content rendered at the bottom of the drawer (e.g. call controls) */
+  footer?: ReactNode;
   /** Custom class name */
   className?: string;
   /** Data sign for testing */
