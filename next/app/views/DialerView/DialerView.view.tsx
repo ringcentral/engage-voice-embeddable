@@ -11,10 +11,11 @@ import {
   PortManager,
   RouterPlugin,
 } from '@ringcentral-integration/next-core';
+import type { UIFunctions, UIProps } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import { DialTextField, Button, IconButton, Link } from '@ringcentral/spring-ui';
 import { BackspaceMd } from '@ringcentral/spring-icon';
-import React, { useCallback } from 'react';
+import React, { useRef } from 'react';
 
 import { EvCall } from '../../services/EvCall';
 import { EvAuth } from '../../services/EvAuth';
@@ -22,7 +23,12 @@ import { EvSettings } from '../../services/EvSettings';
 import { EvClient } from '../../services/EvClient';
 import { EvCallMonitor } from '../../services/EvCallMonitor';
 import { EvWorkingState } from '../../services/EvWorkingState';
-import type { DialerViewOptions, DialerViewProps } from './DialerView.interface';
+import type {
+  DialerViewOptions,
+  DialerViewProps,
+  DialerViewUIProps,
+  DialerViewUIFunctions,
+} from './DialerView.interface';
 import i18n from './i18n';
 
 /**
@@ -139,8 +145,45 @@ class DialerView extends RcViewModule {
     this.router.push('/settings/manualDial');
   }
 
+  /**
+   * Get reactive UI state props for the component
+   */
+  getUIProps(): UIProps<DialerViewUIProps> {
+    return {
+      toNumber: this.toNumber,
+      hasDialer: this.hasDialer,
+      isIdle: this.isIdle,
+      isOnCall: this.evCallMonitor.isOnCall,
+      isPendingDisposition: this.evWorkingState.isPendingDisposition,
+    };
+  }
+
+  /**
+   * Get stable UI action functions for the component
+   */
+  getUIFunctions(): UIFunctions<DialerViewUIFunctions> {
+    return {
+      onBackspace: () => {
+        this.setToNumber(this.toNumber.slice(0, -1));
+      },
+      onDial: async () => {
+        await this.dialout();
+      },
+      onHangup: () => {
+        this.hangup();
+      },
+      onInputChange: (value: string) => {
+        this.setToNumber(value);
+      },
+      onGoToSettings: () => {
+        this.goToManualDialSettings();
+      },
+    };
+  }
+
   component(_props?: DialerViewProps) {
     const { t } = useLocale(i18n);
+    const { current: uiFunctions } = useRef(this.getUIFunctions());
 
     const {
       toNumber,
@@ -148,36 +191,7 @@ class DialerView extends RcViewModule {
       isIdle,
       isOnCall,
       isPendingDisposition,
-    } = useConnector(() => ({
-      toNumber: this.toNumber,
-      hasDialer: this.hasDialer,
-      isIdle: this.isIdle,
-      isOnCall: this.evCallMonitor.isOnCall,
-      isPendingDisposition: this.evWorkingState.isPendingDisposition,
-    }));
-
-    const handleBackspace = useCallback(() => {
-      this.setToNumber(this.toNumber.slice(0, -1));
-    }, []);
-
-    const handleDial = useCallback(async () => {
-      await this.dialout();
-    }, []);
-
-    const handleHangup = useCallback(() => {
-      this.hangup();
-    }, []);
-
-    const handleInputChange = useCallback(
-      (value: string) => {
-        this.setToNumber(value);
-      },
-      [],
-    );
-
-    const handleGoToSettings = useCallback(() => {
-      this.goToManualDialSettings();
-    }, []);
+    } = useConnector(() => this.getUIProps());
 
     if (!hasDialer) {
       return null;
@@ -204,7 +218,7 @@ class DialerView extends RcViewModule {
               <div className="flex justify-center mt-4">
                 <Button
                   size="large"
-                  onClick={handleHangup}
+                  onClick={uiFunctions.onHangup}
                   data-sign="hangupButton"
                   color="danger"
                 >
@@ -217,18 +231,28 @@ class DialerView extends RcViewModule {
               <div className="w-full mb-4 [&_input]:text-center flex justify-center">
                 <DialTextField
                   value={toNumber}
-                  onChange={handleInputChange}
+                  onChange={uiFunctions.onInputChange}
                   placeholder={t('enterNumber')}
                   inputProps={{
                     'data-sign': 'dialerInput',
                   }}
+                  startAdornment={
+                    toNumber && (
+                      <IconButton
+                        symbol={BackspaceMd}
+                        size="large"
+                        variant="icon"
+                        className="invisible pointer-events-none"
+                      />
+                    )
+                  }
                   endAdornment={
                     toNumber && (
                       <IconButton
                         symbol={BackspaceMd}
-                        size="small"
+                        size="large"
                         variant="icon"
-                        onClick={handleBackspace}
+                        onClick={uiFunctions.onBackspace}
                         data-sign="backspaceButton"
                       />
                     )
@@ -255,7 +279,7 @@ class DialerView extends RcViewModule {
                 <div className="flex justify-center">
                   <Button
                     size="large"
-                    onClick={handleDial}
+                    onClick={uiFunctions.onDial}
                     disabled={!toNumber.trim()}
                     data-sign="callButton"
                   >
@@ -268,7 +292,7 @@ class DialerView extends RcViewModule {
         </div>
         <div className="text-center pb-2">
           <Link
-            onClick={handleGoToSettings}
+            onClick={uiFunctions.onGoToSettings}
             data-sign="manualDialSettings"
             className="typography-descriptor"
           >
