@@ -143,7 +143,7 @@ class EvAgentSession extends RcModule {
     }
     // Listen for subsequent login success events (reconnections, re-logins)
     this.evAuth.onLoginSuccess(async () => {
-      this.logger.info('----------onLoginSuccess event');
+      this.logger.info('onLoginSuccess event');
       await this.initAgentSession();
     });
   }
@@ -824,16 +824,14 @@ class EvAgentSession extends RcModule {
 
   async shouldAutoConfigureAgent(): Promise<boolean> {
     if (this.auth.isFreshLogin) {
+      this.logger.info('not auto configure agent because is fresh login');
       return false;
     }
     if (!this.configured) {
+      this.logger.info('not auto configure agent because not configured');
       return false;
     }
-    const multipleTabs = await this.hasMultipleTabs();
-    if (!multipleTabs) {
-      return true;
-    }
-    return false;
+    return true;
   }
 
   /**
@@ -859,7 +857,6 @@ class EvAgentSession extends RcModule {
         this.logger.error('Auto configure failed', e);
       }
     }
-    // TODO: handle multiple tabs
     // Otherwise set fresh config and navigate to session config page
     await this._clearCalls();
     await this.setFreshConfig();

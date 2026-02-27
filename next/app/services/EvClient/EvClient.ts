@@ -97,16 +97,16 @@ class EvClient extends RcModule {
     super();
     this._options = this.evClientOptions.options;
     const { closeResponse, openResponse } = this.evClientOptions.callbacks;
-    this._onOpen = (res) => {
-      this.setAppStatus(evStatus.CONNECTED);
+    this._onOpen = async (res) => {
+      await this.setAppStatus(evStatus.CONNECTED);
       openResponse(res);
       this._eventEmitter.emit(EvCallbackTypes.OPEN_SOCKET, res);
       // ensure for WebSocket keep-alive connection
       this._sdk.terminateStats();
     };
-    this._onClose = () => {
+    this._onClose = async () => {
       this.logger.info('EvCallbackTypes.CLOSE_SOCKET~');
-      this.setAppStatus(evStatus.CLOSED);
+      await this.setAppStatus(evStatus.CLOSED);
       closeResponse();
       this._eventEmitter.emit(EvCallbackTypes.CLOSE_SOCKET);
     };
@@ -160,8 +160,13 @@ class EvClient extends RcModule {
   }
 
   @action
-  setAppStatus(status: string) {
+  _setAppStatus(status: string) {
     this.appStatus = status;
+  }
+
+  @delegate('server')
+  async setAppStatus(status: string): Promise<void> {
+    this._setAppStatus(status);
   }
 
   setEnv(authHost: string) {
@@ -230,8 +235,8 @@ class EvClient extends RcModule {
     engageAccessToken: string,
   ): Promise<EvAuthenticateAgentWithEngageAccessTokenRes> {
     return new Promise<EvAuthenticateAgentWithEngageAccessTokenRes>(
-      (resolve) => {
-        this.setAppStatus(evStatus.LOGIN);
+      async (resolve) => {
+        await this.setAppStatus(evStatus.LOGIN);
         this._sdk.authenticateAgentWithEngageAccessToken(
           engageAccessToken,
           (response: EvAuthenticateAgentWithEngageAccessTokenRes) => {
@@ -327,8 +332,8 @@ class EvClient extends RcModule {
     rcAccessToken: string,
     tokenType: EvTokenType,
   ): Promise<EvAuthenticateAgentWithRcAccessTokenRes> {
-    return new Promise<EvAuthenticateAgentWithRcAccessTokenRes>((resolve) => {
-      this.setAppStatus(evStatus.LOGIN);
+    return new Promise<EvAuthenticateAgentWithRcAccessTokenRes>(async (resolve) => {
+      await this.setAppStatus(evStatus.LOGIN);
       this._sdk.authenticateAgentWithRcAccessToken(
         rcAccessToken,
         tokenType,
@@ -346,7 +351,7 @@ class EvClient extends RcModule {
           if (locale) {
             this._eventEmitter.emit('setLocale', locale);
           }
-          this.setAppStatus(evStatus.LOGINED);
+          await this.setAppStatus(evStatus.LOGINED);
           const _agents = (res || {}).agents || [];
           const agents = _agents.map((agent) => ({
             ...agent,
@@ -392,7 +397,7 @@ class EvClient extends RcModule {
   async getAndHandleAuthenticateResponse(
     rcAccessToken: string,
     tokenType: EvTokenType,
-  ): Promise<EvAuthenticateAgentWithRcAccessTokenRes> {
+  ): Promise<EvAuthenticateAgentWithRcAccessTokenRes | { error: string, data?: string }> {
     const authenticateResponse = await waitUntilTo(
       () => {
         return this.authenticateAgent(rcAccessToken, tokenType);
@@ -404,36 +409,43 @@ class EvClient extends RcModule {
     ).catch((e) => {
       this.logger.error('getAndHandleAuthenticateResponse error~~', e);
       console.error(e);
-      throw new EvTypeError({
-        type: messageTypes.CONNECT_TIMEOUT,
-      });
+      return {
+        error: messageTypes.CONNECT_TIMEOUT
+      };
     });
+    // For testing auth error, comment out this code
+    // if (!window.testAuthError) {
+    //   window.testAuthError = 1;
+    //   return {
+    //     error: messageTypes.CONNECT_ERROR,
+    //     data: authenticateResponse.message,
+    //   };
+    // }
     if (
       authenticateResponse.type === 'Authenticate Error' ||
       authenticateResponse.message
     ) {
-      //  TODO: handle the error
-      throw new EvTypeError({
-        type: messageTypes.CONNECT_ERROR,
+      return {
+        error: messageTypes.CONNECT_ERROR,
         data: authenticateResponse.message,
-      });
+      };
     }
     if (
       !authenticateResponse ||
       !authenticateResponse.agents ||
       !authenticateResponse.agents.length
     ) {
-      throw new EvTypeError({
-        type: messageTypes.NO_AGENT,
-      });
+      return {
+        error: messageTypes.NO_AGENT,
+      };
     }
     if (
       !authenticateResponse.agents[0] ||
       !authenticateResponse.agents[0].agentId
     ) {
-      throw new EvTypeError({
-        type: messageTypes.UNEXPECTED_AGENT,
-      });
+      return {
+        error: messageTypes.UNEXPECTED_AGENT,
+      };
     }
     return authenticateResponse;
   }
@@ -755,12 +767,16 @@ class EvClient extends RcModule {
   }
 
   @delegate('mainClient')
-  async multiLoginRequest(): Promise<void> {
+  async multiLoginRequest(): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
     // temp solution, and wait for ev backend enhancement.
     try {
       await waitUntilTo(() => this._multiLoginRequest(), { timeout: 30000 });
+      return { success: true };
     } catch (error) {
-      throw new Error('_multiLoginRequest fail or 30s timeout');
+      return { success: false, error: '_multiLoginRequest fail or 30s timeout' };
     }
   }
 

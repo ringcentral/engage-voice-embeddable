@@ -657,7 +657,7 @@ class ActivityCallView extends RcViewModule {
   gotoDialWithoutSubmit = async () => {
     this.logger.info('gotoDialWithoutSubmit');
     await this.doDisposeCall();
-    this.evWorkingState.setIsPendingDisposition(false);
+    await this.evWorkingState.setIsPendingDisposition(false);
     this.router.push('/agent/dialer');
   };
 
@@ -767,7 +767,7 @@ class ActivityCallView extends RcViewModule {
       await this.doDisposeCall();
       this.setSaveStatus(SaveStatus.SAVED);
       this.toast.success({ message: translate('callDispositionSuccess') });
-      this.evWorkingState.setIsPendingDisposition(false);
+      await this.evWorkingState.setIsPendingDisposition(false);
       setTimeout(() => this.goBack(), 1000);
     } catch (e) {
       console.error(e);

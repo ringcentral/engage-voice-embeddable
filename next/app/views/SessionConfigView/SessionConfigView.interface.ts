@@ -1,3 +1,4 @@
+import type { LoginTypes } from '../../../enums';
 import type { EvAgent } from '../../services/EvClient/interfaces';
 
 /**
@@ -40,6 +41,18 @@ export interface SessionConfigViewUIFunctions {
   onAccountReChoose: () => void | Promise<void>;
   /** Callback when user clicks continue to configure session */
   setConfigure: () => Promise<void>;
+  /** Callback when login type changes */
+  setLoginType: (type: LoginTypes) => void;
+  /** Callback when skill profile changes */
+  setSkillProfileId: (profileId: string) => void;
+  /** Callback when extension number changes */
+  setExtensionNumber: (number: string) => void;
+  /** Callback when auto answer setting changes */
+  setAutoAnswer: (enabled: boolean) => void;
+  /** Callback when dial group changes */
+  setDialGroupId: (groupId: string) => void;
+  /** Callback when inbound queue selection changes */
+  setInboundQueueIds: (ids: string[]) => void;
 }
 
 /**

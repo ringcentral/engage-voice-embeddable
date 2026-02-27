@@ -1,6 +1,15 @@
 import { ObjectMap } from '@ringcentral-integration/core/lib/ObjectMap';
 
-export const loginStatus = ObjectMap.prefixKeys(
+export enum EvLoginStatus {
+  NO_AUTH = 'noAuth',
+  AUTHING = 'authing',
+  AUTH_SUCCESS = 'authSuccess',
+  REAUTHING = 'reauthing',
+  UNAUTHING = 'unauthing',
+  AUTH_FAILURE = 'authFailure',
+}
+
+export const evAuthEvent = ObjectMap.prefixKeys(
   [
     'AUTH_SUCCESS',
     'LOGIN_SUCCESS',

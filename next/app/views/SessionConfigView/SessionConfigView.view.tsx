@@ -1,23 +1,21 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
-  action,
   computed,
   injectable,
   optional,
   RcViewModule,
-  state,
   useConnector,
   UIFunctions,
   UIProps,
   RouterPlugin,
+  delegate,
 } from '@ringcentral-integration/next-core';
 import { Brand, Locale } from '@ringcentral-integration/micro-core/src/app/services';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
-import { Button, Icon } from '@ringcentral/spring-ui';
+import { Button } from '@ringcentral/spring-ui';
 import { ArrowLeftMd } from '@ringcentral/spring-icon';
-import { TabManager } from '../../services/EvTabManager';
 import type { LoginTypes } from '../../../enums';
-import { loginTypes, tabManagerEvents } from '../../../enums';
+import { loginTypes } from '../../../enums';
 import { EvAgentSession } from '../../services/EvAgentSession';
 import { EvAuth } from '../../services/EvAuth';
 import { EvClient } from '../../services/EvClient';
@@ -47,27 +45,10 @@ class SessionConfigView extends RcViewModule {
     private _locale: Locale,
     private _brand: Brand,
     private _router: RouterPlugin,
-    @optional() private _tabManager?: TabManager,
     @optional('SessionConfigViewOptions')
     private _sessionConfigViewOptions?: SessionConfigViewOptions,
   ) {
     super();
-  }
-
-  private get _tabManagerEnabled(): boolean {
-    return !!this._tabManager?.enable;
-  }
-
-  private get _hasMultipleTabs(): boolean {
-    return !!this._tabManager?.hasMultipleTabs;
-  }
-
-  @state
-  showInboundQueuesPanel = false;
-
-  @action
-  setShowInboundQueuesPanel(show: boolean) {
-    this.showInboundQueuesPanel = show;
   }
 
   @computed((that: SessionConfigView) => [that._evAuth.agent, that._evAuth.agentId])
@@ -131,6 +112,7 @@ class SessionConfigView extends RcViewModule {
     return `${t('multiple')} (${selectedIds.length})`;
   }
 
+  @delegate('server')
   async setLoginType(type: LoginTypes) {
     // Set login type first, then reset autoAnswer based on the new login type
     await this._evAgentSession.setFormGroup({ loginType: type });
@@ -161,11 +143,8 @@ class SessionConfigView extends RcViewModule {
     this._evAgentSession.setFormGroup({ dialGroupId: groupId });
   }
 
-  async onAccountReChoose(syncAllTabs = true) {
-    // Sync to other tabs if enabled
-    if (syncAllTabs && this._tabManagerEnabled && this._hasMultipleTabs) {
-      this._tabManager!.send(tabManagerEvents.RE_CHOOSE_ACCOUNT);
-    }
+  @delegate('server')
+  async onAccountReChoose() {
     // Close existing socket connection
     await this._evClient.closeSocket();
     // Clear auth state
@@ -195,6 +174,13 @@ class SessionConfigView extends RcViewModule {
       showSkillProfile: this.showSkillProfile,
       showAutoAnswer: this.showAutoAnswer,
       showDialGroup: this.showDialGroup,
+      loginTypeList: this._evAgentSession.loginTypeList,
+      skillProfileList: this._evAgentSession.skillProfileList,
+      inboundQueues: this._evAgentSession.inboundQueues,
+      dialGroups: this._evAgentSession.dialGroups,
+      formGroup: this._evAgentSession.formGroup,
+      logoUrl: this._brand.assets?.['logo'] as string | undefined,
+      allowOutbound: this._evAuth.agentPermissions?.allowOutbound || false,
     };
   }
 
@@ -202,6 +188,12 @@ class SessionConfigView extends RcViewModule {
     return {
       onAccountReChoose: () => this.onAccountReChoose(),
       setConfigure: () => this.setConfigure(),
+      setLoginType: (type: LoginTypes) => this.setLoginType(type),
+      setSkillProfileId: (profileId: string) => this.setSkillProfileId(profileId),
+      setExtensionNumber: (number: string) => this.setExtensionNumber(number),
+      setAutoAnswer: (enabled: boolean) => this.setAutoAnswer(enabled),
+      setDialGroupId: (groupId: string) => this.setDialGroupId(groupId),
+      setInboundQueueIds: (ids: string[]) => this.setInboundQueueIds(ids),
     };
   }
 
@@ -224,65 +216,14 @@ class SessionConfigView extends RcViewModule {
       formGroup,
       logoUrl,
       allowOutbound,
-    } = useConnector(() => ({
-      ...this.getUIProps(),
-      loginTypeList: this._evAgentSession.loginTypeList,
-      skillProfileList: this._evAgentSession.skillProfileList,
-      inboundQueues: this._evAgentSession.inboundQueues,
-      dialGroups: this._evAgentSession.dialGroups,
-      formGroup: this._evAgentSession.formGroup,
-      logoUrl: this._brand.assets?.['logo'] as string | undefined,
-      allowOutbound: this._evAuth.agentPermissions?.allowOutbound || false,
-    }));
-
-    const handleLoginTypeChange = useCallback(
-      (type: LoginTypes) => {
-        this.setLoginType(type);
-      },
-      [],
-    );
-
-    const handleSkillProfileChange = useCallback(
-      (profileId: string) => {
-        this.setSkillProfileId(profileId);
-      },
-      [],
-    );
-
-    const handleExtensionChange = useCallback(
-      (number: string) => {
-        this.setExtensionNumber(number);
-      },
-      [],
-    );
-
-    const handleAutoAnswerChange = useCallback(
-      (enabled: boolean) => {
-        this.setAutoAnswer(enabled);
-      },
-      [],
-    );
-
-    const handleDialGroupChange = useCallback(
-      (groupId: string) => {
-        this.setDialGroupId(groupId);
-      },
-      [],
-    );
-
-    const handleInboundQueuesChange = useCallback(
-      (selectedIds: string[]) => {
-        this.setInboundQueueIds(selectedIds);
-      },
-      [],
-    );
+    } = useConnector(() => this.getUIProps());
 
     const handleSubmitInboundQueues = useCallback(
       (selectedIds: string[]) => {
-        this.setInboundQueueIds(selectedIds);
+        uiFunctions.setInboundQueueIds(selectedIds);
         setShowQueuesPanel(false);
       },
-      [],
+      [uiFunctions],
     );
 
     const isExternalPhone = formGroup.loginType === loginTypes.externalPhone;
@@ -292,7 +233,6 @@ class SessionConfigView extends RcViewModule {
       return t(selectedAgent.agentType as 'agent' | 'supervisor');
     }, [selectedAgent?.agentType, t]);
 
-    // Show inbound queues panel
     if (showQueuesPanel) {
       return (
         <InboundQueuesPanel
@@ -306,7 +246,6 @@ class SessionConfigView extends RcViewModule {
 
     return (
       <div className="flex flex-col h-full bg-neutral-base">
-        {/* Header with Logo */}
         <div className="flex justify-center py-5 px-4">
           {logoUrl ? (
             <img src={logoUrl} alt="Logo" className="h-6" />
@@ -316,9 +255,8 @@ class SessionConfigView extends RcViewModule {
             </div>
           )}
         </div>
-        {/* Switch Account Button */}
         <div
-          className={`bg-neutral-b5 ${showReChooseAccount ? 'visible' : 'invisible'}`}
+          className={`bg-neutral-b5 ${showReChooseAccount ? 'visible' : 'invisible'} pl-4`}
         >
           <Button
             onClick={uiFunctions.onAccountReChoose}
@@ -330,7 +268,6 @@ class SessionConfigView extends RcViewModule {
             {t('switchAccount')}
           </Button>
         </div>
-        {/* Account Info */}
         <div
           className="flex justify-between items-center px-4 pt-4 pb-4"
           data-sign="accountInfo"
@@ -345,36 +282,34 @@ class SessionConfigView extends RcViewModule {
             {agentTypeLabel}
           </span>
         </div>
-        {/* Form Content */}
         <div className="flex-1 overflow-y-auto px-4">
           <SessionConfig
             showInboundQueues={showInboundQueues}
             inboundQueues={inboundQueues}
             selectedInboundQueueIds={formGroup.selectedInboundQueueIds || []}
-            onInboundQueuesChange={handleInboundQueuesChange}
+            onInboundQueuesChange={uiFunctions.setInboundQueueIds}
             showInboundQueuesPanel={showQueuesPanel}
             onShowInboundQueuesPanelChange={setShowQueuesPanel}
             showSkillProfile={showSkillProfile}
             skillProfileList={skillProfileList}
             selectedSkillProfileId={formGroup.selectedSkillProfileId}
-            onSkillProfileChange={handleSkillProfileChange}
+            onSkillProfileChange={uiFunctions.setSkillProfileId}
             showDialGroup={allowOutbound}
             dialGroups={dialGroups}
             dialGroupId={formGroup.dialGroupId}
-            onDialGroupChange={handleDialGroupChange}
+            onDialGroupChange={uiFunctions.setDialGroupId}
             showVoiceConnection
             loginTypeList={loginTypeList}
             loginType={formGroup.loginType}
-            onLoginTypeChange={handleLoginTypeChange}
+            onLoginTypeChange={uiFunctions.setLoginType}
             showExtensionNumber={isExternalPhone}
             extensionNumber={formGroup.extensionNumber || ''}
-            onExtensionNumberChange={handleExtensionChange}
+            onExtensionNumberChange={uiFunctions.setExtensionNumber}
             showAutoAnswer={showAutoAnswer}
             autoAnswer={formGroup.autoAnswer || false}
-            onAutoAnswerChange={handleAutoAnswerChange}
+            onAutoAnswerChange={uiFunctions.setAutoAnswer}
           />
         </div>
-        {/* Continue Button */}
         <div className="px-4 py-4">
           <Button
             data-sign="setConfigure"

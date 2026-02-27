@@ -9,7 +9,7 @@ import {
   PortManager,
 } from '@ringcentral-integration/next-core';
 
-import { loginStatus } from '../../../enums';
+import { EvLoginStatus } from '../../../enums';
 import { EvAuth } from '../EvAuth';
 import { EvCallMonitor } from '../EvCallMonitor';
 import type { RedirectOptions } from './Redirect.interface';

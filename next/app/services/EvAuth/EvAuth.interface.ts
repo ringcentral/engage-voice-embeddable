@@ -11,8 +11,6 @@ export interface EvAuthOptions {
  * State interface for EvAuth
  */
 export interface EvAuthState {
-  connecting: boolean;
-  connected: boolean;
   agent: EvAgentData | null;
 }
 

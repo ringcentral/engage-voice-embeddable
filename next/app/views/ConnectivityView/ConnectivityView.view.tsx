@@ -57,7 +57,7 @@ export class ConnectivityView extends BaseConnectivityView {
         ...baseProps, severity: 'error',
       };
     }
-    if (this._evAuth.isSocketReconnecting) {
+    if (this._evAuth.isReauthing) {
       return {
         mode: 'socketDisconnected',
         severity: 'error',

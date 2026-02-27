@@ -193,6 +193,7 @@ class EvIntegratedSoftphone extends RcModule {
       return;
     }
     this.logger.info('resetAllState~~');
+    this._sipConnected = false;
     await this.resetSip();
     await this.evClient.sipTerminate();
     this._eventEmitter.emit(EvSoftphoneEvents.RESET);
