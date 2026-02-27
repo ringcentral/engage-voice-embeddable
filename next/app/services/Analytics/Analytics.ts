@@ -4,9 +4,7 @@ import {
 } from '@ringcentral-integration/micro-core/src/app/services';
 import {
   delegate,
-  dynamic,
   fromWatchValue,
-  inject,
   injectable,
   optional,
   PortManager,
@@ -16,14 +14,15 @@ import {
 } from '@ringcentral-integration/next-core';
 import {
   BehaviorSubject,
+  defer,
   EMPTY,
   filter,
   firstValueFrom,
+  from,
   retry,
   shareReplay,
   Subject,
   switchMap,
-  take,
   tap,
   timer,
 } from 'rxjs';
@@ -87,23 +86,16 @@ class Analytics extends RcModule implements IAnalytics {
    */
   track$ = new Subject<{ event: string; trackProps: Record<string, any> }>();
 
-  private enableMixpanel$ = fromWatchValue(this, () => this.enableMixpanel);
-
-  private loadMixpanel$ = this.enableMixpanel$.pipe(
-    filter(Boolean),
-    take(1),
-    switchMap(async () => {
-      if (!this._analyticsOptions?.analyticsKey) {
-        this.logger.error('Analytics key is required');
-        return EMPTY;
-      }
-      this._analyticsBrowser = new AnalyticsBrowser(
-        this._analyticsOptions.analyticsKey,
-      );
-      await this._analyticsBrowser.load();
-      this.logger.log('Mixpanel initialized');
-      return this._analyticsBrowser;
-    }),
+  private loadMixpanel$ = defer(() => {
+    if (!this._analyticsOptions?.analyticsKey) {
+      this.logger.error('Analytics key is required');
+      return EMPTY;
+    }
+    this._analyticsBrowser = new AnalyticsBrowser(
+      this._analyticsOptions.analyticsKey,
+    );
+    return from(this._analyticsBrowser.load());
+  }).pipe(
     retry({
       count: 3,
       delay: (error) => {
@@ -162,15 +154,17 @@ class Analytics extends RcModule implements IAnalytics {
       } else {
         this.bindRouteChangeEventTrack();
       }
-      this.loadMixpanel$
-        .pipe(
-          tap(() => {
-            this.logger.log('Mixpanel loaded');
-            this._mixpanelReady$.next(true);
-          }),
-          takeUntilAppDestroy,
-        )
-        .subscribe();
+      if (this.enableMixpanel) {
+        this.loadMixpanel$
+          .pipe(
+            tap(() => {
+              this.logger.log('Mixpanel loaded');
+              this._mixpanelReady$.next(true);
+            }),
+            takeUntilAppDestroy,
+          )
+          .subscribe();
+      }
     }
     // Subscribe to global track events
     globalTrackEvent$
@@ -212,6 +206,7 @@ class Analytics extends RcModule implements IAnalytics {
    * Identify user with hashed IDs
    */
   async identify(options: IdentifyOptions): Promise<void> {
+    this.logger.info('identify~~');
     const hashedUserId = await getHashId(options.userId);
     const hashedAccountId = await getHashId(options.accountId);
     if (hashedAccountId) {
