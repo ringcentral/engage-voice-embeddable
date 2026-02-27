@@ -1,9 +1,16 @@
-export const thirdPartyMessageTypes = {
-  register: 'register',
-  matchContacts: 'matchContacts',
-  matchCallLogs: 'matchCallLogs',
-  logCall: 'logCall',
-  viewLead: 'viewLead',
-} as const;
+import { ObjectMap } from '@ringcentral-integration/core/lib/ObjectMap';
 
-export type ThirdPartyMessageType = typeof thirdPartyMessageTypes[keyof typeof thirdPartyMessageTypes];
+export const thirdPartyMessageTypes = ObjectMap.prefixKeys(
+  [
+    'register',
+    'matchContacts',
+    'matchCallLogs',
+    'logCall',
+    'viewLead',
+    'init',
+  ],
+  'rc-ev',
+);
+
+export type ThirdPartyMessageType =
+  typeof thirdPartyMessageTypes[keyof typeof thirdPartyMessageTypes];

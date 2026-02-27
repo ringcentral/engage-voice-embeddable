@@ -117,7 +117,6 @@ class Adapter extends RcModule {
     } as any);
     this.addListeners();
     this._setupStateWatcher();
-    this.onAppStart();
   }
 
   @storage
@@ -242,16 +241,6 @@ class Adapter extends RcModule {
    */
   onStateChange(): void {
     this._pushAdapterState();
-  }
-
-  /**
-   * Called on app start to notify parent window
-   */
-  onAppStart(): void {
-    if (!this.transport) return;
-    this.transport._postMessage({
-      type: this.messageTypes.init,
-    });
   }
 
   /**

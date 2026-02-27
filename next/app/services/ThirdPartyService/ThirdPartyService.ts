@@ -5,7 +5,15 @@ import {
   PortManager,
   RcModule,
   state,
+  delegate
 } from '@ringcentral-integration/next-core';
+import MessageTransport from '@ringcentral-integration/commons/lib/MessageTransport';
+import {
+  ContactMatcher,
+} from '@ringcentral-integration/micro-contacts/src/app/services/ContactMatcher';
+import {
+  ActivityMatcher,
+} from '@ringcentral-integration/micro-contacts/src/app/services/ActivityMatcher';
 
 import { contactMatchIdentifyDecode } from '../../../lib/contactMatchIdentify';
 import { thirdPartyMessageTypes } from '../../../enums';
@@ -29,18 +37,20 @@ export interface ServiceConfig {
 }
 
 /**
- * ThirdPartyService module - Contact/activity matching
- * Handles third-party integration for contact matching and call logging
+ * ThirdPartyService module - Contact/activity matching and call logging
+ * Handles third-party integration via MessageTransport request/response pattern
  */
 @injectable({
   name: 'ThirdPartyService',
 })
 class ThirdPartyService extends RcModule {
-  private _contactMatches: Record<string, any[]> = {};
-  private _activityMatches: Record<string, any[]> = {};
+  public transport!: MessageTransport;
+  public messageTypes = thirdPartyMessageTypes;
 
   constructor(
     protected portManager: PortManager,
+    @optional() private contactMatcher?: ContactMatcher,
+    @optional() private activityMatcher?: ActivityMatcher,
     @optional('ThirdPartyServiceOptions')
     private thirdPartyServiceOptions?: ThirdPartyServiceOptions,
   ) {
@@ -54,8 +64,23 @@ class ThirdPartyService extends RcModule {
     }
   }
 
-  initialize() {
-    this._initTransport();
+  initialize(): void {
+    this.logger.info('initialize~~');
+    if (typeof window === 'undefined') return;
+    this.transport = new MessageTransport({
+      targetWindow: this.thirdPartyServiceOptions?.targetWindow ?? window.parent,
+    } as any);
+    this.addListeners();
+    this.onAppStart();
+  }
+
+  /**
+   * Called on app start to notify parent window
+   */
+  onAppStart() {
+    this.transport._postMessage({
+      type: this.messageTypes.init,
+    });
   }
 
   @state
@@ -68,7 +93,7 @@ class ThirdPartyService extends RcModule {
   };
 
   @action
-  setService(service: Partial<ServiceConfig>) {
+  setService(service: Partial<ServiceConfig>): void {
     this.service = {
       name: service.name || '',
       callLoggerEnabled: service.callLoggerEnabled || false,
@@ -82,85 +107,183 @@ class ThirdPartyService extends RcModule {
     return this.service.leadViewerEnabled;
   }
 
-  get contactMatches(): Record<string, any[]> {
-    return this._contactMatches;
-  }
-
-  get activityMatches(): Record<string, any[]> {
-    return this._activityMatches;
-  }
-
-  private _initTransport(): void {
-    // TODO: Handle worker mode
-    if (typeof window === 'undefined') return;
-    const targetWindow = this.thirdPartyServiceOptions?.targetWindow ?? window.parent;
-    window.addEventListener('message', (event) => {
-      if (event.source !== targetWindow) return;
-      this._handleMessage(event.data);
+  /**
+   * Add push listeners to handle messages from parent window
+   */
+  addListeners(): void {
+    if (!this.transport) return;
+    // @ts-ignore
+    this.transport.addListeners({
+      push: async (payload: any): Promise<void> => {
+        if (typeof payload !== 'object') return;
+        this.logger.info('push message~~', payload.type);
+        switch (payload.type) {
+          case this.messageTypes.register:
+            this.register(payload);
+            break;
+          default:
+            break;
+        }
+      },
     });
   }
 
-  private _handleMessage(payload: any): void {
-    if (typeof payload !== 'object') return;
-    switch (payload.type) {
-      case thirdPartyMessageTypes.register:
-        this.register(payload);
-        break;
-      default:
-        break;
+  /**
+   * Handle third-party service registration.
+   * Registers contact/activity match providers when enabled.
+   */
+  @delegate('server')
+  async register(data: any): Promise<void> {
+    if (!data.service?.name) return;
+    this.setService(data.service);
+    if (data.service.contactMatcherEnabled) {
+      this._registerContactMatch();
+      this.contactMatcher?.triggerMatch();
     }
-  }
-
-  register(data: any): void {
-    if (data.service && data.service.name) {
-      this.setService(data.service);
+    if (data.service.callLogMatcherEnabled) {
+      this._registerActivityMatch();
+      this.activityMatcher?.triggerMatch();
     }
   }
 
   /**
-   * Match contacts by phone numbers
+   * Register a search provider with ContactMatcher
    */
+  _registerContactMatch(): void {
+    if (!this.contactMatcher) return;
+    if ((this.contactMatcher as any)._searchProviders?.has(this.service.name)) {
+      return;
+    }
+    this.contactMatcher.addSearchProvider({
+      name: this.service.name,
+      searchFn: async ({ queries }: { queries: string[] }) => {
+        return this.matchContacts(queries);
+      },
+      readyCheckFn: () => true,
+    });
+  }
+
+  /**
+   * Register a search provider with ActivityMatcher
+   */
+  _registerActivityMatch(): void {
+    if (!this.activityMatcher) return;
+    if ((this.activityMatcher as any)._searchProviders?.has(this.service.name)) {
+      return;
+    }
+    this.activityMatcher.addSearchProvider({
+      name: this.service.name,
+      searchFn: async ({ queries }: { queries: string[] }) => {
+        return this.matchActivities(queries);
+      },
+      readyCheckFn: () => true,
+    });
+  }
+
+  /**
+   * Match contacts by phone numbers via parent window request/response
+   */
+  @delegate('mainClient')
   async matchContacts(queries: string[]): Promise<Record<string, any[]>> {
-    if (!this.service.contactMatcherEnabled) {
+    try {
+      const result: Record<string, any[]> = {};
+      if (!this.service.contactMatcherEnabled) {
+        return result;
+      }
+      const decodedQueries = queries.map((query) =>
+        contactMatchIdentifyDecode(query),
+      );
+      const data = await this.transport.request({
+        payload: {
+          requestType: this.messageTypes.matchContacts,
+          data: decodedQueries,
+        },
+      });
+      if (!data || Object.keys(data).length === 0) {
+        return result;
+      }
+      queries.forEach((query) => {
+        const decodedQuery = contactMatchIdentifyDecode(query);
+        const { phoneNumber } = decodedQuery;
+        if (data[phoneNumber] && Array.isArray(data[phoneNumber])) {
+          result[query] = data[phoneNumber];
+        } else {
+          result[query] = [];
+        }
+      });
+      return result;
+    } catch (e) {
+      console.error(e);
       return {};
     }
-    // Would send request to parent window and wait for response
-    return {};
   }
 
   /**
-   * Match activities by session IDs
+   * Match activities by session IDs via parent window request/response
    */
+  @delegate('mainClient')
   async matchActivities(queries: string[]): Promise<Record<string, any[]>> {
-    if (!this.service.callLogMatcherEnabled) {
+    try {
+      const result: Record<string, any[]> = {};
+      if (!this.service.callLogMatcherEnabled) {
+        return result;
+      }
+      const data = await this.transport.request({
+        payload: {
+          requestType: this.messageTypes.matchCallLogs,
+          data: queries,
+        },
+      });
+      if (!data || Object.keys(data).length === 0) {
+        return result;
+      }
+      queries.forEach((query) => {
+        if (data[query] && Array.isArray(data[query])) {
+          result[query] = data[query];
+        } else {
+          result[query] = [];
+        }
+      });
+      return result;
+    } catch (e) {
+      console.error(e);
       return {};
     }
-    // Would send request to parent window and wait for response
-    return {};
   }
 
   /**
-   * Log a call
+   * Log a call via parent window request/response.
+   * Refreshes activity matches after successful logging.
    */
+  @delegate('mainClient')
   async logCall(data: any): Promise<void> {
     if (!this.service.callLoggerEnabled) return;
-    const targetWindow = this.thirdPartyServiceOptions?.targetWindow ?? window.parent;
-    targetWindow.postMessage({
-      type: thirdPartyMessageTypes.logCall,
-      data,
-    }, '*');
+    await this.transport.request({
+      payload: {
+        requestType: this.messageTypes.logCall,
+        data,
+      },
+    });
+    if (this.service.callLogMatcherEnabled && this.activityMatcher) {
+      this.activityMatcher.match({
+        queries: [data.sessionId],
+        ignoreCache: true,
+      });
+    }
   }
 
   /**
-   * View a lead
+   * View a lead via parent window request/response
    */
+  @delegate('mainClient')
   async viewLead(data: any): Promise<void> {
     if (!this.service.leadViewerEnabled) return;
-    const targetWindow = this.thirdPartyServiceOptions?.targetWindow ?? window.parent;
-    targetWindow.postMessage({
-      type: thirdPartyMessageTypes.viewLead,
-      data,
-    }, '*');
+    await this.transport.request({
+      payload: {
+        requestType: this.messageTypes.viewLead,
+        data,
+      },
+    });
   }
 }
 
