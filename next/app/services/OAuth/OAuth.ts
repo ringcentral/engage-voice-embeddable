@@ -127,4 +127,13 @@ export class OAuth extends OAuthBase {
       { multiple: true },
     );
   }
+
+  override async getOAuthUri(): Promise<string> {
+    const uri = await super.getOAuthUri();
+    // override to remove force=true parameter
+    if (uri.indexOf('&force=true') !== -1) {
+      return uri.replace('&force=true', '');
+    }
+    return uri;
+  }
 }
