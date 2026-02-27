@@ -9,6 +9,7 @@ import {
   storage,
   StoragePlugin,
   PortManager,
+  delegate,
 } from '@ringcentral-integration/next-core';
 
 import {
@@ -98,9 +99,14 @@ class EvWorkingState extends RcModule {
   }
 
   @action
-  setIsPendingDisposition(isPendingDisposition: boolean, callId = ''): void {
+  _setIsPendingDisposition(isPendingDisposition: boolean, callId = ''): void {
     this.isPendingDisposition = isPendingDisposition;
     this.pendingDispositionCallId = isPendingDisposition ? callId : '';
+  }
+
+  @delegate('server')
+  async setIsPendingDisposition(isPendingDisposition: boolean, callId = ''): Promise<void> {
+    this._setIsPendingDisposition(isPendingDisposition, callId);
   }
 
   @action
