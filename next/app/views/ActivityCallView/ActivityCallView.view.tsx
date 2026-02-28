@@ -1171,7 +1171,13 @@ class ActivityCallView extends RcViewModule {
                 data-sign="submitButton"
                 size="large"
                 fullWidth
-                disabled={saveStatus === SaveStatus.SAVING}
+                disabled={
+                  saveStatus === SaveStatus.SAVING ||
+                  (saveStatus === SaveStatus.SUBMIT && (
+                    (dispositionPickList.length > 0 && !dispositionData?.dispositionId) ||
+                    (required.notes && !dispositionData?.notes)
+                  ))
+                }
                 loading={saveStatus === SaveStatus.SAVING}
                 onClick={uiFunctions.disposeCall}
                 color={saveStatus === SaveStatus.SAVED ? 'success' : 'primary'}
