@@ -37,12 +37,29 @@ export const QueueTransferTab: FunctionComponent<QueueTransferTabProps> = ({
 
   const gates = selectedGroup?.gates ?? [];
 
+  const renderGroupValue = useMemo(
+    () => (value: unknown) => {
+      const group = queueGroups.find((g) => g.gateGroupId === value);
+      return group?.groupName ?? '';
+    },
+    [queueGroups],
+  );
+
+  const renderGateValue = useMemo(
+    () => (value: unknown) => {
+      const gate = gates.find((g) => g.gateId === value);
+      return gate?.gateName ?? '';
+    },
+    [gates],
+  );
+
   return (
     <div className="flex flex-col gap-4 flex-1" data-sign="queueTransferTab">
       <Select
         data-sign="queueGroupSelect"
         label={labels.selectQueueGroup}
         value={selectedQueueGroupId}
+        renderValue={renderGroupValue}
         onChange={(e) => {
           const groupId = e.target.value as string;
           onQueueGroupChange(groupId);
@@ -68,6 +85,7 @@ export const QueueTransferTab: FunctionComponent<QueueTransferTabProps> = ({
         data-sign="queueGateSelect"
         label={labels.selectQueue}
         value={selectedGateId}
+        renderValue={renderGateValue}
         onChange={(e) => onGateChange(e.target.value as string)}
         variant="outlined"
         size="medium"
