@@ -1,4 +1,3 @@
-import type { TransferOption } from '../../components/TransferMenu';
 import type { IvrAlertData } from '../../components/IvrAlertPanel';
 import type { DispositionItem, DispositionData, DispositionValidation, DispositionRequired } from '../../components/DispositionForm';
 import type { SaveStatus } from './ActivityCallView.view';
@@ -59,8 +58,6 @@ export interface ActivityCallViewUIProps {
   isInComingCall: boolean;
   showSubmitStep: boolean;
   allowTransfer: boolean;
-  allowTransferCall: boolean;
-  disableInternalTransfer: boolean;
   hideCallNote: boolean;
   isDefaultRecord: boolean;
   isInbound: boolean;
@@ -87,7 +84,7 @@ export interface ActivityCallViewUIFunctions {
   onResumeRecord: () => void;
   onRestartTimer: () => Promise<void>;
   onActiveCall: () => void;
-  onTransferSelect: (option: TransferOption) => void;
+  onTransfer: () => void;
   onCopySuccess: (name: string) => void;
   setKeypadOpen: (isOpen: boolean) => void;
   handleKeypadChange: (value: string) => void;
@@ -95,6 +92,4 @@ export interface ActivityCallViewUIFunctions {
   onUpdateCallLog: (field: string, value: string) => void;
   disposeCall: () => Promise<void>;
   openAgentScript: () => void;
-  goToRequeueCallPage: () => void;
-  goToTransferCallPage: (type: string) => void;
 }

@@ -229,7 +229,7 @@ class EvTransferCall extends RcModule {
   }
 
   @action
-  changeTransferPhoneBookSelected(index: number) {
+  changeTransferPhoneBookSelected(index: number | null) {
     this.transferPhoneBookSelectedIndex = index;
   }
 

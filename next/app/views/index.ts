@@ -13,12 +13,7 @@ export * from './ChooseAccountView';
 export * from './SessionUpdateView';
 export * from './SessionInfoView';
 export * from './SettingsView';
-export * from './TransferCallView';
-export * from './TransferInternalView';
-export * from './TransferPhoneBookView';
-export * from './TransferManualEntryView';
-export * from './RequeueCallGroupView';
-export * from './RequeueCallGroupItemView';
+export * from './TransferView';
 export * from './ActiveCallListView';
 export * from './CallHistoryDetailView';
 

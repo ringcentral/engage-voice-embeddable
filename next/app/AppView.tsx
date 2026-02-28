@@ -29,12 +29,7 @@ import { ChooseAccountView } from './views/ChooseAccountView';
 import { SessionUpdateView } from './views/SessionUpdateView';
 import { SessionInfoView } from './views/SessionInfoView';
 import { SettingsView } from './views/SettingsView';
-import { TransferCallView } from './views/TransferCallView';
-import { TransferInternalView } from './views/TransferInternalView';
-import { TransferPhoneBookView } from './views/TransferPhoneBookView';
-import { TransferManualEntryView } from './views/TransferManualEntryView';
-import { RequeueCallGroupView } from './views/RequeueCallGroupView';
-import { RequeueCallGroupItemView } from './views/RequeueCallGroupItemView';
+import { TransferView } from './views/TransferView';
 import { ActiveCallListView } from './views/ActiveCallListView';
 import { CallHistoryDetailView } from './views/CallHistoryDetailView';
 import { AgentView } from './views/AgentView';
@@ -92,35 +87,10 @@ class AppView extends RcViewModule {
       component: this._agentView.component,
       authentication: true,
     },
-    // Call-related routes (more specific routes first)
-    {
-      path: '/activityCallLog/:id/transferCall/queueGroup/:groupId',
-      component: this._requeueCallGroupItemView.component,
-      authentication: true,
-    },
-    {
-      path: '/activityCallLog/:id/transferCall/queueGroup',
-      component: this._requeueCallGroupView.component,
-      authentication: true,
-    },
-    {
-      path: '/activityCallLog/:id/transferCall/internal',
-      component: this._transferInternalView.component,
-      authentication: true,
-    },
-    {
-      path: '/activityCallLog/:id/transferCall/phoneBook',
-      component: this._transferPhoneBookView.component,
-      authentication: true,
-    },
-    {
-      path: '/activityCallLog/:id/transferCall/manualEntry',
-      component: this._transferManualEntryView.component,
-      authentication: true,
-    },
+    // Transfer call route (unified transfer page)
     {
       path: '/activityCallLog/:id/transferCall',
-      component: this._transferCallView.component,
+      component: this._transferView.component,
       authentication: true,
     },
     {
@@ -194,12 +164,7 @@ class AppView extends RcViewModule {
     private _sessionUpdateView: SessionUpdateView,
     private _sessionInfoView: SessionInfoView,
     private _settingsView: SettingsView,
-    private _transferCallView: TransferCallView,
-    private _transferInternalView: TransferInternalView,
-    private _transferPhoneBookView: TransferPhoneBookView,
-    private _transferManualEntryView: TransferManualEntryView,
-    private _requeueCallGroupView: RequeueCallGroupView,
-    private _requeueCallGroupItemView: RequeueCallGroupItemView,
+    private _transferView: TransferView,
     private _activeCallListView: ActiveCallListView,
     private _callHistoryDetailView: CallHistoryDetailView,
     private _connectivityView: ConnectivityView,

@@ -281,7 +281,7 @@ class EvAuth extends RcModule {
       this.logger.info('evSubscription.subscribe LOGIN_PHASE_1~~');
       this._eventEmitter.emit(EvCallbackTypes.LOGIN_PHASE_1, ...args);
     })
-    this.onceLoginSuccess(() => {
+    this.onLoginSuccess(() => {
       this.identifyAnalyticsUser();
     });
     watch(

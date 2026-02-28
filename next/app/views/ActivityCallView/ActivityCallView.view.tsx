@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import {
   action,
   autobind,
@@ -38,15 +38,13 @@ import { EvRequeueCall } from '../../services/EvRequeueCall';
 import { EvAgentScript } from '../../services/EvAgentScript';
 import { EvAuth } from '../../services/EvAuth';
 import { ThirdPartyService } from '../../services/ThirdPartyService';
-import { dialoutStatuses, transferTypes } from '../../../enums';
+import { dialoutStatuses } from '../../../enums';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
 import type { EvCallData } from '../../services/EvCallDataSource/EvCallDataSource.interface';
 import type { EvCallDispositionData } from '../../services/EvCallDisposition/EvCallDisposition.interface';
 
 import { CallInfoHeader } from '../../components/CallInfoHeader';
 import { EvCallControlButtons } from '../../components/EvCallControlButtons';
-import { TransferMenu } from '../../components/TransferMenu';
-import type { TransferOption } from '../../components/TransferMenu';
 import { IvrAlertPanel } from '../../components/IvrAlertPanel';
 import { DialpadPanel } from '../../components/DialpadPanel';
 import { DispositionForm } from '../../components/DispositionForm';
@@ -602,23 +600,9 @@ class ActivityCallView extends RcViewModule {
 
   // Navigation Actions
 
-  goToTransferCallPage = (type: string) => {
+  goToTransferPage = () => {
     this.evTransferCall.resetTransferStatus();
     this.evTransferCall.fetchAgentList();
-    this.router.replace(`/activityCallLog/${this.callId}/transferCall/${type}`);
-  };
-
-  goToRequeueCallPage = () => {
-    const gate = (this.evCallMonitor.callsMapping[this.callId] as any)?.gate;
-    if (gate) {
-      this.evRequeueCall.setStatus({
-        selectedQueueGroupId: gate.gateGroupId || '',
-        selectedGateId: gate.gateId || '',
-        stayOnCall: false,
-        requeuing: false,
-      });
-    }
-    this.evTransferCall.changeTransferType(transferTypes.queue);
     this.router.replace(`/activityCallLog/${this.callId}/transferCall`);
   };
 
@@ -659,26 +643,6 @@ class ActivityCallView extends RcViewModule {
     await this.doDisposeCall();
     await this.evWorkingState.setIsPendingDisposition(false);
     this.router.push('/agent/dialer');
-  };
-
-  /**
-   * Handle transfer menu selection
-   */
-  handleTransferSelect = (option: TransferOption) => {
-    switch (option) {
-      case 'internal':
-        this.goToTransferCallPage(transferTypes.internal);
-        break;
-      case 'phoneBook':
-        this.goToTransferCallPage(transferTypes.phoneBook);
-        break;
-      case 'queue':
-        this.goToRequeueCallPage();
-        break;
-      case 'manualEntry':
-        this.goToTransferCallPage(transferTypes.manualEntry);
-        break;
-    }
   };
 
   // Copy action
@@ -812,8 +776,6 @@ class ActivityCallView extends RcViewModule {
       isInComingCall: this.isInComingCall,
       showSubmitStep: this.showSubmitStep,
       allowTransfer: this.allowTransfer,
-      allowTransferCall: this.allowTransferCall,
-      disableInternalTransfer: !this.evTransferCall.allowInternalTransfer,
       hideCallNote: this.activityCallViewOptions?.hideCallNote ?? false,
       isDefaultRecord: this.isDefaultRecord,
       isInbound: this.isInbound,
@@ -847,7 +809,7 @@ class ActivityCallView extends RcViewModule {
       onResumeRecord: () => this.onResumeRecord(),
       onRestartTimer: () => this.onRestartTimer(),
       onActiveCall: () => this.goToActiveCallList(),
-      onTransferSelect: (option) => this.handleTransferSelect(option),
+      onTransfer: () => this.goToTransferPage(),
       onCopySuccess: (name) => this.onCopySuccess(name),
       setKeypadOpen: (isOpen) => this.setKeypadOpen(isOpen),
       handleKeypadChange: (value) => this.handleKeypadChange(value),
@@ -855,8 +817,6 @@ class ActivityCallView extends RcViewModule {
       onUpdateCallLog: (field, value) => this.onUpdateCallLog(field, value),
       disposeCall: () => this.disposeCall(),
       openAgentScript: () => this.evAgentScript.setIsDisplayAgentScript(true),
-      goToRequeueCallPage: () => this.goToRequeueCallPage(),
-      goToTransferCallPage: (type) => this.goToTransferCallPage(type),
     };
   }
 
@@ -975,18 +935,12 @@ class ActivityCallView extends RcViewModule {
       isInComingCall,
       showSubmitStep,
       allowTransfer,
-      allowTransferCall,
-      disableInternalTransfer,
       hideCallNote,
       isDefaultRecord,
       isInbound,
       isHistoryMode,
       viewCallId,
     } = uiProps;
-
-    // Transfer menu state
-    const [transferAnchorEl, setTransferAnchorEl] = useState<HTMLElement | null>(null);
-    const isTransferMenuOpen = Boolean(transferAnchorEl);
 
     // Sync route param :id to viewCallId, and only set evCall.activityCallId for active calls
     useEffect(() => {
@@ -1008,14 +962,6 @@ class ActivityCallView extends RcViewModule {
         this.reset();
       }
     }, [activityCallId, viewCallId]);
-
-    const handleTransferClick = useCallback((event: React.MouseEvent<HTMLElement>) => {
-      setTransferAnchorEl(event.currentTarget);
-    }, []);
-
-    const handleTransferClose = useCallback(() => {
-      setTransferAnchorEl(null);
-    }, []);
 
     const handleHoldToggle = useCallback(() => {
       if (isOnHold) {
@@ -1162,7 +1108,7 @@ class ActivityCallView extends RcViewModule {
                     showActiveCallButton={isOnActive}
                     onMute={handleMuteToggle}
                     onHold={handleHoldToggle}
-                    onTransfer={handleTransferClick}
+                    onTransfer={uiFunctions.onTransfer}
                     onRecord={handleRecordClick}
                     onHangup={uiFunctions.onHangup}
                     onActiveCall={uiFunctions.onActiveCall}
@@ -1170,21 +1116,6 @@ class ActivityCallView extends RcViewModule {
                     disableTransfer={isInComingCall || !allowTransfer}
                     disableRecord={!callControlPermissions.allowRecordControl}
                     size="small"
-                  />
-                  <TransferMenu
-                    anchorEl={transferAnchorEl}
-                    isOpen={isTransferMenuOpen}
-                    onClose={handleTransferClose}
-                    onSelect={uiFunctions.onTransferSelect}
-                    allowTransferCall={callControlPermissions.allowTransferCall}
-                    allowRequeueCall={callControlPermissions.allowRequeueCall}
-                    disableInternalTransfer={disableInternalTransfer}
-                    labels={{
-                      internalTransfer: t('internalTransfer'),
-                      phoneBookTransfer: t('phoneBookTransfer'),
-                      queueTransfer: t('queueTransfer'),
-                      enterANumber: t('enterANumber'),
-                    }}
                   />
                 </div>
               }
@@ -1221,7 +1152,7 @@ class ActivityCallView extends RcViewModule {
                 showActiveCallButton={isOnActive}
                 onMute={handleMuteToggle}
                 onHold={handleHoldToggle}
-                onTransfer={handleTransferClick}
+                onTransfer={uiFunctions.onTransfer}
                 onRecord={handleRecordClick}
                 onHangup={uiFunctions.onHangup}
                 onActiveCall={uiFunctions.onActiveCall}
@@ -1229,21 +1160,6 @@ class ActivityCallView extends RcViewModule {
                 disableTransfer={isInComingCall || !allowTransfer}
                 disableRecord={!callControlPermissions.allowRecordControl}
                 size="small"
-              />
-              <TransferMenu
-                anchorEl={transferAnchorEl}
-                isOpen={isTransferMenuOpen}
-                onClose={handleTransferClose}
-                onSelect={uiFunctions.onTransferSelect}
-                allowTransferCall={callControlPermissions.allowTransferCall}
-                allowRequeueCall={callControlPermissions.allowRequeueCall}
-                disableInternalTransfer={disableInternalTransfer}
-                labels={{
-                  internalTransfer: t('internalTransfer'),
-                  phoneBookTransfer: t('phoneBookTransfer'),
-                  queueTransfer: t('queueTransfer'),
-                  enterANumber: t('enterANumber'),
-                }}
               />
             </div>
           )}
