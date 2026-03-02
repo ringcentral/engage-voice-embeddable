@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import {
   action,
   autobind,
@@ -33,6 +33,7 @@ import {
   MuteMd,
   MicrophoneMd,
   RecordMd,
+  StopMd,
   DialpadMd,
 } from '@ringcentral/spring-icon';
 
@@ -56,7 +57,6 @@ import { CallControlGrid } from '../../components/CallControlGrid';
 import type { CallControlAction } from '../../components/CallControlGrid';
 import { IvrAlertPanel } from '../../components/IvrAlertPanel';
 import { DialpadPanel } from '../../components/DialpadPanel';
-import { RecordCountdown } from '../../components/RecordCountdown';
 import type {
   ActiveCallViewProps,
   ActiveCallViewUIProps,
@@ -274,7 +274,7 @@ class ActiveCallView extends RcViewModule {
       allowHoldCall: this.currentMainCall?.allowHold ?? true,
       allowHangupCall: this.currentMainCall?.allowHangup ?? true,
       allowRecordControl: this.agentRecording?.agentRecording ?? false,
-      allowPauseRecord: typeof this.agentRecording?.pause === 'number',
+      allowPauseRecord: typeof this.agentRecording?.pause === 'number' && this.agentRecording?.pause > 0,
     };
   }
 
@@ -533,11 +533,13 @@ class ActiveCallView extends RcViewModule {
       },
       {
         actionType: 'record' as const,
-        symbol: RecordMd,
-        label: isRecording ? t('stopRecord') : t('record'),
+        symbol: isRecording ? StopMd : RecordMd,
+        label: isRecording
+          ? (callControlPermissions.allowPauseRecord ? t('pauseRecord') : t('stopRecord'))
+          : t('record'),
         onClick: isAutoIndicator ? undefined : handleRecordClick,
-        disabled: isInComingCall || disableRecord || !showRecordButton,
-        color: (isRecording || isDefaultRecord ? 'danger' : 'neutral') as 'danger' | 'neutral',
+        disabled: isAutoIndicator ? false : (isInComingCall || disableRecord || !showRecordButton),
+        color: (isAutoIndicator || isRecording) ? 'danger' : 'neutral',
         indicator: isAutoIndicator,
         tooltip: isAutoIndicator ? 'Recording' : undefined,
       },
@@ -748,11 +750,36 @@ class ActiveCallView extends RcViewModule {
 
     const showRecordButton = callControlPermissions.allowRecordControl || isDefaultRecord;
     const isOnActive = isMultipleCalls;
-    const showCountdown =
+
+    // Countdown timer for paused recording (replaces record button during pause)
+    const [countdownSeconds, setCountdownSeconds] = useState(0);
+    const isCountdownActive =
       callControlPermissions.allowPauseRecord &&
       recordPauseCount != null &&
       !isRecording &&
-      !!timeStamp;
+      !!timeStamp &&
+      countdownSeconds >= 0;
+
+    useEffect(() => {
+      if (!timeStamp || isRecording || !callControlPermissions.allowPauseRecord || recordPauseCount == null) {
+        setCountdownSeconds(0);
+        return;
+      }
+      const updateTimer = () => {
+        const time = Math.ceil(
+          recordPauseCount + (timeStamp - Date.now()) / 1000,
+        );
+        if (time < 0) {
+          clearInterval(intervalId);
+          setTimeout(() => uiFunctions.onResumeRecord(), 1000);
+          return;
+        }
+        setCountdownSeconds(time);
+      };
+      updateTimer();
+      const intervalId = setInterval(updateTimer, 1000);
+      return () => clearInterval(intervalId);
+    }, [timeStamp, recordPauseCount, isRecording, callControlPermissions.allowPauseRecord, uiFunctions]);
 
     if (!currentCall) {
       return (
@@ -786,6 +813,28 @@ class ActiveCallView extends RcViewModule {
       handleMuteToggle,
       handleRecordClick,
     });
+
+    // During pause countdown, replace the record button with a countdown indicator
+    // matching old code behavior where CountDownButton replaced RecordControlButton
+    if (isCountdownActive) {
+      const recordIdx = callActions.findIndex((a) => a.actionType === 'record');
+      if (recordIdx >= 0) {
+        const display = countdownSeconds > 99 ? '99+' : String(Math.max(0, countdownSeconds));
+        const CountdownSymbol = () => (
+          <span className="typography-subtitleMini text-danger" data-sign="countdownText">
+            {display}
+          </span>
+        );
+        callActions[recordIdx] = {
+          ...callActions[recordIdx],
+          symbol: CountdownSymbol,
+          label: t('restartTimer'),
+          onClick: () => uiFunctions.onRestartTimer(),
+          color: 'danger',
+          disabled: false,
+        };
+      }
+    }
 
     return (
       <div className="flex flex-col h-full bg-neutral-base overflow-hidden">
@@ -840,7 +889,7 @@ class ActiveCallView extends RcViewModule {
                   value={notes}
                   onChange={handleNotesChange}
                   data-sign="quickNotesInput"
-                  rows={3}
+                  rows={2}
                   maxLength={32000}
                   fullWidth
                 />
@@ -862,16 +911,6 @@ class ActiveCallView extends RcViewModule {
         </div>
 
         <div className="flex-shrink-0">
-          {showCountdown && (
-            <div className="flex justify-center py-2">
-              <RecordCountdown
-                recordPauseCount={recordPauseCount!}
-                timeStamp={timeStamp!}
-                onResumeRecord={uiFunctions.onResumeRecord}
-                onRestartTimer={uiFunctions.onRestartTimer}
-              />
-            </div>
-          )}
           <div className="flex justify-center py-4">
             {isOnActive ? (
               <IconButton

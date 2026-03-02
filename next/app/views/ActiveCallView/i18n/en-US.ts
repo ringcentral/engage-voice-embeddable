@@ -14,6 +14,8 @@ export default {
   disposition: 'Disposition',
   record: 'Record',
   stopRecord: 'Stop Rec',
+  pauseRecord: 'Pause Rec',
+  restartTimer: 'Restart',
 
   // Recording
   recordPaused: 'Call recording paused.',

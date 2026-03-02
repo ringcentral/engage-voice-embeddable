@@ -16,7 +16,7 @@ export const CallControlGrid: FunctionComponent<CallControlGridProps> = ({
   'data-sign': dataSign = 'callControlGrid',
 }) => (
   <div
-    className={`flex flex-wrap gap-4 justify-center ${className ? ` ${className}` : ''}`}
+    className={`grid grid-cols-3 gap-4 justify-items-center${className ? ` ${className}` : ''}`}
     data-sign={dataSign}
   >
     {actions.map(({ actionType, indicator, tooltip, ...rest }) => (
