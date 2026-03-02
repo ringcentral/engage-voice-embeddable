@@ -19,13 +19,15 @@ import {
   OutgoingCallMd,
   CheckBoldMd,
 } from '@ringcentral/spring-icon';
-import { Avatar as SpringAvatar } from '@ringcentral/spring-ui';
+import { Icon, Tooltip } from '@ringcentral/spring-ui';
 import type { StateSnapshot } from 'react-virtuoso';
 import dayjs from 'dayjs';
 
 import { EvCallHistory } from '../../services/EvCallHistory';
 import { DispositionView } from '../DispositionView';
 import { callDirection } from '../../../enums';
+import { ContactAvatar } from '../../components/ContactAvatar';
+import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
 import type { FormattedCall } from '../../services/EvCallHistory/EvCallHistory.interface';
 import type {
   CallHistoryViewOptions,
@@ -158,6 +160,13 @@ class CallHistoryView extends RcViewModule {
     const phoneNumber = isOutbound
       ? call.to?.phoneNumber
       : call.from?.phoneNumber;
+    const contactMatch = isOutbound ? call.toMatches?.[0] : call.fromMatches?.[0];
+    const contactMatchName = contactMatch?.name;
+    const contactMatchAvatarUrl = contactMatch?.profileImageUrl;
+    const resolvedName = contactMatchName || displayName;
+    const isRealName = !!resolvedName && resolvedName !== phoneNumber;
+    const formattedNumber = formatPhoneNumber({ phoneNumber: phoneNumber || '' });
+    const primaryText = resolvedName || formattedNumber || t('unknown');
     const startTime = useMemo(() => {
       if (!call.startTime) return '';
       const now = dayjs();
@@ -170,46 +179,60 @@ class CallHistoryView extends RcViewModule {
       }
       return callTime.format('MM/DD/YYYY');
     }, [call.startTime, t]);
+    const avatarName = isRealName ? resolvedName : undefined;
     const Avatar = useMemo(
       () =>
-        function CallAvatar({ size = 'small' }: { size?: 'small' | 'medium' | 'large' }) {
-          const IconSymbol = isOutbound ? OutgoingCallMd : IncomingCallMd;
+        function CallAvatar({ size = 'medium' }: { size?: 'small' | 'medium' | 'large' }) {
           return (
-            <SpringAvatar size={size} classes={{ content: 'bg-transparent text-neutral-b2' }}>
-              <IconSymbol />
-            </SpringAvatar>
+            <ContactAvatar
+              size={size}
+              contactName={avatarName}
+              phoneNumber={phoneNumber}
+              url={contactMatchAvatarUrl}
+            />
           );
         },
-      [isOutbound],
+      [avatarName, phoneNumber, contactMatchAvatarUrl],
     );
     const DisplayName = useMemo(
       () =>
         function CallDisplayName() {
-          return (
-            <span className="typography-subtitle truncate">
-              {displayName || phoneNumber || t('unknown')}
+          const content = (
+            <span className="typography-subtitle block w-full truncate">
+              {primaryText}
             </span>
           );
+          if (isRealName && phoneNumber) {
+            return (
+              <Tooltip title={formattedNumber}>
+                {content}
+              </Tooltip>
+            );
+          }
+          return content;
         },
-      [displayName, phoneNumber, t],
+      [primaryText, isRealName, phoneNumber, formattedNumber],
     );
     const Status = useMemo(() => {
+      const directionIcon = isOutbound ? OutgoingCallMd : IncomingCallMd;
       return function CallStatus({ mode }: { mode: 'icon' | 'text' }) {
         if (mode === 'icon') {
-          const IconSymbol = isOutbound ? OutgoingCallMd : IncomingCallMd;
           return (
-            <span className="inline-flex items-center text-neutral-b2">
-              <IconSymbol />
+            <span className="inline-flex items-center gap-1 text-neutral-b2 truncate">
+              <Icon symbol={directionIcon} size="xsmall" />
+              <span className="typography-descriptor truncate">
+                {isOutbound ? t('outbound') : t('inbound')}
+              </span>
             </span>
           );
         }
         return (
-          <span className="typography-descriptor text-neutral-b2">
+          <span className="typography-descriptor text-neutral-b2 truncate">
             {isOutbound ? t('outbound') : t('inbound')}
           </span>
         );
       };
-    }, [isOutbound, t]);
+    }, [isOutbound, t, isRealName, formattedNumber]);
     const logged = useMemo(() => {
       if (!call.isDisposed) return null;
       return (
@@ -240,12 +263,12 @@ class CallHistoryView extends RcViewModule {
         type: 'phoneNumber',
         metadata: { showMaybe: false },
       },
-      formattedPhoneNumber: phoneNumber,
+      formattedPhoneNumber: formattedNumber,
       showViewLogIcon: call.isDisposed,
       isConferenceCall: false,
       getActionInfo: () => ({
         phoneNumber,
-        name: displayName,
+        name: resolvedName || displayName,
       }),
       copyNumber: () => null,
     };

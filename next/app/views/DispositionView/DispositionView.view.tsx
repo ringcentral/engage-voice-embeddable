@@ -20,8 +20,8 @@ import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import { AppFooterNav, AppHeaderNav } from '@ringcentral-integration/micro-core/src/app/components';
 import { PageHeader } from '@ringcentral-integration/next-widgets/components';
 import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
-import { Button, IconButton, Icon } from '@ringcentral/spring-ui';
-import { CheckMd, CaretRightMd } from '@ringcentral/spring-icon';
+import { Button, Icon } from '@ringcentral/spring-ui';
+import { CheckMd } from '@ringcentral/spring-icon';
 
 import { EvPresence } from '../../services/EvPresence';
 import { EvCall } from '../../services/EvCall';
@@ -231,10 +231,6 @@ class DispositionView extends RcViewModule {
     return call.ani || '';
   }
 
-  goToCallDetailPage = () => {
-    this.router.push(`/history/${this.callId}/detail`);
-  };
-
   @delegate('server')
   async goBack() {
     if (this.isHistoryMode) {
@@ -361,7 +357,6 @@ class DispositionView extends RcViewModule {
     return {
       setViewCallId: (id: string) => this.setViewCallId(id),
       onBack: () => this.goBack(),
-      onCallInfoClick: () => this.goToCallDetailPage(),
       onUpdateCallLog: (field, value) => this.onUpdateCallLog(field, value),
       disposeCall: () => this.disposeCall(),
     };
@@ -435,17 +430,6 @@ class DispositionView extends RcViewModule {
           isRinging={!showCallEnded}
           followInfos={basicInfo?.followInfos}
           callInfos={basicInfo?.callInfos}
-          onClick={uiFunctions.onCallInfoClick}
-          actions={
-            <IconButton
-              symbol={CaretRightMd}
-              size="small"
-              variant="icon"
-              color="neutral"
-              onClick={uiFunctions.onCallInfoClick}
-              data-sign="viewCallDetailButton"
-            />
-          }
         />
 
         <div className="flex-1 flex flex-col overflow-hidden">

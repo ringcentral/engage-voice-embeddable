@@ -106,6 +106,7 @@ class CallHistoryDetailView extends RcViewModule {
       | undefined;
     const callMeta = {
       dnis: rawCall?.dnis,
+      queueName: rawCall?.queue?.name,
       callId: rawCall?.uii,
       termParty: endedCall?.termParty,
       termReason: endedCall?.termReason,

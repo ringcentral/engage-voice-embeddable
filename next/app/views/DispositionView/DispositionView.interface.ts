@@ -43,7 +43,6 @@ export interface DispositionViewUIProps {
 export interface DispositionViewUIFunctions {
   setViewCallId: (id: string) => void;
   onBack: () => void;
-  onCallInfoClick: () => void;
   onUpdateCallLog: (field: string, value: string) => void;
   disposeCall: () => Promise<void>;
 }

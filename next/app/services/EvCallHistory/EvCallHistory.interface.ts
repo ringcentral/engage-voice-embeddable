@@ -49,6 +49,7 @@ export interface ContactMatch {
   id: string;
   name: string;
   type: string;
+  profileImageUrl?: string;
 }
 
 /**

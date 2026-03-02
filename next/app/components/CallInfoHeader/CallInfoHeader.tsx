@@ -1,7 +1,7 @@
 import type { FunctionComponent } from 'react';
 import React from 'react';
 import clsx from 'clsx';
-import { Avatar, ListItem, ListItemText } from '@ringcentral/spring-ui';
+import { Avatar, ListItem, ListItemText, Tooltip } from '@ringcentral/spring-ui';
 import { IncomingCallMd, OutgoingCallMd } from '@ringcentral/spring-icon';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import type { CallInfoHeaderProps } from './CallInfoHeader.interface';
@@ -33,6 +33,7 @@ export const CallInfoHeader: FunctionComponent<CallInfoHeaderProps> = ({
   const { t } = useLocale(i18n);
   const DirectionIcon = isInbound ? IncomingCallMd : OutgoingCallMd;
   const filteredFollowInfos = followInfos?.filter(Boolean) ?? [];
+  const followInfoText = filteredFollowInfos.join(' | ');
   const primaryContent = subject ? (
     <span
       className="typography-subtitle text-neutral-b1 truncate"
@@ -44,13 +45,14 @@ export const CallInfoHeader: FunctionComponent<CallInfoHeaderProps> = ({
   ) : null;
   const secondaryContent =
     filteredFollowInfos.length > 0 ? (
-      <span
-        className="typography-descriptor text-neutral-b2 truncate"
-        data-sign="followInfo"
-        title={filteredFollowInfos.join(' | ')}
-      >
-        {filteredFollowInfos.join(' | ')}
-      </span>
+      <Tooltip title={followInfoText}>
+        <span
+          className="typography-descriptor text-neutral-b2 truncate"
+          data-sign="followInfo"
+        >
+          {followInfoText}
+        </span>
+      </Tooltip>
     ) : null;
   const statusBarColor = status ? statusBarColorMap[status] : undefined;
 

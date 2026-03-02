@@ -18,6 +18,7 @@ interface CallHistoryDetailViewProps {
  */
 interface CallDetailMeta {
   dnis?: string;
+  queueName?: string;
   callId?: string;
   termParty?: string;
   termReason?: string;

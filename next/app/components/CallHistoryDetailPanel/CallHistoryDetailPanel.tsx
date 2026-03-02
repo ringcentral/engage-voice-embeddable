@@ -76,13 +76,9 @@ export const CallHistoryDetailPanel: FunctionComponent<
   }
 
   const directionLabel = isInbound ? t('inbound') : t('outbound');
-  const followInfos: string[] = [];
-  if (phoneNumber) {
-    followInfos.push(phoneNumber);
-  }
-  followInfos.push(directionLabel);
-  if (callTimeText) {
-    followInfos.push(callTimeText.text);
+  const followInfos: string[] = phoneNumber ? [phoneNumber] : [];
+  if (callMeta.queueName) {
+    followInfos.push(callMeta.queueName);
   }
 
   return (
@@ -104,6 +100,29 @@ export const CallHistoryDetailPanel: FunctionComponent<
         />
         {/* Detail fields */}
         <div className="px-4 py-2">
+          <Block className="mb-2" data-sign="directionTimeBlock">
+            <BlockHeader>
+              <div className="w-full">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="typography-descriptorMini">{t('direction')}</span>
+                  <p className="text-neutral-b2 typography-mainText truncate">
+                    {directionLabel}
+                  </p>
+                </div>
+                {callTimeText?.text && (
+                  <div className="flex items-start justify-between gap-3 mt-2">
+                    <span className="typography-descriptorMini">{t('time')}</span>
+                    <p
+                      className="text-neutral-b2 typography-mainText truncate"
+                      title={callTimeText.title}
+                    >
+                      {callTimeText.text}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </BlockHeader>
+          </Block>
           {/* DNIS */}
           {callMeta.dnis && (
             <Block className="mb-2" data-sign="dnisBlock">
