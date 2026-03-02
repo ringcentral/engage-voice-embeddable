@@ -133,8 +133,13 @@ class DispositionView extends RcViewModule {
   }
 
   @action
-  setViewCallId(id: string) {
+  _setViewCallId(id: string) {
     this.viewCallId = id;
+  }
+
+  @delegate('server')
+  async setViewCallId(id: string) {
+    this._setViewCallId(id);
   }
 
   @action
@@ -234,7 +239,7 @@ class DispositionView extends RcViewModule {
   @delegate('server')
   async goBack() {
     if (this.isHistoryMode) {
-      this.setViewCallId('');
+      this._setViewCallId('');
       this.router.goBack();
       this.reset();
       return;
@@ -242,7 +247,7 @@ class DispositionView extends RcViewModule {
     const isEnded = this.callStatus === 'callEnd';
     if (isEnded) {
       this.evCall.setDialoutStatus(dialoutStatuses.idle);
-      this.setViewCallId('');
+      this._setViewCallId('');
       this.router.goBack();
       this.reset();
       this.evCall.setActivityCallId('');
@@ -252,7 +257,8 @@ class DispositionView extends RcViewModule {
     }
   }
 
-  onUpdateCallLog = (field: string, value: string) => {
+  @delegate('server')
+  async onUpdateCallLog(field: string, value: string) {
     const callId = this.callId;
     const currentData = this.evCallDisposition.getDisposition(callId) || { dispositionId: null, notes: '' };
     if (field === 'dispositionId') {
@@ -305,7 +311,8 @@ class DispositionView extends RcViewModule {
     }
   }
 
-  disposeCall = async () => {
+  @delegate('server')
+  async disposeCall() {
     if (this.saveStatus === SaveStatus.SAVED) {
       this.goBack();
       return;

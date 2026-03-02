@@ -5,14 +5,13 @@ import {
   optional,
   RcModule,
   state,
+  delegate,
   storage,
   StoragePlugin,
   PortManager,
   isSharedWorker,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
-
-import { tabManagerEvents } from '../../../enums';
 
 /**
  * EvTabManager options for configuration
@@ -38,9 +37,7 @@ export interface TabManagerEvent {
 })
 class TabManager extends RcModule {
   private _eventEmitter = new EventEmitter();
-  private _heartBeatInterval = 50000;
   private _heartBeatExpire = 70000;
-  private _lastHeartBeat = 0;
 
   constructor(
     @inject('Prefix') private prefix: string,
@@ -52,7 +49,7 @@ class TabManager extends RcModule {
     super();
     this.storagePlugin.enable(this);
     if (this.portManager?.shared) {
-      this.portManager.onServer(() => {
+      this.portManager.onClient(() => {
         this.initialize();
       });
     } else {
@@ -61,18 +58,31 @@ class TabManager extends RcModule {
   }
 
   initialize() {
-    this._startHeartBeat();
+    if (this.fromPopup) {
+      this.setPopupTabId(this.id);
+      window.addEventListener('pagehide', () => {
+        if (this.popupTabId === this.id) {
+          this.setPopupTabId('');
+        }
+      });
+    }
+  }
+
+  get id() {
+    return this.portManager?.clientId || '';
   }
 
   @state
-  isPopupWindowOpened = false;
+  popupTabId = '';
 
-  @storage
-  @state
-  event: TabManagerEvent | null = null;
+  @action
+  _setPopupTabId(tabId: string) {
+    this.popupTabId = tabId;
+  }
 
-  get enable(): boolean {
-    return true;
+  @delegate('server')
+  async setPopupTabId(tabId: string) {
+    this._setPopupTabId(tabId);
   }
 
   get fromPopup(): boolean {
@@ -85,96 +95,32 @@ class TabManager extends RcModule {
     return this._isFirstTab();
   }
 
+  get isPopupWindowOpened(): boolean {
+    return this.popupTabId !== '';
+  }
+
   get hasMultipleTabs(): boolean {
     // Check if multiple tabs are open
     return false; // Simplified implementation
-  }
-
-  @action
-  setIsPopupWindowOpened(opened: boolean) {
-    this.isPopupWindowOpened = opened;
-  }
-
-  @action
-  setEvent(event: TabManagerEvent | null) {
-    this.event = event;
   }
 
   /**
    * Send event to other tabs
    */
   send(eventName: string, data?: any): void {
-    const event = { name: eventName, data };
-    // Use BroadcastChannel or localStorage for cross-tab communication
-    try {
-      localStorage.setItem(`${this.prefix}-tab-event`, JSON.stringify({
-        ...event,
-        timestamp: Date.now(),
-      }));
-    } catch (e) {
-      console.warn('Failed to send tab event:', e);
-    }
+    this._sendEventToOtherTabs(this.id, eventName, data);
   }
 
-  override async onInit(): Promise<void> {
-    if (isSharedWorker) {
+  @delegate('clients')
+  async _sendEventToOtherTabs(currentId: string, eventName: string, data?: any): Promise<void> {
+    if (currentId === this.id) {
       return;
     }
-    if (this.fromPopup) {
-      this.setIsPopupWindowOpened(true);
-    } else {
-      await this._syncIsPopupWindowOpened();
-    }
-    this._listenForTabEvents();
-  }
-
-  private _startHeartBeat(): void {
-    setInterval(() => {
-      this._lastHeartBeat = Date.now();
-      try {
-        localStorage.setItem(`${this.prefix}-tab-heartbeat`, String(this._lastHeartBeat));
-      } catch (e) {
-        // ignore
-      }
-    }, this._heartBeatInterval);
+    this._eventEmitter.emit(eventName, data);
   }
 
   private _isFirstTab(): boolean {
-    try {
-      const lastHeartBeat = localStorage.getItem(`${this.prefix}-tab-heartbeat`);
-      if (!lastHeartBeat) return true;
-      const elapsed = Date.now() - parseInt(lastHeartBeat, 10);
-      return elapsed > this._heartBeatExpire;
-    } catch (e) {
-      return true;
-    }
-  }
-
-  private async _syncIsPopupWindowOpened(): Promise<void> {
-    // Check if popup window is opened
-    try {
-      const popupStatus = localStorage.getItem(`${this.prefix}-popup-opened`);
-      this.setIsPopupWindowOpened(popupStatus === 'true');
-    } catch (e) {
-      this.setIsPopupWindowOpened(false);
-    }
-  }
-
-  private _listenForTabEvents(): void {
-    if (typeof window === 'undefined') {
-      return;
-    }
-    window.addEventListener('storage', (event) => {
-      if (event.key === `${this.prefix}-tab-event` && event.newValue) {
-        try {
-          const data = JSON.parse(event.newValue);
-          this.setEvent(data);
-          this._eventEmitter.emit('tabEvent', data);
-        } catch (e) {
-          // ignore
-        }
-      }
-    });
+    return this.portManager?.isActiveTab || true;
   }
 
   onTabEvent(callback: (event: TabManagerEvent) => void): void {

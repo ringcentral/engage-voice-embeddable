@@ -255,9 +255,10 @@ class ThirdPartyService extends RcModule {
    * Log a call via parent window request/response.
    * Refreshes activity matches after successful logging.
    */
-  @delegate('mainClient')
+  @delegate('clients')
   async logCall(data: any): Promise<void> {
     if (!this.service.callLoggerEnabled) return;
+    if (!this.portManager?.isActiveTab) return;
     await this.transport.request({
       payload: {
         requestType: this.messageTypes.logCall,
@@ -275,9 +276,10 @@ class ThirdPartyService extends RcModule {
   /**
    * View a lead via parent window request/response
    */
-  @delegate('mainClient')
+  @delegate('clients')
   async viewLead(data: any): Promise<void> {
     if (!this.service.leadViewerEnabled) return;
+    if (!this.portManager?.isActiveTab) return;
     await this.transport.request({
       payload: {
         requestType: this.messageTypes.viewLead,

@@ -132,8 +132,13 @@ class ActiveCallView extends RcViewModule {
   }
 
   @action
-  setViewCallId(id: string) {
+  _setViewCallId(id: string) {
     this.viewCallId = id;
+  }
+
+  @delegate('server')
+  async setViewCallId(id: string) {
+    this._setViewCallId(id);
   }
 
   @action
@@ -407,7 +412,8 @@ class ActiveCallView extends RcViewModule {
 
   // Notes Actions
 
-  onUpdateNotes = (value: string) => {
+  @delegate('server')
+  async onUpdateNotes(value: string) {
     const callId = this.callId;
     const currentData = this.evCallDisposition.getDisposition(callId) || { dispositionId: null, notes: '' };
     const updatedData: EvCallDispositionData = {
@@ -436,7 +442,7 @@ class ActiveCallView extends RcViewModule {
   @delegate('server')
   async goBack() {
     this.evCall.setDialoutStatus(dialoutStatuses.idle);
-    this.setViewCallId('');
+    this._setViewCallId('');
     this.router.goBack();
     this.reset();
   }
