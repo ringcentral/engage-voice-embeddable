@@ -24,7 +24,7 @@ import type { StateSnapshot } from 'react-virtuoso';
 import dayjs from 'dayjs';
 
 import { EvCallHistory } from '../../services/EvCallHistory';
-import { ActivityCallView } from '../ActivityCallView';
+import { DispositionView } from '../DispositionView';
 import { callDirection } from '../../../enums';
 import type { FormattedCall } from '../../services/EvCallHistory/EvCallHistory.interface';
 import type {
@@ -44,7 +44,7 @@ import i18n from './i18n';
 class CallHistoryView extends RcViewModule {
   constructor(
     private evCallHistory: EvCallHistory,
-    private activityCallView: ActivityCallView,
+    private dispositionView: DispositionView,
     private _router: RouterPlugin,
     @optional('CallHistoryViewOptions')
     private callHistoryViewOptions?: CallHistoryViewOptions,
@@ -82,18 +82,18 @@ class CallHistoryView extends RcViewModule {
    */
   @computed((that: CallHistoryView) => [
     that.evCallHistory.latestCalls,
-    that.activityCallView.callStatus,
-    that.activityCallView.callId,
+    that.dispositionView.callStatus,
+    that.dispositionView.callId,
   ])
   get callsWithActivityUpdate(): FormattedCall[] {
     const calls = this.evCallHistory.latestCalls ?? [];
     if (calls.length === 0) return calls;
-    const { callStatus, callId } = this.activityCallView;
+    const { callStatus, callId } = this.dispositionView;
     if (callStatus === 'callEnd' && callId && calls[0]?.id === callId) {
-      const currentCall = this.activityCallView.currentCall;
+      const currentCall = this.dispositionView.currentCall;
       if (currentCall) {
         const firstCall = { ...calls[0] };
-        const contactName = this.activityCallView.getContactName(currentCall);
+        const contactName = this.dispositionView.getContactName(currentCall);
         if (contactName) {
           if (firstCall.direction === callDirection.outbound) {
             firstCall.toName = contactName;

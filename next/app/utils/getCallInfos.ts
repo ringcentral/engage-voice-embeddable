@@ -1,6 +1,6 @@
 import dayjs from 'dayjs';
 
-import type { CallInfoItem } from '../../components/CallInfoHeader';
+import type { CallInfoItem } from '../components/CallInfoHeader';
 
 interface CallInfoMapping {
   attr: string;
@@ -18,7 +18,6 @@ const CALL_INFO_MAP_LIST: CallInfoMapping[] = [
 
 /**
  * Extract call detail metadata from call data for display in call info panel.
- * Ported from src/modules/EvActivityCallUI/utils/getCallInfos.ts
  */
 export function getCallInfos(call: Record<string, any>): CallInfoItem[] {
   const endedCall = call.endedCall ?? {};

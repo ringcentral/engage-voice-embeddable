@@ -1,21 +1,21 @@
 import type { IvrAlertData } from '../../components/IvrAlertPanel';
-import type { DispositionItem, DispositionData, DispositionValidation, DispositionRequired } from '../../components/DispositionForm';
-import type { SaveStatus } from './ActivityCallView.view';
 
 /**
  * Basic call info with follow-up info
  */
-export interface BasicInfo {
+export interface BasicCallInfo {
   subject: string;
+  contactName?: string;
+  phoneNumber?: string;
+  avatarUrl?: string;
   followInfos: string[];
 }
 
 /**
  * Call control permission flags
  */
-export interface CallControlPermissions {
+export interface ActiveCallPermissions {
   allowTransferCall: boolean;
-  allowRequeueCall: boolean;
   allowHoldCall: boolean;
   allowHangupCall: boolean;
   allowRecordControl: boolean;
@@ -23,56 +23,44 @@ export interface CallControlPermissions {
 }
 
 /**
- * ActivityCallView external props
+ * ActiveCallView external props
  */
-export interface ActivityCallViewProps {
+export interface ActiveCallViewProps {
   // Currently no external props needed
 }
 
 /**
- * ActivityCallView UI state props (returned by getUIProps)
+ * ActiveCallView UI state props
  */
-export interface ActivityCallViewUIProps {
+export interface ActiveCallViewUIProps {
   activityCallId: string;
   currentCall: any;
-  contactName: string;
   isMuted: boolean;
   isOnHold: boolean;
   isRecording: boolean;
-  callStatus: 'active' | 'callEnd' | 'onHold';
-  saveStatus: SaveStatus;
   isKeypadOpen: boolean;
   keypadValue: string;
-  dispositionPickList: DispositionItem[];
   ivrAlertData: IvrAlertData[];
-  hasAgentScript: boolean;
-  callControlPermissions: CallControlPermissions;
-  validated: DispositionValidation;
-  required: DispositionRequired;
-  dispositionData: DispositionData | undefined;
+  callControlPermissions: ActiveCallPermissions;
   isIntegratedSoftphone: boolean;
   recordPauseCount: number | undefined;
   timeStamp: number | null;
-  basicInfo: BasicInfo | null;
+  basicInfo: BasicCallInfo | null;
   isMultipleCalls: boolean;
   isInComingCall: boolean;
-  showSubmitStep: boolean;
   allowTransfer: boolean;
-  hideCallNote: boolean;
   isDefaultRecord: boolean;
   isInbound: boolean;
-  isHistoryMode: boolean;
-  viewCallId: string;
+  notes: string;
 }
 
 /**
- * ActivityCallView UI action functions (returned by getUIFunctions)
+ * ActiveCallView UI action functions
  */
-export interface ActivityCallViewUIFunctions {
+export interface ActiveCallViewUIFunctions {
   setCallId: (id: string) => Promise<void>;
   setViewCallId: (id: string) => void;
   onBack: () => void;
-  onCallInfoClick: () => void;
   onMute: () => void;
   onUnmute: () => void;
   onHold: () => void;
@@ -85,11 +73,9 @@ export interface ActivityCallViewUIFunctions {
   onRestartTimer: () => Promise<void>;
   onActiveCall: () => void;
   onTransfer: () => void;
-  onCopySuccess: (name: string) => void;
+  onDisposition: () => void;
   setKeypadOpen: (isOpen: boolean) => void;
   handleKeypadChange: (value: string) => void;
   handleKeypadKeyPress: (digit: string) => void;
-  onUpdateCallLog: (field: string, value: string) => void;
-  disposeCall: () => Promise<void>;
-  openAgentScript: () => void;
+  onUpdateNotes: (value: string) => void;
 }

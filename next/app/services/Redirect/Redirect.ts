@@ -15,7 +15,7 @@ import { EvCallMonitor } from '../EvCallMonitor';
 import type { RedirectOptions } from './Redirect.interface';
 import { EvClient } from '../EvClient';
 import { EvCall } from '../EvCall';
-import { ActivityCallView } from '../../views/ActivityCallView';
+import { DispositionView } from '../../views/DispositionView';
 import { DialerView } from '../../views/DialerView';
 
 /**
@@ -40,7 +40,7 @@ class Redirect extends RcModule {
     protected _evCallMonitor: EvCallMonitor,
     protected _evCall: EvCall,
     protected _dialerView: DialerView,
-    protected _activityCallView: ActivityCallView,
+    protected _dispositionView: DispositionView,
     @optional('RedirectOptions')
     protected _options?: RedirectOptions,
   ) {
@@ -169,11 +169,11 @@ class Redirect extends RcModule {
     this._evCallMonitor.onCallEnded(async (call) => {
       this.logger.info('onCallEnded~~');
       this._redirectOnCallEnded();
-      if (!this._activityCallView.showSubmitStep) {
+      if (!this._dispositionView.showSubmitStep) {
         this._router.replace(this._dialerPath);
       } else {
         const id = this._evClient.encodeUii(call.session);
-        const path = `/activityCallLog/${id}`;
+        const path = `/activityCallLog/${id}/disposition`;
         if (this._router.currentPath !== path) {
           this._router.replace(path);
         }
@@ -183,8 +183,8 @@ class Redirect extends RcModule {
 
   /**
    * Handle routing when a call ends.
-   * If on a sub-path of /activityCallLog/{id}/..., redirect back to
-   * the parent activity call log page using replace to avoid
+   * If on a sub-path of /activityCallLog/{id}/... (e.g. transfer),
+   * redirect to the disposition page using replace to avoid
    * polluting the history stack.
    */
   private _redirectOnCallEnded(): void {
@@ -192,7 +192,7 @@ class Redirect extends RcModule {
     const match = this.currentPath.match(subPathRegex);
     if (match) {
       const id = match[1];
-      this._router.replace(`/activityCallLog/${id}`);
+      this._router.replace(`/activityCallLog/${id}/disposition`);
     }
   }
 

@@ -21,7 +21,8 @@ import { ContactAvatar } from './components/ContactAvatar';
 import { LoginView } from './views/LoginView';
 import { HeaderView } from './views/HeaderView';
 import { SessionConfigView } from './views/SessionConfigView';
-import { ActivityCallView } from './views/ActivityCallView';
+import { ActiveCallView } from './views/ActiveCallView';
+import { DispositionView } from './views/DispositionView';
 import { ManualDialSettingsView } from './views/ManualDialSettingsView';
 
 // New Views
@@ -99,14 +100,19 @@ class AppView extends RcViewModule {
       authentication: true,
     },
     {
+      path: '/activityCallLog/:id/disposition',
+      component: this._dispositionView.component,
+      authentication: true,
+    },
+    {
       path: '/activityCallLog/:id',
-      component: this._activityCallView.component,
+      component: this._activeCallView.component,
       authentication: true,
     },
     // History call log route (for creating/updating call log from history)
     {
       path: '/history/:id/callLog/:method',
-      component: this._activityCallView.component,
+      component: this._dispositionView.component,
       authentication: true,
     },
     // History detail route (for viewing read-only call details)
@@ -157,7 +163,8 @@ class AppView extends RcViewModule {
     // Core views
     private _sessionConfigView: SessionConfigView,
     private _agentView: AgentView,
-    private _activityCallView: ActivityCallView,
+    private _activeCallView: ActiveCallView,
+    private _dispositionView: DispositionView,
     private _manualDialSettingsView: ManualDialSettingsView,
     // New views
     private _chooseAccountView: ChooseAccountView,
@@ -207,7 +214,7 @@ class AppView extends RcViewModule {
           <div className="flex-none">
             <AppAnnouncementRender>
               <this._connectivityView.component />
-              <this._activityCallView.Announcement />
+              <this._activeCallView.Announcement />
               <this._workingStateSelectView.Announcement />
               {this._appViewOptions?.headers}
             </AppAnnouncementRender>
