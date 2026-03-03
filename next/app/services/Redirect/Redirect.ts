@@ -160,7 +160,7 @@ class Redirect extends RcModule {
       }
     });
     this._evCallMonitor.onCallAnswered(async (call) => {
-      this.logger.info('onCallAnswered~~', call);
+      this.logger.info('onCallAnswered~~');
       if (!call?.session) return;
       const id = this._evClient.encodeUii(call.session);
       this._evCall.setActivityCallId(id);
