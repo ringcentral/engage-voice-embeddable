@@ -1,5 +1,6 @@
 export default {
   noActiveCall: 'No active call',
+  pendingDisposition: 'Pending Disposition',
 
   // Page titles
   callLog: 'Call log',
@@ -9,6 +10,10 @@ export default {
 
   // Form
   pleaseSelect: 'Please select',
+  summary: 'Summary',
+  summaryEdited: 'Summary (edited)',
+  summaryPlaceholder: 'Summary will be generated here...',
+  summaryLoading: 'Generating call summary...',
   notes: 'Notes',
   enterNotes: 'Enter notes...',
 

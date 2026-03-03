@@ -32,9 +32,16 @@ export interface DispositionViewUIProps {
   dispositionData: DispositionData | undefined;
   basicInfo: DispositionBasicInfo | null;
   isInbound: boolean;
+  isDisposed: boolean;
   isHistoryMode: boolean;
   showSubmitStep: boolean;
   hideCallNote: boolean;
+  showSummary: boolean;
+  segmentId: string;
+  summary: string;
+  isSummaryFinal: boolean;
+  isSummaryLoading: boolean;
+  isSummaryEdited: boolean;
 }
 
 /**
@@ -44,5 +51,6 @@ export interface DispositionViewUIFunctions {
   setViewCallId: (id: string) => void;
   onBack: () => void;
   onUpdateCallLog: (field: string, value: string) => void;
+  onUpdateSummary: (value: string) => void;
   disposeCall: () => Promise<void>;
 }

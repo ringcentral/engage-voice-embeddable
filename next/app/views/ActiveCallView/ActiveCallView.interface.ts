@@ -48,6 +48,7 @@ export interface ActiveCallViewUIProps {
   basicInfo: BasicCallInfo | null;
   isMultipleCalls: boolean;
   isInComingCall: boolean;
+  isCallDisposed: boolean;
   allowTransfer: boolean;
   isDefaultRecord: boolean;
   isInbound: boolean;

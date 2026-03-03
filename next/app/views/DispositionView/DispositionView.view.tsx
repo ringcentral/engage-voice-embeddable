@@ -1,6 +1,7 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   action,
+  autobind,
   computed,
   injectable,
   optional,
@@ -17,10 +18,10 @@ import {
   type UIFunctions,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
-import { AppFooterNav, AppHeaderNav } from '@ringcentral-integration/micro-core/src/app/components';
+import { AppAnnouncement, AppFooterNav, AppHeaderNav } from '@ringcentral-integration/micro-core/src/app/components';
 import { PageHeader } from '@ringcentral-integration/next-widgets/components';
 import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
-import { Button, Icon } from '@ringcentral/spring-ui';
+import { Announcement, Button, Icon } from '@ringcentral/spring-ui';
 import { CheckMd } from '@ringcentral/spring-icon';
 
 import { EvPresence } from '../../services/EvPresence';
@@ -31,9 +32,13 @@ import { EvWorkingState } from '../../services/EvWorkingState';
 import { EvAgentScript } from '../../services/EvAgentScript';
 import { EvActiveCallControl } from '../../services/EvActiveCallControl';
 import { ThirdPartyService } from '../../services/ThirdPartyService';
+import { EvClient } from '../../services/EvClient';
 import { dialoutStatuses } from '../../../enums';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
-import type { EvCallDispositionData } from '../../services/EvCallDisposition/EvCallDisposition.interface';
+import { getClockByTimestamp } from '../../../lib/getClockByTimestamp';
+import type {
+  EvCallDispositionData,
+} from '../../services/EvCallDisposition/EvCallDisposition.interface';
 
 import { CallInfoHeader } from '../../components/CallInfoHeader';
 import { DispositionForm } from '../../components/DispositionForm';
@@ -77,6 +82,8 @@ interface DispositionItem {
   name: 'DispositionView',
 })
 class DispositionView extends RcViewModule {
+  private readonly dialerPath = '/agent/dialer';
+
   constructor(
     private evPresence: EvPresence,
     private evCall: EvCall,
@@ -86,6 +93,7 @@ class DispositionView extends RcViewModule {
     private evAgentScript: EvAgentScript,
     private evActiveCallControl: EvActiveCallControl,
     private thirdPartyService: ThirdPartyService,
+    private evClient: EvClient,
     private router: RouterPlugin,
     private toast: Toast,
     private storagePlugin: StoragePlugin,
@@ -157,6 +165,10 @@ class DispositionView extends RcViewModule {
     return this.viewCallId || this.evCall.activityCallId;
   }
 
+  get hasCurrentCall(): boolean {
+    return !!this.currentCall;
+  }
+
   get currentCall() {
     const id = this.callId;
     if (!id) return null;
@@ -224,7 +236,28 @@ class DispositionView extends RcViewModule {
   }
 
   get isInbound(): boolean {
-    return this.evCall.isInbound;
+    return this.currentCall?.callType === 'INBOUND';
+  }
+
+  get showSummary(): boolean {
+    return this.isSummaryEnabled(this.currentCall);
+  }
+
+  private getSummarySegmentId(call?: {
+    session?: { segmentId?: string };
+    segmentContext?: { segmentId?: string };
+  } | null): string {
+    if (!call) {
+      return '';
+    }
+    return call.session?.segmentId || call.segmentContext?.segmentId || '';
+  }
+
+  private isSummaryEnabled(call?: { session?: { summary?: boolean } } | null): boolean {
+    if (!call) {
+      return false;
+    }
+    return !!call.session?.summary;
   }
 
   getContactName(call: any): string {
@@ -244,11 +277,11 @@ class DispositionView extends RcViewModule {
       this.reset();
       return;
     }
-    const isEnded = this.callStatus === 'callEnd';
+    const isEnded = this.callStatus === 'callEnd' || !this.hasCurrentCall;
     if (isEnded) {
       this.evCall.setDialoutStatus(dialoutStatuses.idle);
       this._setViewCallId('');
-      this.router.goBack();
+      this.router.replace(this.dialerPath);
       this.reset();
       this.evCall.setActivityCallId('');
     } else {
@@ -260,7 +293,11 @@ class DispositionView extends RcViewModule {
   @delegate('server')
   async onUpdateCallLog(field: string, value: string) {
     const callId = this.callId;
-    const currentData = this.evCallDisposition.getDisposition(callId) || { dispositionId: null, notes: '' };
+    const currentData = this.evCallDisposition.getDisposition(callId) || {
+      dispositionId: null,
+      notes: '',
+      summary: '',
+    };
     if (field === 'dispositionId') {
       const currentDisposition = this.dispositionPickList.find(
         (item) => item.dispositionId === value,
@@ -280,10 +317,104 @@ class DispositionView extends RcViewModule {
     const updatedData: EvCallDispositionData = {
       dispositionId: currentData.dispositionId,
       notes: currentData.notes,
+      summary: currentData.summary,
       [field]: value,
     };
     this.evCallDisposition.setDisposition(callId, updatedData);
   };
+
+  @delegate('server')
+  async onUpdateSummary(value: string) {
+    this.evCallDisposition.setSummary(this.callId, value);
+  }
+
+  @delegate('server')
+  async requestConversationSummary(callId: string, callStatus: 'active' | 'callEnd') {
+    const call = this.evPresence.callsMapping[callId];
+    this.logger.info('requestConversationSummary~~', callId, callStatus);
+    if (!this.isSummaryEnabled(call)) {
+      this.logger.info('requestConversationSummary~~ not enabled', callId, callStatus);
+      return;
+    }
+    const segmentId = this.getSummarySegmentId(call);
+    const sessionId = call.session?.sessionId;
+    if (!segmentId || !sessionId) {
+      return;
+    }
+    const summaryState = this.evCallDisposition.getSummaryState(callId);
+    if (summaryState) {
+      if (!summaryState.isFinal) {
+        this.logger.info('requestConversationSummary~~ not final', callId, callStatus);
+        return;
+      }
+      // if the summary is edited after the final, we don't need to request again
+      if (summaryState.isEditedAfterFinal) {
+        this.logger.info('requestConversationSummary~~ not edited after final', callId, callStatus);
+        return;
+      }
+    }
+    this.logger.info('requestConversationSummary~~ start request', callId, callStatus);
+    const uii = this.evClient.decodeUii(call.uii);
+    this.evCallDisposition.startSummaryRequest(callId, segmentId);
+    try {
+      await this.evClient.requestCallSummary(uii, sessionId, segmentId);
+    } catch (error) {
+      this.evCallDisposition.setSummaryRequestError(callId, segmentId);
+      this.logger.error('requestConversationSummary failed', error);
+    }
+  }
+
+  @delegate('server')
+  async goToPendingDisposition() {
+    const callId = this.evWorkingState.pendingDispositionCallId || this.evCall.activityCallId;
+    if (!callId) {
+      return;
+    }
+    this.router.push(`/activityCallLog/${callId}/disposition`);
+  }
+
+  /**
+   * Announcement banner shown when agent is in Pending Disposition state.
+   * Renders in AppView's AppAnnouncementRender area.
+   */
+  @autobind
+  Announcement() {
+    const { t } = useLocale(i18n);
+    const { isPendingDisposition, time } = useConnector(() => ({
+      isPendingDisposition: this.evWorkingState.isPendingDisposition,
+      time: this.evWorkingState.time,
+    }));
+    const [intervalTime, setIntervalTime] = useState(() => Date.now() - time);
+    useEffect(() => {
+      if (!isPendingDisposition) return;
+      const updateTimer = () => {
+        setIntervalTime(Date.now() - time);
+      };
+      updateTimer();
+      const timerId = setInterval(updateTimer, 1000);
+      return () => clearInterval(timerId);
+    }, [isPendingDisposition, time]);
+    if (!isPendingDisposition) {
+      return null;
+    }
+    const timerText = getClockByTimestamp(intervalTime);
+    return (
+      <AppAnnouncement>
+        <Announcement
+          severity="neutral"
+          className="rounded-none cursor-pointer"
+          classes={{ body: 'gap-2' }}
+          data-sign="pendingDispositionAnnouncement"
+          onClick={() => this.goToPendingDisposition()}
+          action={
+            <span className="typography-subtitleMini">{timerText}</span>
+          }
+        >
+          {t('pendingDisposition')}
+        </Announcement>
+      </AppAnnouncement>
+    );
+  }
 
   private async doDisposeCall() {
     try {
@@ -293,8 +424,8 @@ class DispositionView extends RcViewModule {
           call: {
             id: call.uii,
             direction: call.callType,
-            from: { phoneNumber: call.callType === 'OUTBOUND' ? call.dnis : call.ani },
-            to: { phoneNumber: call.callType === 'OUTBOUND' ? call.ani : call.dnis },
+            from: { phoneNumber: call.ani },
+            to: { phoneNumber: call.dnis },
           },
           task: this.evCallDisposition.getDisposition(this.callId),
           sessionId: this.callId,
@@ -303,7 +434,7 @@ class DispositionView extends RcViewModule {
     } catch (e) {
       console.error(e);
     }
-    this.evCallDisposition.disposeCall(this.callId);
+    await this.evCallDisposition.disposeCall(this.callId);
     const call = this.currentCall;
     if (call?.scriptId) {
       this.evAgentScript.setCurrentCallScript(null);
@@ -325,13 +456,24 @@ class DispositionView extends RcViewModule {
     if (!this.validated.dispositionId || !this.validated.notes) {
       return;
     }
+    const shouldGoToDialerAfterSubmit = this.callStatus === 'callEnd' || !this.hasCurrentCall;
     try {
       this.setSaveStatus(SaveStatus.SAVING);
       await this.doDisposeCall();
       this.setSaveStatus(SaveStatus.SAVED);
       this.toast.success({ message: translate('callDispositionSuccess') });
       await this.evWorkingState.setIsPendingDisposition(false);
-      setTimeout(() => this.goBack(), 1000);
+      setTimeout(() => {
+        if (shouldGoToDialerAfterSubmit) {
+          this.evCall.setDialoutStatus(dialoutStatuses.idle);
+          this._setViewCallId('');
+          this.router.replace(this.dialerPath);
+          this.reset();
+          this.evCall.setActivityCallId('');
+          return;
+        }
+        this.goBack();
+      }, 1000);
     } catch (e) {
       console.error(e);
       this.setSaveStatus(SaveStatus.SUBMIT);
@@ -344,6 +486,8 @@ class DispositionView extends RcViewModule {
 
   getUIProps(): UIProps<DispositionViewUIProps> {
     const callId = this.callId;
+    const summaryState = this.evCallDisposition.getSummaryState(callId);
+    const segmentId = this.getSummarySegmentId(this.currentCall);
     return {
       currentCall: this.currentCall,
       callStatus: this.callStatus,
@@ -354,9 +498,16 @@ class DispositionView extends RcViewModule {
       dispositionData: this.evCallDisposition.getDisposition(callId),
       basicInfo: this.basicInfo,
       isInbound: this.isInbound,
+      isDisposed: this.evCallDisposition.isDisposed(callId),
       isHistoryMode: this.isHistoryMode,
       showSubmitStep: this.showSubmitStep,
       hideCallNote: this.dispositionViewOptions?.hideCallNote ?? false,
+      showSummary: this.showSummary,
+      segmentId,
+      summary: this.evCallDisposition.getDisposition(callId)?.summary || '',
+      isSummaryFinal: summaryState?.isFinal || false,
+      isSummaryLoading: summaryState?.isLoading || false,
+      isSummaryEdited: summaryState?.isEditedAfterFinal || false,
     };
   }
 
@@ -365,6 +516,7 @@ class DispositionView extends RcViewModule {
       setViewCallId: (id: string) => this.setViewCallId(id),
       onBack: () => this.goBack(),
       onUpdateCallLog: (field, value) => this.onUpdateCallLog(field, value),
+      onUpdateSummary: (value) => this.onUpdateSummary(value),
       disposeCall: () => this.disposeCall(),
     };
   }
@@ -386,9 +538,16 @@ class DispositionView extends RcViewModule {
       dispositionData,
       basicInfo,
       isInbound,
+      isDisposed,
       isHistoryMode,
       showSubmitStep,
       hideCallNote,
+      showSummary,
+      segmentId,
+      summary,
+      isSummaryFinal,
+      isSummaryLoading,
+      isSummaryEdited,
     } = uiProps;
 
     useEffect(() => {
@@ -400,6 +559,19 @@ class DispositionView extends RcViewModule {
     useEffect(() => {
       this.reset();
     }, [params.id]);
+
+    useEffect(() => {
+      const callId = params.id || this.callId;
+      const canRequestSummary = !!callId &&
+        !isHistoryMode &&
+        showSummary &&
+        !!segmentId &&
+        (callStatus === 'active' || this.evWorkingState.isPendingDisposition);
+      if (!canRequestSummary) {
+        return;
+      }
+      void this.requestConversationSummary(callId, callStatus);
+    }, [params.id, callStatus, showSummary, segmentId, isHistoryMode]);
 
     const showCallEnded = callStatus === 'callEnd';
     const pageTitle = isHistoryMode
@@ -448,13 +620,22 @@ class DispositionView extends RcViewModule {
                 validated={validated}
                 required={required}
                 hideCallNote={hideCallNote}
+                showSummary={showSummary}
+                summary={summary}
+                isSummaryFinal={isSummaryFinal}
+                isSummaryLoading={isSummaryLoading}
+                disableDispositionSelect={isDisposed}
                 onFieldChange={uiFunctions.onUpdateCallLog}
+                onSummaryChange={uiFunctions.onUpdateSummary}
                 selectPlaceholder={t('pleaseSelect')}
                 dispositionErrorText={t('dispositionError')}
                 notesErrorText={t('notesRequired')}
                 dispositionLabel={t('disposition')}
                 notesLabel={t('notes')}
                 notesPlaceholder={t('enterNotes')}
+                summaryLabel={isSummaryEdited ? t('summaryEdited') : t('summary')}
+                summaryPlaceholder={t('summaryPlaceholder')}
+                summaryLoadingText={t('summaryLoading')}
               />
             </div>
           ) : (

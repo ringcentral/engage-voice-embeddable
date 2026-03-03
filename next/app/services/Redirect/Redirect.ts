@@ -15,6 +15,7 @@ import { EvCallMonitor } from '../EvCallMonitor';
 import type { RedirectOptions } from './Redirect.interface';
 import { EvClient } from '../EvClient';
 import { EvCall } from '../EvCall';
+import { EvCallDisposition } from '../EvCallDisposition';
 import { DispositionView } from '../../views/DispositionView';
 import { DialerView } from '../../views/DialerView';
 
@@ -39,6 +40,7 @@ class Redirect extends RcModule {
     protected _evClient: EvClient,
     protected _evCallMonitor: EvCallMonitor,
     protected _evCall: EvCall,
+    protected _evCallDisposition: EvCallDisposition,
     protected _dialerView: DialerView,
     protected _dispositionView: DispositionView,
     @optional('RedirectOptions')
@@ -168,11 +170,19 @@ class Redirect extends RcModule {
     });
     this._evCallMonitor.onCallEnded(async (call) => {
       this.logger.info('onCallEnded~~');
+      if (!call?.session) {
+        this._router.replace(this._dialerPath);
+        return;
+      }
+      const id = this._evClient.encodeUii(call.session);
+      if (this._evCallDisposition.isDisposed(id)) {
+        this._router.replace(this._dialerPath);
+        return;
+      }
       this._redirectOnCallEnded();
       if (!this._dispositionView.showSubmitStep) {
         this._router.replace(this._dialerPath);
       } else {
-        const id = this._evClient.encodeUii(call.session);
         const path = `/activityCallLog/${id}/disposition`;
         if (this._router.currentPath !== path) {
           this._router.replace(path);

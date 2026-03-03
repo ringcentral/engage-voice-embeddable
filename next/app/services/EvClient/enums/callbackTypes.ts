@@ -69,6 +69,8 @@ export const EvCallbackTypes = {
   STATS_CAMPAIGN: 'campaignStats',
   STATS_CHAT_QUEUE: 'chatQueueStats',
   STATS_QUEUE: 'queueStats',
+  SUMMARY: 'dispositionSummary',
+  SUMMARY_ERROR: 'dispositionSummaryError',
   SUPERVISOR_LIST: 'supervisorListResponse',
   TCPA_SAFE_LEAD_STATE: 'tcpaSafeLeadStateNotification',
   WEBRTC_INFO: 'webRtcInfoResponse',

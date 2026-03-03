@@ -4,6 +4,8 @@ import type {
   EvAgentConfig,
   EvAgentStateResponse,
   EvBaseCall,
+  EvDispositionSummaryErrorResponse,
+  EvDispositionSummaryPhaseResponse,
   EvDirectAgentTransferResponse,
   EvDropSessionNotification,
   EvEndedCall,
@@ -97,6 +99,8 @@ export interface EvClientCallMapping {
   campaignStats: any;
   chatQueueStats: any;
   queueStats: any;
+  dispositionSummary: EvDispositionSummaryPhaseResponse;
+  dispositionSummaryError: EvDispositionSummaryErrorResponse;
   supervisorListResponse: any;
   tcpaSafeLeadStateNotification: { leadState: any };
   webRtcInfoResponse: any;

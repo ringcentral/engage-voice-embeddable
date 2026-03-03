@@ -11,6 +11,7 @@ export interface EvCallDispositionOptions {
 export interface EvCallDispositionData {
   dispositionId: string | null;
   notes: string;
+  summary: string;
 }
 
 /**
@@ -32,4 +33,17 @@ export interface EvDispositionState {
  */
 export interface EvDispositionStateMapping {
   [callId: string]: EvDispositionState;
+}
+
+export interface EvCallSummaryState {
+  segmentId: string;
+  orderedPhases: Record<number, string>;
+  summary: string;
+  isFinal: boolean;
+  isLoading: boolean;
+  isEditedAfterFinal: boolean;
+}
+
+export interface EvCallSummaryStateMapping {
+  [callId: string]: EvCallSummaryState;
 }

@@ -18,13 +18,22 @@ export const DispositionForm: FunctionComponent<DispositionFormProps> = ({
   validated,
   required,
   hideCallNote = false,
+  showSummary = false,
+  summary = '',
+  isSummaryFinal = false,
+  isSummaryLoading = false,
+  disableDispositionSelect = false,
   onFieldChange,
+  onSummaryChange,
   selectPlaceholder = 'Please select',
   dispositionErrorText = 'Please choose a disposition before submitting.',
   notesErrorText = 'Notes are required for this disposition.',
   dispositionLabel = 'Disposition',
   notesLabel = 'Notes',
   notesPlaceholder = 'Enter notes...',
+  summaryLabel = 'Summary',
+  summaryPlaceholder = 'Summary will be generated here...',
+  summaryLoadingText = 'Generating call summary...',
   className,
   'data-sign': dataSign = 'dispositionForm',
 }) => {
@@ -59,6 +68,7 @@ export const DispositionForm: FunctionComponent<DispositionFormProps> = ({
             value={selectedValue}
             placeholder={selectPlaceholder}
             onChange={handleDispositionChange}
+            disabled={disableDispositionSelect}
             error={!validated.dispositionId}
             helperText={!validated.dispositionId ? dispositionErrorText : undefined}
             required
@@ -75,6 +85,27 @@ export const DispositionForm: FunctionComponent<DispositionFormProps> = ({
               </Option>
             ))}
           </Select>
+        </div>
+      )}
+      {showSummary && (
+        <div data-sign="summaryField">
+          <Textarea
+            label={summaryLabel}
+            value={summary}
+            onChange={(event) => {
+              if (!isSummaryFinal || !onSummaryChange) {
+                return;
+              }
+              onSummaryChange((event.target as HTMLTextAreaElement).value);
+            }}
+            placeholder={summaryPlaceholder}
+            disabled={isSummaryLoading || !isSummaryFinal}
+            helperText={isSummaryLoading ? summaryLoadingText : undefined}
+            maxLength={32000}
+            fullWidth
+            rows={3}
+            data-sign="summaryTextarea"
+          />
         </div>
       )}
       {/* Notes Textarea */}

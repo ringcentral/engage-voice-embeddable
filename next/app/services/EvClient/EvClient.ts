@@ -968,6 +968,11 @@ class EvClient extends RcModule {
       });
     });
   }
+
+  @delegate('mainClient')
+  async requestCallSummary(uii: string, sessionId: string, segmentId: string) {
+    this._sdk.requestCallSummary(uii, sessionId, segmentId);
+  }
 }
 
 export { EvClient };

@@ -39,6 +39,7 @@ import { track } from '../Analytics/track';
 import { trackEvents } from '../../../lib/trackEvents';
 
 const DEFAULT_COUNTRIES = ['USA', 'CAN'];
+const AGENT_CONFIG_TIMEOUT_MS = 10 * 1000;
 
 /**
  * EvAuth module - Authentication and agent login management
@@ -445,8 +446,29 @@ class EvAuth extends RcModule {
       retryOpenSocket,
     );
     try {
-      const getAgentConfig = new Promise<EvAgentConfig>((resolve) => {
-        this._eventEmitter.once(EvCallbackTypes.LOGIN_PHASE_1, resolve);
+      const getAgentConfig = new Promise<EvAgentConfig>((resolve, reject) => {
+        let isSettled = false;
+        const handleLoginPhase1 = (agentConfig: EvAgentConfig) => {
+          if (isSettled) {
+            return;
+          }
+          isSettled = true;
+          clearTimeout(timerId);
+          resolve(agentConfig);
+        };
+        const timerId = setTimeout(() => {
+          if (isSettled) {
+            return;
+          }
+          isSettled = true;
+          this._eventEmitter.off(EvCallbackTypes.LOGIN_PHASE_1, handleLoginPhase1);
+          reject(
+            new EvTypeError({
+              type: messageTypes.CONNECT_TIMEOUT,
+            }),
+          );
+        }, AGENT_CONFIG_TIMEOUT_MS);
+        this._eventEmitter.once(EvCallbackTypes.LOGIN_PHASE_1, handleLoginPhase1);
       });
       const selectedAgentId = this.agentId;
       if (!selectedAgentId) {

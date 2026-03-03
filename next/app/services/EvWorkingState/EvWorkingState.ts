@@ -26,6 +26,7 @@ import { EvSubscription } from '../EvSubscription';
 import { EvCallMonitor } from '../EvCallMonitor';
 import { EvPresence } from '../EvPresence';
 import { EvAgentSession } from '../EvAgentSession';
+import { EvCallDisposition } from '../EvCallDisposition';
 import type {
   EvWorkingStateOptions,
   AgentState,
@@ -57,6 +58,7 @@ class EvWorkingState extends RcModule {
     private evCallMonitor: EvCallMonitor,
     private evPresence: EvPresence,
     private evAgentSession: EvAgentSession,
+    private evCallDisposition: EvCallDisposition,
     private toast: Toast,
     private storagePlugin: StoragePlugin,
     private portManager: PortManager,
@@ -202,9 +204,19 @@ class EvWorkingState extends RcModule {
       this._handleTriggerConfig();
     });
     this.evCallMonitor.onCallEnded((call) => {
+      const encodedCallId = call?.session ? this.evClient.encodeUii(call.session) : '';
+      const mainCallId = call?.uii
+        ? this.evClient.getMainId(this.evClient.decodeUii(call.uii))
+        : '';
+      const isDisposed = this.evCallDisposition.isDisposed(encodedCallId) ||
+        this.evCallDisposition.isDisposed(mainCallId);
+      if (isDisposed) {
+        this.logger.info('onCallEnded~~ already disposed, skip pending disposition');
+        this.setIsPendingDisposition(false);
+        return;
+      }
       this.logger.info('onCallEnded~~ setIsPendingDisposition(true)');
-      const callId = call ? this.evClient.getMainId(call.uii) : '';
-      this.setIsPendingDisposition(true, callId);
+      this.setIsPendingDisposition(true, encodedCallId || mainCallId);
     });
     this.evSubscription.subscribe(
       EvCallbackTypes.AGENT_STATE,

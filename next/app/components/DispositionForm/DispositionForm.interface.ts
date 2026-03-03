@@ -52,8 +52,20 @@ export interface DispositionFormProps {
   required: DispositionRequired;
   /** Whether to hide the call notes field */
   hideCallNote?: boolean;
+  /** Whether to show the summary textarea */
+  showSummary?: boolean;
+  /** Summary text value */
+  summary?: string;
+  /** Whether summary streaming is final and editable */
+  isSummaryFinal?: boolean;
+  /** Whether summary streaming is still loading */
+  isSummaryLoading?: boolean;
+  /** Disable disposition select when already submitted */
+  disableDispositionSelect?: boolean;
   /** Called when a form field changes */
   onFieldChange: (field: string, value: string) => void;
+  /** Called when summary content changes */
+  onSummaryChange?: (value: string) => void;
   /** Placeholder text for the disposition select */
   selectPlaceholder?: string;
   /** Error text for disposition validation */
@@ -66,6 +78,12 @@ export interface DispositionFormProps {
   notesLabel?: string;
   /** Placeholder for the notes field */
   notesPlaceholder?: string;
+  /** Label for the summary field */
+  summaryLabel?: string;
+  /** Placeholder for the summary field */
+  summaryPlaceholder?: string;
+  /** Loading text for summary generation */
+  summaryLoadingText?: string;
   /** Custom class name */
   className?: string;
   /** Data sign for testing */

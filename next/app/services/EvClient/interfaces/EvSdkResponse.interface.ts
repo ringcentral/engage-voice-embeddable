@@ -45,10 +45,31 @@ export type EvBaseCall = {
   transferPhoneBook: EvTransferPhoneBookItem[];
   // Dynamic properties set during call lifecycle
   hold?: boolean;
+  segmentContext: {
+    segmentId: string;
+    agentContext: {
+      knowledgeBaseId: string;
+      perspectiveRecordingMode: string;
+    },
+    customerIdentity: {
+      id: string;
+      ani: string;
+      aniE164: string;
+    },
+    dialog: {
+      channelId: string;
+      channelType: string;
+      dialogDirection: string;
+      dialogId: string;
+    }
+  },
   session?: {
     sessionId: string;
     uii?: string;
     recordingUrl?: string;
+    summary: boolean;
+    segmentId: string;
+    dialogId: string;
   };
   endedCall?: boolean;
 };
@@ -555,6 +576,26 @@ export interface EvDispositionCallOptions {
   externId?: string;
   leadId?: string;
   requestId?: string;
+}
+
+export interface EvDispositionSummaryPhaseResponse {
+  final: boolean;
+  type: 'SUMMARY';
+  status: 'OK'
+  summary: string; // summary phase string
+  segmentId: number;
+  sequenceNo: string;
+}
+
+export interface EvDispositionSummaryErrorResponse {
+  uii: string;
+  requestMessageId: string;
+  status: 'ERROR';
+  detail: string;
+  segmentId: string;
+  sessionId: string;
+  errorCode: string;
+  errorMessage: string;
 }
 
 export interface EvLogoutAgentResponse {

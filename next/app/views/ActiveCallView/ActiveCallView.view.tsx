@@ -415,10 +415,15 @@ class ActiveCallView extends RcViewModule {
   @delegate('server')
   async onUpdateNotes(value: string) {
     const callId = this.callId;
-    const currentData = this.evCallDisposition.getDisposition(callId) || { dispositionId: null, notes: '' };
+    const currentData = this.evCallDisposition.getDisposition(callId) || {
+      dispositionId: null,
+      notes: '',
+      summary: '',
+    };
     const updatedData: EvCallDispositionData = {
       dispositionId: currentData.dispositionId,
       notes: value,
+      summary: currentData.summary,
     };
     this.evCallDisposition.setDisposition(callId, updatedData);
   };
@@ -480,6 +485,7 @@ class ActiveCallView extends RcViewModule {
     isRecording,
     isDefaultRecord,
     isInComingCall,
+    isCallDisposed,
     callControlPermissions,
     isIntegratedSoftphone,
     allowTransfer,
@@ -495,6 +501,7 @@ class ActiveCallView extends RcViewModule {
     isRecording: boolean;
     isDefaultRecord: boolean;
     isInComingCall: boolean;
+    isCallDisposed: boolean;
     callControlPermissions: ActiveCallViewUIProps['callControlPermissions'];
     isIntegratedSoftphone: boolean;
     allowTransfer: boolean;
@@ -554,7 +561,7 @@ class ActiveCallView extends RcViewModule {
         symbol: DispositionMd,
         label: t('disposition'),
         onClick: uiFunctions.onDisposition,
-        disabled: isInComingCall,
+        disabled: isInComingCall || isCallDisposed,
       },
     ];
     return actions;
@@ -564,6 +571,7 @@ class ActiveCallView extends RcViewModule {
     const call = this.currentCall;
     const callId = this.callId;
     const dispositionData = this.evCallDisposition.getDisposition(callId);
+    const isCallDisposed = this.evCallDisposition.isDisposed(callId);
     return {
       activityCallId: this.evCall.activityCallId,
       currentCall: call,
@@ -580,6 +588,7 @@ class ActiveCallView extends RcViewModule {
       basicInfo: this.basicInfo,
       isMultipleCalls: this.isMultipleCalls,
       isInComingCall: this.isInComingCall,
+      isCallDisposed,
       allowTransfer: this.allowTransfer,
       isDefaultRecord: this.isDefaultRecord,
       isInbound: this.isInbound,
@@ -694,6 +703,7 @@ class ActiveCallView extends RcViewModule {
       basicInfo,
       isMultipleCalls,
       isInComingCall,
+      isCallDisposed,
       allowTransfer,
       isDefaultRecord,
       isInbound,
@@ -810,6 +820,7 @@ class ActiveCallView extends RcViewModule {
       isRecording,
       isDefaultRecord,
       isInComingCall,
+      isCallDisposed,
       callControlPermissions,
       isIntegratedSoftphone,
       allowTransfer,
