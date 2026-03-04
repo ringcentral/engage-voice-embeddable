@@ -54,6 +54,7 @@ import type {
   EvClientManualOutdialParams,
 } from './EvClient.interface';
 import { Environment } from '../Environment';
+import { AgentSDK } from 'next/agentLibrary';
 
 type ListenerType = (typeof EvCallbackTypes)['OPEN_SOCKET' | 'CLOSE_SOCKET'];
 
@@ -117,14 +118,23 @@ class EvClient extends RcModule {
         this._options.authHost = authHost;
       }
     }
-
-    if (this._portManager.shared) {
+    if (this._portManager?.shared) {
       this._portManager.onMainTab(() => {
-        // execute this code when client is opened
-        this.initialize();
+        this._initialize();
       });
     } else {
-      this.initialize();
+      this._initialize();
+    }
+  }
+
+  _initialize() {
+    const ffsDomain = localStorage.getItem('FFS_DOMAIN_INITIAL');
+    if (!ffsDomain) {
+      localStorage.setItem('FFS_DOMAIN_INITIAL', 'https://ffs.ringcentral.com');
+    }
+    const ffsExternal = localStorage.getItem('FFS_DOMAIN_EXTERNAL');
+    if (!ffsExternal) {
+      localStorage.setItem('FFS_DOMAIN_EXTERNAL', 'https://ffs.ringcentral.com');
     }
   }
 
@@ -183,10 +193,6 @@ class EvClient extends RcModule {
     }
   }
 
-  initialize() {
-    this.initSDK();
-  }
-
   @delegate('mainClient')
   async initSDK() {
     if (typeof window === 'undefined' || !window.AgentSDK) {
@@ -209,6 +215,7 @@ class EvClient extends RcModule {
       },
       ...options,
     });
+    window.AgentSDK.shared.HttpService.setApiBase(options.authHost);
   }
 
   on(eventType: string, callback: (...args: any[]) => void) {
@@ -227,7 +234,7 @@ class EvClient extends RcModule {
   }
 
   getRefreshedToken() {
-    this._sdk.getRefreshedToken();
+    return this._sdk.getRefreshedToken();
   }
 
   @delegate('mainClient')
@@ -256,8 +263,10 @@ class EvClient extends RcModule {
     dialGroupId,
     updateFromAdminUI = false,
     isForce = false,
+    loginType,
   }: EvConfigureAgentOptions): Promise<EvMessageRes> {
     return new Promise<EvMessageRes>((resolve) => {
+      this.logger.info('configureAgent~~')
       this._sdk.loginAgent(
         dialDest,
         queueIds,
@@ -266,7 +275,9 @@ class EvClient extends RcModule {
         dialGroupId,
         updateFromAdminUI,
         isForce,
+        loginType,
         (res: any) => {
+          this.logger.info('configureAgent response~~');
           resolve({
             type: messageTypes.CONFIGURE_AGENT,
             data: res,
@@ -338,11 +349,15 @@ class EvClient extends RcModule {
         rcAccessToken,
         tokenType,
         async (res: RawEvAuthenticateAgentWithRcAccessTokenRes) => {
+          res.rcAccessToken = rcAccessToken;
           // Persist tokens in localStorage for Agent SDK session management
           if (typeof window !== 'undefined' && window.localStorage) {
-            localStorage.setItem('engage-auth:tokenType', res.tokenType);
-            localStorage.setItem('engage-auth:accessToken', res.accessToken);
-            localStorage.setItem('engage-auth:refreshToken', res.refreshToken);
+            window.AgentSDK.shared.Session.storeAccessTokenResult({
+              response: JSON.stringify(res),
+            });
+            window.AgentSDK.shared.Session.storeRCAccessTokenResult({
+              response: JSON.stringify(res),
+            });
           }
           // here just auth with engage access token, not need handle response data, that handle by Agent SDK.
           await this.authenticateAgentWithEngageAccessToken(res.accessToken);
@@ -854,7 +869,7 @@ class EvClient extends RcModule {
   async getKnowledgeBaseGroups(
     knowledgeBaseGroupIds: number[],
   ): Promise<any | null> {
-    this.getRefreshedToken();
+    await this.getRefreshedToken();
     const uiModel = this._sdk._getUIModel().getInstance();
     const HttpService = this._sdk._HttpService;
     const agentSettings: EvAgentSettings = this._sdk.getAgentSettings();
@@ -887,14 +902,14 @@ class EvClient extends RcModule {
   @delegate('mainClient')
   sipInitAndRegister({
     agentId,
-    authToken,
   }: {
     agentId: string;
-    authToken: string;
   }): Promise<boolean> {
     this.logger.info('evClient sipInitAndRegister~~');
     const { isSso: ssoLogin } = this._sdk.getApplicationSettings();
     const { dialDest } = this._sdk.getAgentSettings();
+    const authenticateRequest = this._sdk.getAuthenticateRequest();
+    const authToken = authenticateRequest.engageAccessToken;
     return this._sdk.sipInitAndRegister({
       authToken,
       agentId: Number(agentId),
@@ -972,6 +987,58 @@ class EvClient extends RcModule {
   @delegate('mainClient')
   async requestCallSummary(uii: string, sessionId: string, segmentId: string) {
     this._sdk.requestCallSummary(uii, sessionId, segmentId);
+  }
+
+  getFullUserDetails() {
+    const userDetails = localStorage.getItem('engage-auth:fullUserDetails');
+    if (!userDetails) {
+      return;
+    }
+    const userDetailsJson = JSON.parse(userDetails);
+    return userDetailsJson;
+  }
+
+  @delegate('mainClient')
+  async updateActivityDisposition({
+    dialogId,
+    params,
+  }): Promise<any | null> {
+    // TODO: check isAccessTokenExpired;
+    await this.getRefreshedToken();
+    const fullUserDetails = this.getFullUserDetails();
+    const rcAccountId = fullUserDetails.rcAccountId;
+    const rcxSubAccountId = this._sdk.getAgentSettings().accountId;
+    const authenticateRequest = this._sdk.getAuthenticateRequest();
+    const engageAccessToken = `Bearer ${authenticateRequest.engageAccessToken}`;
+    try {
+      const getResponse = await fetch(`${this._options.authHost}/api/cm/v1/accounts/${rcAccountId}/rcxSubaccounts/${rcxSubAccountId}/activities?dialogId=${dialogId}&withDisplayInfo=false`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: engageAccessToken,
+        },
+      });
+      if (!getResponse.ok) {
+        throw new Error('Failed to get activity disposition');
+      }
+      const activities = await getResponse.json();
+      const activityId = activities?.records?.length > 0 ? activities.records[0]?.id : '';
+      if (!activityId) return;
+      const updateResponse = await fetch(`${this._options.authHost}/api/cm/v1/accounts/${rcAccountId}/rcxSubaccounts/${rcxSubAccountId}/activities/${activityId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: engageAccessToken,
+        },
+        body: JSON.stringify(params),
+      });
+      if (!updateResponse.ok) {
+        throw new Error('Failed to update activity disposition');
+      }
+      return updateResponse.json();
+    } catch (error) {
+      this.logger.error('updateActivityDisposition fail', error);
+      throw error;
+    }
   }
 }
 

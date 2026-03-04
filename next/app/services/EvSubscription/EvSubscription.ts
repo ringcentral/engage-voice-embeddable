@@ -93,9 +93,9 @@ class EvSubscription extends RcModule {
           const data = args[0]?.data;
           this.emit(event, {
             message: args[0]?.message,
-            data: data ? {
+            data: data && data.request ? {
               request: data.request ? formatSipRequest(data.request) : undefined,
-            } : undefined,
+            } : data,
           });
           return;
         }

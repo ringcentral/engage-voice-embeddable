@@ -187,7 +187,7 @@ class EvIntegratedSoftphoneView extends RcViewModule {
         return;
       }
       this.logger.info('SIP_RINGING~~');
-      const displayName = ringingCall?.data?.request?.from?._displayName ?? '';
+      const displayName = ringingCall?.data;
       // TODO: only work when in main tab
       const currentCall = await this.evClient.getCurrentCall();
       const queueName = currentCall?.queue?.name ?? '';

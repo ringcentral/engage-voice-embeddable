@@ -17,15 +17,7 @@ import type {
 export type EvSipRingingData = {
   message: string;
   // This type from sip.js => IncomingRequest
-  data: {
-    request: {
-      from: {
-        displayName: string;
-        _displayName: string;
-      };
-      friendlyName: string;
-    };
-  };
+  data: string;
 };
 
 export interface EvClientCallMapping {

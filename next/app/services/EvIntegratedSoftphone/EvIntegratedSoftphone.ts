@@ -536,7 +536,6 @@ class EvIntegratedSoftphone extends RcModule {
       this.logger.info('sipInitAndRegister~~');
       await this.evClient.sipInitAndRegister({
         agentId: this.evAuth.getAgentId(),
-        authToken: this.evAuth.authenticateResponse?.accessToken || '',
       });
       await this.onceRegistered();
       await this.setSipRegistering(false);

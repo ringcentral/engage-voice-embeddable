@@ -93,8 +93,8 @@ class LeadsView extends RcViewModule {
       isDialing: this.evCall.isDialing,
       pendingDisposition: this.evWorkingState.isPendingDisposition,
       agentState: this.evWorkingState.agentState?.agentState || '',
-      allowManualPass: this.evAuth.agent?.agentConfig?.agentPermissions?.allowManualPass ?? false,
-      defaultTimezone: (this.evAuth.agent?.authenticateResponse as any)?.regionalSettings?.timezoneName || 'America/New_York',
+      allowManualPass: this.evAuth.agentConfig?.agentPermissions?.allowManualPass ?? false,
+      defaultTimezone: (this.evAuth.authenticateResponse as any)?.regionalSettings?.timezoneName || 'America/New_York',
     }));
 
     const agentBusy = AGENT_BUSY_STATES.includes(agentState);

@@ -64,7 +64,7 @@ class SessionConfigView extends RcViewModule {
 
   get selectedIntegratedSoftphone(): boolean {
     return (
-      this._evAgentSession.formGroup.loginType === loginTypes.integratedSoftphone
+      this._evAgentSession.formGroup.loginType === loginTypes.integrated
     );
   }
 
@@ -116,7 +116,7 @@ class SessionConfigView extends RcViewModule {
   async setLoginType(type: LoginTypes) {
     // Set login type first, then reset autoAnswer based on the new login type
     await this._evAgentSession.setFormGroup({ loginType: type });
-    const isIntegratedSoftphone = type === loginTypes.integratedSoftphone;
+    const isIntegratedSoftphone = type === loginTypes.integrated;
     const autoAnswer = isIntegratedSoftphone
       ? this._evAgentSession.autoAnswer
       : this._evAgentSession.defaultAutoAnswerOn;
@@ -226,7 +226,7 @@ class SessionConfigView extends RcViewModule {
       [uiFunctions],
     );
 
-    const isExternalPhone = formGroup.loginType === loginTypes.externalPhone;
+    const isExternalPhone = formGroup.loginType === loginTypes.external;
 
     const agentTypeLabel = useMemo(() => {
       if (!selectedAgent?.agentType) return '';

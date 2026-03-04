@@ -417,8 +417,9 @@ class DispositionView extends RcViewModule {
   }
 
   private async doDisposeCall() {
+    const call = this.currentCall;
+    const disposition = this.evCallDisposition.getDisposition(this.callId);
     try {
-      const call = this.currentCall;
       if (call) {
         await this.thirdPartyService.logCall({
           call: {
@@ -427,15 +428,28 @@ class DispositionView extends RcViewModule {
             from: { phoneNumber: call.ani },
             to: { phoneNumber: call.dnis },
           },
-          task: this.evCallDisposition.getDisposition(this.callId),
+          task: disposition,
           sessionId: this.callId,
         });
       }
     } catch (e) {
       console.error(e);
     }
+    const dialogId = call?.session.dialogId;
+    const dispositionId = disposition?.dispositionId;
     await this.evCallDisposition.disposeCall(this.callId);
-    const call = this.currentCall;
+    if (dialogId && this.summary && dispositionId) {
+      const disposition = this.dispositionPickList.find(
+        p => p.dispositionId === dispositionId
+      );
+      await this.evClient.updateActivityDisposition({
+        dialogId,
+        params: {
+          dispositionName: disposition?.label || '',
+          agentSummary: this.summary,
+        }
+      })
+    }
     if (call?.scriptId) {
       this.evAgentScript.setCurrentCallScript(null);
       this.evAgentScript.saveScriptResult(call);
@@ -484,6 +498,10 @@ class DispositionView extends RcViewModule {
     }
   };
 
+  get summary() {
+    return this.evCallDisposition.getDisposition(this.callId)?.summary || '';
+  }
+
   getUIProps(): UIProps<DispositionViewUIProps> {
     const callId = this.callId;
     const summaryState = this.evCallDisposition.getSummaryState(callId);
@@ -504,7 +522,7 @@ class DispositionView extends RcViewModule {
       hideCallNote: this.dispositionViewOptions?.hideCallNote ?? false,
       showSummary: this.showSummary,
       segmentId,
-      summary: this.evCallDisposition.getDisposition(callId)?.summary || '',
+      summary: this.summary,
       isSummaryFinal: summaryState?.isFinal || false,
       isSummaryLoading: summaryState?.isLoading || false,
       isSummaryEdited: summaryState?.isEditedAfterFinal || false,

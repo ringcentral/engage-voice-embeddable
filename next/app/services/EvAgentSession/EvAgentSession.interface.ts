@@ -36,6 +36,7 @@ export interface EvConfigureAgentOptions {
   skillProfileId: string;
   dialGroupId?: string;
   isForce?: boolean;
+  loginType?: string;
 }
 
 /**

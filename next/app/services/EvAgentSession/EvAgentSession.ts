@@ -46,12 +46,12 @@ import i18n, { t } from './i18n';
 const WAIT_EV_SERVER_ROLLBACK_DELAY = 2000;
 
 const ACCEPTABLE_LOGIN_TYPES = [
-  loginTypes.integratedSoftphone,
+  loginTypes.integrated,
   loginTypes.RC_PHONE,
-  loginTypes.externalPhone,
+  loginTypes.external,
 ];
 
-const DEFAULT_LOGIN_TYPE = loginTypes.integratedSoftphone;
+const DEFAULT_LOGIN_TYPE = loginTypes.integrated;
 const NONE = dropDownOptions.None;
 
 const DEFAULT_FORM_GROUP: FormGroup = {
@@ -202,11 +202,11 @@ class EvAgentSession extends RcModule {
   accessToken = '';
 
   get isExternalPhone(): boolean {
-    return this.formGroup.loginType === loginTypes.externalPhone;
+    return this.formGroup.loginType === loginTypes.external;
   }
 
   get isIntegratedSoftphone(): boolean {
-    return this.loginType === loginTypes.integratedSoftphone;
+    return this.loginType === loginTypes.integrated;
   }
 
   @computed((that: EvAgentSession) => [that.locale.currentLocale])
@@ -683,13 +683,14 @@ class EvAgentSession extends RcModule {
       skillProfileId:
         selectedSkillProfileId === NONE ? '' : selectedSkillProfileId || '',
       dialGroupId: formGroup.dialGroupId || '',
+      loginType: formGroup.loginType || '',
     };
   }
 
   private _getDialDest(formGroup: FormGroup): string {
     const { loginType, extensionNumber } = formGroup;
     switch (loginType) {
-      case loginTypes.externalPhone: {
+      case loginTypes.external: {
         if (!extensionNumber) {
           this.toast.danger({
             message: t(messageTypes.EMPTY_PHONE_NUMBER),
@@ -710,7 +711,7 @@ class EvAgentSession extends RcModule {
         this.setFormGroup({ extensionNumber: parsedNumber });
         return extensionNumber;
       }
-      case loginTypes.integratedSoftphone:
+      case loginTypes.integrated:
         return 'integrated';
       case loginTypes.RC_PHONE:
       default:

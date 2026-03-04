@@ -204,7 +204,7 @@ class EvCallDisposition extends RcModule {
    * Dispose a call with the selected disposition
    * Includes safety check to ensure callDisposition exists
    */
-  disposeCall(id: string) {
+  async disposeCall(id: string) {
     const call = this.evPresence.callsMapping[id];
     const callDisposition = this.callsMapping[id];
     // Safety check - return early if no disposition data
@@ -217,7 +217,7 @@ class EvCallDisposition extends RcModule {
     if (!call?.outdialDispositions || isDisposed) {
       return;
     }
-    this.evClient.dispositionCall({
+    await this.evClient.dispositionCall({
       uii: call.uii,
       dispId: callDisposition.dispositionId || '',
       notes: callDisposition.notes,

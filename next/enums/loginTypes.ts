@@ -1,8 +1,8 @@
 import { ObjectMap } from '@ringcentral-integration/core/lib/ObjectMap';
 
 export const loginTypes = ObjectMap.fromKeys([
-  'integratedSoftphone',
-  'externalPhone',
+  'integrated',
+  'external',
   'RC_PHONE',
 ]);
 

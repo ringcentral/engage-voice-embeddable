@@ -333,13 +333,12 @@ class EvAuth extends RcModule {
   @delegate('clients')
   async identifyAnalyticsUser() {
     try {
-      const userDetails = localStorage.getItem('engage-auth:fullUserDetails');
+      const userDetails = this.evClient.getFullUserDetails();
       if (!userDetails) {
         return;
       }
-      const userDetailsJson = JSON.parse(userDetails);
-      const userId = `${userDetailsJson.rcUserId}`;
-      const accountId = userDetailsJson.rcAccountId;
+      const userId = `${userDetails.rcUserId}`;
+      const accountId = userDetails.rcAccountId;
       this.analytics.identify({
         userId,
         accountId,

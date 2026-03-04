@@ -63,7 +63,7 @@ class SessionUpdateView extends RcViewModule {
 
   async setLoginType(type: LoginTypes) {
     await this._evAgentSession.setFormGroup({ loginType: type });
-    const isIntegratedSoftphone = type === loginTypes.integratedSoftphone;
+    const isIntegratedSoftphone = type === loginTypes.integrated;
     const autoAnswer = isIntegratedSoftphone
       ? this._evAgentSession.autoAnswer
       : this._evAgentSession.defaultAutoAnswerOn;
@@ -76,7 +76,7 @@ class SessionUpdateView extends RcViewModule {
 
   get isIntegratedSoftphone(): boolean {
     return (
-      this._evAgentSession.formGroup.loginType === loginTypes.integratedSoftphone
+      this._evAgentSession.formGroup.loginType === loginTypes.integrated
     );
   }
 
@@ -251,7 +251,7 @@ class SessionUpdateView extends RcViewModule {
             loginTypeList={loginTypeList as LoginTypeOption[]}
             loginType={formGroup.loginType}
             onLoginTypeChange={handleLoginTypeChange}
-            showExtensionNumber={formGroup.loginType === loginTypes.externalPhone}
+            showExtensionNumber={formGroup.loginType === loginTypes.external}
             extensionNumber={formGroup.extensionNumber || ''}
             onExtensionNumberChange={handleExtensionNumberChange}
             showAutoAnswer={showAutoAnswer}

@@ -6,10 +6,8 @@ import {
   RcModule,
   state,
   delegate,
-  storage,
   StoragePlugin,
   PortManager,
-  isSharedWorker,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
 
@@ -47,7 +45,6 @@ class TabManager extends RcModule {
     private evTabManagerOptions?: EvTabManagerOptions,
   ) {
     super();
-    this.storagePlugin.enable(this);
     if (this.portManager?.shared) {
       this.portManager.onClient(() => {
         this.initialize();

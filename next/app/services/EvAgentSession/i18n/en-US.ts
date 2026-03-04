@@ -2,8 +2,8 @@ import { dropDownOptions, loginTypes, messageTypes } from '../../../../enums';
 
 export default {
   [loginTypes.RC_PHONE]: 'RingCentral Office phone',
-  [loginTypes.externalPhone]: 'Use external phone',
-  [loginTypes.integratedSoftphone]: 'Integrated softphone',
+  [loginTypes.external]: 'Use external phone',
+  [loginTypes.integrated]: 'Integrated softphone',
   [dropDownOptions.None]: 'None',
   [messageTypes.NOT_INBOUND_QUEUE_SELECTED]: 'Please select at least one inbound queue.',
   [messageTypes.EMPTY_PHONE_NUMBER]: 'Phone number is required.',

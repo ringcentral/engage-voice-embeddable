@@ -687,6 +687,7 @@ export interface EvConfigureAgentOptions {
   dialGroupId?: string;
   updateFromAdminUI?: boolean;
   isForce?: boolean;
+  loginType?: string;
   callback?(): void;
 }
 
