@@ -20,8 +20,7 @@ export { merge } from 'webpack-merge';
 import { getBaseWebpackConfig as getWebpackConfig } from './widgets.webpack';
 
 const DEFAULT_FILENAME = '[name].js';
-// * only contenthash is supported in worker build
-const DEFAULT_CHUNK_FILENAME = '[id]-[contenthash].js';
+const DEFAULT_CHUNK_FILENAME = '[name].js';
 /**
  * default vendor chunk name
  */
@@ -57,9 +56,7 @@ export const getFinalFilePathMap = <T extends BaseAppConfig>(
       const chunkName = path.parse(main).name;
       acc[chunkName] =
         filename ??
-        // when have index page, use contenthash to avoid cache, because that always use index.html cache mechanism, once index.html be update will get all new js entry
-        // others always want original name, that may load manually
-        (index ? '[name]-[contenthash].js' : DEFAULT_FILENAME);
+        DEFAULT_FILENAME;
 
       return acc;
     },
@@ -172,6 +169,7 @@ export const getBaseWebpackConfig = <T extends BaseAppConfig>({
     chunkLocale,
     useStyleTransform: projectConfig.useStyleTransform,
     hashPrefix: projectConfig.appConfig.hashPrefix,
+    enableHash: false,
     env: args.buildEnv,
   });
 
@@ -225,14 +223,16 @@ export const getBaseWebpackConfig = <T extends BaseAppConfig>({
             ...params,
             templateParameters: (compilation, assets, assetTags, options) => {
               const fileUrlMap = getFileUrlMap(compilation, chunkInfoMap);
+              const compilationHash = compilation.hash ?? '';
+              const workerVersionQuery = compilationHash
+                ? `?_v=${compilationHash}`
+                : '';
 
               const getChunkUrl = (chunkName: string) => {
                 if (!outputUsePropsMode) return `${chunkName}.js`;
 
                 const url = fileUrlMap?.get(chunkName);
-                if (!url) {
-                  throw new Error(`chunk "${chunkName}" url not found`);
-                }
+                if (!url) return `${chunkName}.js`;
 
                 return nodeUrl.resolve(publicPath ?? '', url);
               };
@@ -240,7 +240,7 @@ export const getBaseWebpackConfig = <T extends BaseAppConfig>({
               const workerScript = (
                 nameSpace = '__rc_shared_worker__',
                 chunkName = 'worker',
-                queryString = '',
+                queryString = workerVersionQuery,
               ): string => {
                 const workerUrl = `${getChunkUrl(chunkName)}${queryString}`;
                 const mfeConfig =

@@ -107,7 +107,7 @@ class SettingsView extends RcViewModule {
       await this.logout();
     }, []);
 
-    const version = this._options?.version || '1.0.0';
+    const version = this._options?.version || '1.0.0-beta';
 
     return (
       <>
