@@ -14,7 +14,6 @@ import {
   delegate,
   RouterPlugin,
 } from '@ringcentral-integration/next-core';
-import { format, parse } from '@ringcentral-integration/phone-number';
 import { sleep } from '@ringcentral-integration/commons/utils';
 import { EventEmitter } from 'events';
 import { equals } from 'ramda';
@@ -730,6 +729,7 @@ class EvAgentSession extends RcModule {
   }): Promise<void> {
     this.logger.info('handleAgentResult~~', status, message);
     if (status !== 'SUCCESS') {
+      console.error('handleAgentResult error~~', status, message);
       if (typeof message === 'string') {
         this.toast.danger({ message, ttl: 0 });
       } else {
@@ -752,6 +752,10 @@ class EvAgentSession extends RcModule {
   private async _connectEvServer(
     config: EvConfigureAgentOptions,
   ): Promise<{ result: { data: EvAgentConfig }; existingLoginFound: boolean }> {
+    const authorized = await this.evAuth.refreshEvToken();
+    if (!authorized) {
+      throw new Error(messageTypes.AUTHORIZATION_ERROR);
+    }
     let result = await this.evClient.configureAgent(config);
     const { status } = result.data;
     this.logger.info('configureAgent status~~', status);

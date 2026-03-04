@@ -198,7 +198,11 @@ class EvClient extends RcModule {
     if (typeof window === 'undefined' || !window.AgentSDK) {
       return;
     }
-    this.logger.info('initSDK...');
+    if (this._sdk) {
+      this.logger.info('AgentSDK already initialized~~');
+      return;
+    }
+    this.logger.info('Init AgentSDK~~');
     const options = { ...this._options };
     // Apply Environment module authHost override when enabled
     if (this._environment?.enabled && this._environment.evAuthServer) {
@@ -350,17 +354,25 @@ class EvClient extends RcModule {
         tokenType,
         async (res: RawEvAuthenticateAgentWithRcAccessTokenRes) => {
           res.rcAccessToken = rcAccessToken;
-          // Persist tokens in localStorage for Agent SDK session management
+          // There three token types in the app
+          // 1. RC token from RingCentral Single Sign-on API
+          // 2. Engage token from Engage Auth:
+          //     saved in authenticateRequest.engageAccessToken and Session.getAccessToken()
+          //     it is used for ringcx HTTP requests, need to exchange with rc token again if expired
+          // 3. AGENT SDK token for WebSocket connection:
+          //     saved in authenticateRequest.accessToken,
+          //     it is used for WebSocket connection
+          //     It is refreshed in sdk by hashcode
+          // Call authenticateAgentWithEngageAccessToken to pass engage token to AGENT SDK for WebSocket connection
+          const engageAccessTokenResponse = await this.authenticateAgentWithEngageAccessToken(res.accessToken);
           if (typeof window !== 'undefined' && window.localStorage) {
             window.AgentSDK.shared.Session.storeAccessTokenResult({
-              response: JSON.stringify(res),
+              response: JSON.stringify(engageAccessTokenResponse),
             });
             window.AgentSDK.shared.Session.storeRCAccessTokenResult({
-              response: JSON.stringify(res),
+              response: JSON.stringify(engageAccessTokenResponse),
             });
           }
-          // here just auth with engage access token, not need handle response data, that handle by Agent SDK.
-          await this.authenticateAgentWithEngageAccessToken(res.accessToken);
           // Apply locale from regional settings if available
           const locale = (res as any).regionalSettings?.language;
           if (locale) {
@@ -869,7 +881,6 @@ class EvClient extends RcModule {
   async getKnowledgeBaseGroups(
     knowledgeBaseGroupIds: number[],
   ): Promise<any | null> {
-    await this.getRefreshedToken();
     const uiModel = this._sdk._getUIModel().getInstance();
     const HttpService = this._sdk._HttpService;
     const agentSettings: EvAgentSettings = this._sdk.getAgentSettings();
@@ -999,12 +1010,38 @@ class EvClient extends RcModule {
   }
 
   @delegate('mainClient')
+  async refreshEvToken() {
+    const Session = window.AgentSDK.shared.Session;
+    let authenticateRequest = this._sdk.getAuthenticateRequest();
+    const engageAccessToken = authenticateRequest.engageAccessToken;
+    const sessionToken = Session.getAccessToken();
+    if (engageAccessToken !== sessionToken) {
+      Session.setAccessToken(engageAccessToken);
+    }
+    if (Session.isAccessTokenExpired()) {
+      // there are no refresh token, so need to exchange with rc token again.
+      return false;
+    }
+    return true;
+  }
+
+  @delegate('mainClient')
+  async getEvTokenExpiredTime(): Promise<number> {
+    const Session = window.AgentSDK.shared.Session;
+    return Session.getClaims();
+  }
+
+  @delegate('mainClient')
+  async clearEvSession() {
+    const Session = window.AgentSDK.shared.Session;
+    Session.clearSession();
+  }
+
+  @delegate('mainClient')
   async updateActivityDisposition({
     dialogId,
     params,
   }): Promise<any | null> {
-    // TODO: check isAccessTokenExpired;
-    await this.getRefreshedToken();
     const fullUserDetails = this.getFullUserDetails();
     const rcAccountId = fullUserDetails.rcAccountId;
     const rcxSubAccountId = this._sdk.getAgentSettings().accountId;

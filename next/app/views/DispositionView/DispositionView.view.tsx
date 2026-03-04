@@ -25,6 +25,7 @@ import { Announcement, Button, Icon } from '@ringcentral/spring-ui';
 import { CheckMd } from '@ringcentral/spring-icon';
 
 import { EvPresence } from '../../services/EvPresence';
+import { EvAuth } from '../../services/EvAuth';
 import { EvCall } from '../../services/EvCall';
 import { EvCallMonitor } from '../../services/EvCallMonitor';
 import { EvCallDisposition } from '../../services/EvCallDisposition';
@@ -86,6 +87,7 @@ class DispositionView extends RcViewModule {
 
   constructor(
     private evPresence: EvPresence,
+    private evAuth: EvAuth,
     private evCall: EvCall,
     private evCallMonitor: EvCallMonitor,
     private evCallDisposition: EvCallDisposition,
@@ -442,6 +444,10 @@ class DispositionView extends RcViewModule {
       const disposition = this.dispositionPickList.find(
         p => p.dispositionId === dispositionId
       );
+      const authorized = await this.evAuth.refreshEvToken();
+      if (!authorized) {
+        return;
+      }
       await this.evClient.updateActivityDisposition({
         dialogId,
         params: {

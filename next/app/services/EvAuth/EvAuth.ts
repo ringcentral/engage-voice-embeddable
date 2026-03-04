@@ -1,4 +1,5 @@
 import { Auth } from '@ringcentral-integration/micro-auth/src/app/services';
+import { loginStatus } from '@ringcentral-integration/micro-auth/src/app/services/Auth';
 import { Locale, Toast } from '@ringcentral-integration/micro-core/src/app/services';
 import { BlockPlugin } from '@ringcentral-integration/micro-core/src/app/plugins';
 
@@ -263,12 +264,33 @@ class EvAuth extends RcModule {
 
   initialize() {
     this.auth.addAfterLoggedInHandler(() => {
-      this.logger.info('addAfterLoggedInHandler~~');
+      this.logger.info('AfterLoggedInHandler~~');
       this.clearAgentId();
     });
     this.auth.addBeforeLogoutHandler(async () => {
-      this.logger.info('addBeforeLogoutHandler~~');
-      await this.clearAgentId();
+      this.logger.info('BeforeLogoutHandler~~');
+      try {
+        this._setLoginStatus(EvLoginStatus.UNAUTHING);
+        const agentId = this.agentId;
+        this._emitLogoutBefore();
+        const logoutAgentResponse = await this.logoutAgent(agentId);
+        console.log('logoutAgentResponse~~', logoutAgentResponse);
+        if (!logoutAgentResponse.message || logoutAgentResponse.message !== 'OK') {
+          this.logger.info('logoutAgent failed');
+        }
+        this.setAgent(null);
+        await this.clearAgentId();
+      } catch (error) {
+        console.error('logout error~~', error);
+        this.logger.error('logout error~~', error);
+      }
+      try {
+        await this.evClient.clearEvSession();
+        await this.evClient.closeSocket();
+      } catch (error) {
+        this.logger.error('closeSocket error~~', error);
+      }
+      this._setLoginStatus(EvLoginStatus.NO_AUTH);
     });
     this.evSubscription.subscribe(EvCallbackTypes.LOGOUT, async () => {
       this.toast.info({
@@ -288,11 +310,14 @@ class EvAuth extends RcModule {
     watch(
       this,
       () => [
-        this.auth.loggedIn,
+        this.auth.loginStatus,
         this.loginStatus,
         this.oAuth?.jwtOwnerChanged,
       ] as const,
       async ([loggedIn, currentLoginStatus, jwtOwnerChanged]) => {
+        if (this.auth.loginStatus !== loginStatus.loggedIn) {
+          return;
+        }
         this.logger.info('auto-login~~', loggedIn, currentLoginStatus, jwtOwnerChanged);
         if (
           loggedIn &&
@@ -323,7 +348,6 @@ class EvAuth extends RcModule {
 
   private _logout = async () => {
     await this.auth.logout({ dismissAllAlert: false, reason: 'Manually sign out' });
-    this._setLoginStatus(EvLoginStatus.NO_AUTH);
   };
 
   onceLogout(cb: () => any) {
@@ -353,18 +377,10 @@ class EvAuth extends RcModule {
     if (!(await this.canUserLogoutFn())) {
       return;
     }
-    this.logger.info('logout~~');
-    this._setLoginStatus(EvLoginStatus.UNAUTHING);
-    const agentId = this.agentId;
-    this._emitLogoutBefore();
-    const logoutAgentResponse = await this.logoutAgent(agentId);
-    if (!logoutAgentResponse.message || logoutAgentResponse.message !== 'OK') {
-      this.logger.info('logoutAgent failed');
-    }
-    this.setAgent(null);
     await this.block.next(this._logout);
   }
 
+  @delegate('server')
   async logoutAgent(agentId: string = this.agentId) {
     return this.evClient.logoutAgent(agentId);
   }
@@ -375,6 +391,7 @@ class EvAuth extends RcModule {
 
   @delegate('server')
   async newReconnect(isBlock = true) {
+    this.logger.info('newReconnect~~');
     this._setLoginStatus(EvLoginStatus.REAUTHING);
     await this.evClient.closeSocket();
     const fn = () => this.loginAgent();
@@ -432,6 +449,20 @@ class EvAuth extends RcModule {
       this._setLoginStatus(EvLoginStatus.AUTH_FAILURE);
       await this._logout();
     }
+  }
+
+  @delegate('server')
+  async refreshEvToken(): Promise<boolean> {
+    const result = await this.evClient.refreshEvToken();
+    if (result) {
+      return true;
+    }
+    const authenticateResponse = await this.authenticateWithToken({
+      rcAccessToken: this.auth.accessToken,
+      tokenType: 'Bearer',
+      shouldEmitAuthSuccess: false,
+    });
+    return !!authenticateResponse;
   }
 
   @delegate('server')

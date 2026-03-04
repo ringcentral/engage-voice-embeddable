@@ -46,6 +46,7 @@ export const messageTypes = ObjectMap.fromKeys([
   'INTERCEPT',
   // Working state
   'PENDING_DISPOSITION',
+  'AUTHORIZATION_ERROR',
 ]);
 
 export type MessageTypes = keyof typeof messageTypes;

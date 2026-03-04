@@ -11,7 +11,7 @@ import {
   delegate,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
-
+import { Auth } from '@ringcentral-integration/micro-auth/src/app/services';
 import { EvSoftphoneEvents } from '../../../enums';
 import { dialoutStatuses } from '../../../enums/dialoutStatus';
 import { sleep } from '../../../lib/utils';
@@ -51,6 +51,7 @@ class EvIntegratedSoftphone extends RcModule {
 
   constructor(
     private evClient: EvClient,
+    private auth: Auth,
     private evAuth: EvAuth,
     private evSubscription: EvSubscription,
     private evAgentSession: EvAgentSession,
@@ -192,6 +193,9 @@ class EvIntegratedSoftphone extends RcModule {
     if (!this.portManager.isServer) {
       return;
     }
+    if (!this._sipConnected) {
+      return;
+    }
     this.logger.info('resetAllState~~');
     this._sipConnected = false;
     await this.resetSip();
@@ -207,6 +211,10 @@ class EvIntegratedSoftphone extends RcModule {
     this._bindingIntegratedSoftphone();
     this.evAuth.beforeAgentLogout(async () => {
       this.logger.info('beforeAgentLogout~~');
+      await this._resetAllState();
+    });
+    this.auth.addBeforeLogoutHandler(async () => {
+      this.logger.info('addBeforeLogoutHandler~~');
       await this._resetAllState();
     });
     this.evAgentSession.onReConfigFail(() => {

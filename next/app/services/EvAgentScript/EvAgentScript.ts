@@ -249,6 +249,7 @@ class EvAgentScript extends RcModule {
   }
 
   private async _getKnowledgeBaseGroups(knowledgeBaseGroupIds: number[]): Promise<void> {
+    await this.evAuth.refreshEvToken();
     const value = await this.evClient.getKnowledgeBaseGroups(knowledgeBaseGroupIds);
     this._sendChannel({
       key: agentScriptEvents.GET_KNOWLEDGE_BASE_ARTICLES,

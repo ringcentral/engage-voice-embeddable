@@ -103,10 +103,11 @@ export class ConnectivityView extends BaseConnectivityView {
   override getUIFunctions(): UIFunctions<EvConnectivityViewProps> {
     const baseFunctions = super.getUIFunctions();
     return {
-      onClick: () => {
+      onClick: async () => {
         const { mode } = this.getUIProps();
         if (mode === 'socketDisconnected') {
-          this._evAuth.newReconnect();
+          await this._evIntegratedSoftphone.resetSip();
+          await this._evAuth.newReconnect();
           return;
         }
         baseFunctions.onClick();
