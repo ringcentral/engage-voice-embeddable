@@ -274,14 +274,12 @@ class EvAuth extends RcModule {
         const agentId = this.agentId;
         this._emitLogoutBefore();
         const logoutAgentResponse = await this.logoutAgent(agentId);
-        console.log('logoutAgentResponse~~', logoutAgentResponse);
         if (!logoutAgentResponse.message || logoutAgentResponse.message !== 'OK') {
           this.logger.info('logoutAgent failed');
         }
         this.setAgent(null);
         await this.clearAgentId();
       } catch (error) {
-        console.error('logout error~~', error);
         this.logger.error('logout error~~', error);
       }
       try {

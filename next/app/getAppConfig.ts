@@ -15,13 +15,12 @@ import {
   ThemePlugin,
 } from '@ringcentral-integration/micro-core/src/app/plugins';
 import {
-  BrandConfig,
   LocaleOptions,
   Brand,
   Locale,
   Toast,
   Beforeunload,
-  BeforeunloadOptions,
+  BrandConfigOptions,
 } from '@ringcentral-integration/micro-core/src/app/services';
 import {
   SpringAppRootView,
@@ -214,6 +213,12 @@ export const getAppConfig = ({
       useValue: prefix,
     },
     {
+      provide: 'BrandConfigOptions',
+      useValue: {
+        assetOrigin: process.env.HOSTING_URL,
+      } satisfies BrandConfigOptions,
+    },
+    {
       provide: 'BrandConfig',
       useValue: { ...brandConfig },
     },
@@ -309,7 +314,7 @@ export const getAppConfig = ({
     {
       provide: 'HeaderNavViewOptions',
       useValue: {} satisfies HeaderNavViewOptions,
-    }
+    },
   ];
 
   // Core views

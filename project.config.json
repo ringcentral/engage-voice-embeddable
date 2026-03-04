@@ -1,4 +1,5 @@
 {
+  "appVersion": "1.0.0-beta",
   "distPath": "dist",
   "buildPath": "build",
   "themePath": "./next",
@@ -17,9 +18,14 @@
     }
   ],
   "assets": [
-    "next/icon.svg",
+    { "from": "next/favicon.ico", "to": "favicon.ico" },
+    { "from": "next/icon.svg", "to": "icon.svg" },
     { "from": "next/popup.html", "to": "popup.html" },
-    { "from": "next/index.html", "to": "index.html" }
+    { "from": "next/index.html", "to": "index.html" },
+    { "from": "next/agentLibrary.js", "to": "agentLibrary.js" },
+    { "from": "next/assets/ringCXLogo.svg", "to": "assets/ringCXLogo.svg" },
+    { "from": "next/assets/logo.svg", "to": "assets/logo.svg" },
+    { "from": "next/assets/popup.svg", "to": "assets/popup.svg" },
   ],
   "environment": {
     "local": {

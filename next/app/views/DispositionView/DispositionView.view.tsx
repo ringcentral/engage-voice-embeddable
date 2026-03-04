@@ -435,7 +435,7 @@ class DispositionView extends RcViewModule {
         });
       }
     } catch (e) {
-      console.error(e);
+      this.logger.error('thirdPartyService logCall error~~', e);
     }
     const dialogId = call?.session.dialogId;
     const dispositionId = disposition?.dispositionId;

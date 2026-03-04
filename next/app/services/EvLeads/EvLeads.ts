@@ -255,7 +255,7 @@ class EvLeads extends RcModule {
       this.setLeads(result.leads as Lead[]);
       return true;
     } catch (error) {
-      console.error('error', error);
+      this.logger.error('fetchLeads error~~', error);
       return false;
     } finally {
       this.setLoading(false);
