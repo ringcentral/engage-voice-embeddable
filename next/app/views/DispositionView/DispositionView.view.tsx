@@ -441,7 +441,7 @@ class DispositionView extends RcViewModule {
     const dispositionId = disposition?.dispositionId;
     await this.evCallDisposition.disposeCall(this.callId);
     if (dialogId && this.summary && dispositionId) {
-      const disposition = this.dispositionPickList.find(
+      const dispositionItem = this.dispositionPickList.find(
         p => p.dispositionId === dispositionId
       );
       const authorized = await this.evAuth.refreshEvToken();
@@ -451,10 +451,11 @@ class DispositionView extends RcViewModule {
       await this.evClient.updateActivityDisposition({
         dialogId,
         params: {
-          dispositionName: disposition?.label || '',
+          dispositionName: dispositionItem?.label || '',
           agentSummary: this.summary,
-        }
-      })
+          agentNotes: disposition?.notes || '',
+        },
+      });
     }
     if (call?.scriptId) {
       this.evAgentScript.setCurrentCallScript(null);
