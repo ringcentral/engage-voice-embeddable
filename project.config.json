@@ -25,7 +25,7 @@
     { "from": "next/agentLibrary.js", "to": "agentLibrary.js" },
     { "from": "next/assets/ringCXLogo.svg", "to": "assets/ringCXLogo.svg" },
     { "from": "next/assets/logo.svg", "to": "assets/logo.svg" },
-    { "from": "next/assets/popup.svg", "to": "assets/popup.svg" },
+    { "from": "next/assets/popup.svg", "to": "assets/popup.svg" }
   ],
   "environment": {
     "local": {

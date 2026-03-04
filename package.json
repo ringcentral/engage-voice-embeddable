@@ -10,7 +10,7 @@
     "build": "yarn gulp build --env prod",
     "gulp": "gulp --require @ringcentral-integration/babel-settings/lib/register.js",
     "next:start": "yarn next:gulp devServer --build-env local",
-    "next:build": "yarn next:gulp build --env prod",
+    "next:build": "yarn next:gulp build --build-env prod",
     "next:gulp": "gulp --gulpfile gulpfile.ts --require @ringcentral-integration/babel-settings/lib/register.js"
   },
   "license": "MIT",

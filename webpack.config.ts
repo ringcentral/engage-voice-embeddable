@@ -1,5 +1,4 @@
 import path from 'path';
-import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import type { WebpackConfigOptions } from '@ringcentral-integration/next-builder';
 import { DefinePlugin, type RuleSetRule } from 'webpack';
 import { getBaseWebpackConfig, merge } from './next/lib/webpack/builder.webpack';
@@ -51,7 +50,6 @@ export const getWebpackConfig = (options: WebpackConfigOptions<AppConfig>) => {
           projectConfig.appConfig.appVersion || '',
         ),
       }),
-      new BundleAnalyzerPlugin(),
     ],
     resolve: {
       alias: {
