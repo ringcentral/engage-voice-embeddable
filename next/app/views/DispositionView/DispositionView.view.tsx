@@ -73,6 +73,7 @@ export interface DispositionViewOptions {
 interface DispositionItem {
   dispositionId: string;
   disposition: string;
+  label: string;
   requireNote?: boolean;
 }
 
@@ -418,18 +419,46 @@ class DispositionView extends RcViewModule {
     );
   }
 
+  @computed((that: DispositionView) => [that.currentCall])
+  get callLogData() {
+    const call = this.currentCall as any;
+    if (!call) return null;
+    const isOutbound = call.callType === 'OUTBOUND';
+    const contactMatches: any[] = call.contactMatches || [];
+    const name = contactMatches[0]?.name;
+    const fromNumber = isOutbound ? call.dnis : call.ani;
+    const toNumber = isOutbound ? call.ani : call.dnis;
+    return {
+      id: call.uii,
+      direction: call.callType,
+      from: {
+        phoneNumber: fromNumber,
+        name: !isOutbound ? name : fromNumber,
+      },
+      to: {
+        phoneNumber: toNumber,
+        name: isOutbound ? name : toNumber,
+      },
+      telephonyStatus: 'CallConnected',
+      sessionId: call.session?.sessionId,
+      telephonySessionId: call.uii,
+      partyId: call.agentId,
+      startTime: call.queueDts ? new Date(call.queueDts).getTime() : undefined,
+      offset: 0,
+      fromMatches: [] as any[],
+      toMatches: [] as any[],
+      activityMatches: [] as any[],
+      recordingUrl: call.session?.recordingUrl,
+    };
+  }
+
   private async doDisposeCall() {
     const call = this.currentCall;
     const disposition = this.evCallDisposition.getDisposition(this.callId);
     try {
-      if (call) {
+      if (this.callLogData) {
         await this.thirdPartyService.logCall({
-          call: {
-            id: call.uii,
-            direction: call.callType,
-            from: { phoneNumber: call.ani },
-            to: { phoneNumber: call.dnis },
-          },
+          call: this.callLogData,
           task: disposition,
           sessionId: this.callId,
         });
