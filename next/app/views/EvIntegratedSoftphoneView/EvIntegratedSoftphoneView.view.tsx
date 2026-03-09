@@ -183,9 +183,6 @@ class EvIntegratedSoftphoneView extends RcViewModule {
   private _bindSipModalEvents() {
     // On ringing: show modal if auto-answer is not handling it
     this.evIntegratedSoftphone.onRinging(async (ringingCall?: EvSipRingingData) => {
-      if (this.evIntegratedSoftphone.autoAnswerCheckFn?.()) {
-        return;
-      }
       this.logger.info('SIP_RINGING~~');
       const displayName = ringingCall?.data;
       // TODO: only work when in main tab

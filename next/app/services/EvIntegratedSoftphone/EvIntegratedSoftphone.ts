@@ -1,6 +1,7 @@
 import {
   action,
   injectable,
+  ModuleRef,
   optional,
   RcModule,
   state,
@@ -22,6 +23,7 @@ import { EvAuth } from '../EvAuth';
 import { EvSubscription } from '../EvSubscription';
 import { EvAgentSession } from '../EvAgentSession';
 import { EvPresence } from '../EvPresence';
+import { EvCall } from '../EvCall';
 import type {
   EvIntegratedSoftphoneOptions,
   SipState,
@@ -46,9 +48,6 @@ class EvIntegratedSoftphone extends RcModule {
   private _sipConnected = false;
   private _isCloseWhenCallConnected = false;
 
-  /** Auto-answer check function, set by external callers */
-  autoAnswerCheckFn: (() => boolean) | null = null;
-
   constructor(
     private evClient: EvClient,
     private auth: Auth,
@@ -58,6 +57,7 @@ class EvIntegratedSoftphone extends RcModule {
     private evPresence: EvPresence,
     private storagePlugin: StoragePlugin,
     private portManager: PortManager,
+    private moduleRef: ModuleRef,
     @optional('EvIntegratedSoftphoneOptions')
     private evIntegratedSoftphoneOptions?: EvIntegratedSoftphoneOptions,
   ) {
@@ -114,6 +114,21 @@ class EvIntegratedSoftphone extends RcModule {
 
   get isIntegratedSoftphone(): boolean {
     return this.evAgentSession.isIntegratedSoftphone;
+  }
+
+  /**
+   * Determine whether an incoming SIP call should be answered automatically.
+   * Uses ModuleRef to lazily obtain EvCall and avoid a circular dependency
+   * (EvCall already depends on EvIntegratedSoftphone).
+   * - autoAnswer: agent configured auto-answer in session settings
+   * - isMonitoring: monitoring/coaching inbound calls must always be auto-answered
+   */
+  get shouldAutoAnswer(): boolean {
+    if (this.evAgentSession.autoAnswer) {
+      return true;
+    }
+    const evCall = this.moduleRef.get<EvCall>(EvCall);
+    return Boolean(evCall?.currentCall?.isMonitoring);
   }
 
   @action
@@ -281,10 +296,11 @@ class EvIntegratedSoftphone extends RcModule {
       (ringingCall?: EvSipRingingData) => {
         this.logger.info('SIP_RINGING~~');
         this.evPresence.bindBeforeunload();
-        this._eventEmitter.emit(EvCallbackTypes.SIP_RINGING, ringingCall);
-        if (this.autoAnswerCheckFn?.()) {
+        if (this.shouldAutoAnswer) {
           this.sipAnswer();
+          return;
         }
+        this._eventEmitter.emit(EvCallbackTypes.SIP_RINGING, ringingCall);
       },
     );
     this.evSubscription.subscribe(EvCallbackTypes.SIP_CONNECTED, async () => {
