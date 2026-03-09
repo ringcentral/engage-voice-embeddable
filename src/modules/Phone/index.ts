@@ -230,7 +230,7 @@ export default class BasePhone extends RcModule {
     analytics,
   }: GenericPhone) {
     evIntegratedSoftphone.autoAnswerCheckFn = () =>
-      evAuth.autoAnswerCalls ||
+      evAgentSession.autoAnswer ||
       // When that is inbound call, check isMonitoring, only inbound will get currentCall first
       evCall.currentCall?.isMonitoring;
     evIntegratedSoftphone.onRinging(() => {
