@@ -9,6 +9,7 @@ import {
   StoragePlugin,
   PortManager,
   watch,
+  delegate,
 } from '@ringcentral-integration/next-core';
 import MessageTransport from '@ringcentral-integration/commons/lib/MessageTransport';
 import { adapterMessageTypes } from '../../../enums';
@@ -19,6 +20,9 @@ import { EvLeads } from '../EvLeads';
 import { EvPresence } from '../EvPresence';
 import { EvAgentSession } from '../EvAgentSession';
 import { TabManager } from '../EvTabManager';
+import { EvSubscription } from '../EvSubscription';
+import { EvCallbackTypes } from '../EvClient/enums';
+import { DialerView } from '../../views/DialerView';
 
 /**
  * Adapter options for configuration
@@ -90,32 +94,56 @@ class Adapter extends RcModule {
     private evLeads: EvLeads,
     private evPresence: EvPresence,
     private evAgentSession: EvAgentSession,
+    private evSubscription: EvSubscription,
     private tabManager: TabManager,
     private toast: Toast,
     private storagePlugin: StoragePlugin,
     private portManager: PortManager,
+    @optional() private dialerView?: DialerView,
     @optional('AdapterOptions') private adapterOptions?: AdapterOptions,
   ) {
     super();
     this.storagePlugin.enable(this);
     if (this.portManager?.shared) {
       this.portManager.onClient(() => {
-        this.initialize();
+        this.initializeClient();
+      });
+      this.portManager.onServer(() => {
+        this.initializeServer();
       });
     } else {
-      this.initialize();
+      this.initializeClient();
+      this.initializeServer();
     }
   }
 
   /**
    * Initialize adapter - setup transport, listeners, and state watcher
    */
-  initialize(): void {
+  initializeClient(): void {
     if (typeof window === 'undefined') return;
     this.transport = new MessageTransport({
       targetWindow: this.adapterOptions?.targetWindow ?? window.parent,
     } as any);
     this.addListeners();
+  }
+
+  /**
+   * Subscribe to SIP lifecycle events and forward them to the parent window
+   */
+  initializeServer(): void {
+    this.evSubscription.subscribe(EvCallbackTypes.SIP_REGISTERED, () => {
+      this.onSIPRegistered();
+    });
+    this.evSubscription.subscribe(EvCallbackTypes.SIP_UNREGISTERED, () => {
+      this.onSIPUnregistered();
+    });
+    this.evSubscription.subscribe(EvCallbackTypes.SIP_UNSTABLE_CONNECTION, () => {
+      this.onSIPUnstable();
+    });
+    this.evSubscription.subscribe(EvCallbackTypes.SIP_REGISTRATION_FAILED, () => {
+      this.onSIPFailed();
+    });
     this._setupStateWatcher();
   }
 
@@ -141,23 +169,43 @@ class Adapter extends RcModule {
   };
 
   @action
-  setClosed(closed: boolean) {
+  _setClosed(closed: boolean) {
     this.closed = closed;
   }
 
+  @delegate('server')
+  async setClosed(closed: boolean): Promise<void> {
+    this._setClosed(closed);
+  }
+
   @action
-  setMinimized(minimized: boolean) {
+  _setMinimized(minimized: boolean) {
     this.minimized = minimized;
   }
 
-  @action
-  setSize(size: AdapterSize) {
-    this.size = size;
+  @delegate('server')
+  async setMinimized(minimized: boolean): Promise<void> {
+    this._setMinimized(minimized);
   }
 
   @action
-  setPosition(position: AdapterPosition) {
+  _setSize(size: AdapterSize) {
+    this.size = size;
+  }
+
+  @delegate('server')
+  async setSize(size: AdapterSize): Promise<void> {
+    this._setSize(size);
+  }
+
+  @action
+  _setPosition(position: AdapterPosition) {
     this.position = position;
+  }
+
+  @delegate('server')
+  async setPosition(position: AdapterPosition): Promise<void> {
+    this._setPosition(position);
   }
 
   /**
@@ -255,10 +303,19 @@ class Adapter extends RcModule {
     });
   }
 
+
+  @delegate('server')
   async clickToDial(phoneNumber: string): Promise<void> {
-    await this.evCall.dialout(phoneNumber);
+    if (this.dialerView) {
+      await this.dialerView.setToNumber(phoneNumber);
+      this.dialerView.setLatestDialoutNumber();
+      await this.evCall.dialout(this.dialerView.toNumber);
+    } else {
+      await this.evCall.dialout(phoneNumber);
+    }
   }
 
+  @delegate('server')
   async dialLead(leadProps: LeadProps, destination: string): Promise<void> {
     const leads = this.evLeads.filteredLeads;
     const lead = leads.find((l: any) => {
@@ -284,45 +341,74 @@ class Adapter extends RcModule {
     }
   }
 
-  setEnvironment(): void {
+  @delegate('server')
+  async setEnvironment(): Promise<void> {
     if ((window as any).toggleEnv) {
       (window as any).toggleEnv();
     }
   }
 
-  onNewCall(call: any): void {
-    this._postMessage({ type: this.messageTypes.newCall, call });
+  @delegate('clients')
+  async onNewCall(call: any): Promise<void> {
+    this._postExternalMessage({ type: this.messageTypes.newCall, call });
   }
 
-  onRingCall(call: any): void {
-    this._postMessage({ type: this.messageTypes.ringCall, call });
+  @delegate('clients')
+  async onRingCall(call: any): Promise<void> {
+    this._postExternalMessage({ type: this.messageTypes.ringCall, call });
   }
 
-  onSIPRingCall(message: any): void {
-    this._postMessage({ type: this.messageTypes.sipRingCall, message });
+  @delegate('clients')
+  async onSIPRingCall(message: any): Promise<void> {
+    this._postExternalMessage({ type: this.messageTypes.sipRingCall, message });
   }
 
-  onSIPEndCall(message: any): void {
-    this._postMessage({ type: this.messageTypes.sipEndCall, message });
+  @delegate('clients')
+  async onSIPEndCall(message: any): Promise<void> {
+    this._postExternalMessage({ type: this.messageTypes.sipEndCall, message });
   }
 
-  onEndCall(call: any): void {
-    this._postMessage({ type: this.messageTypes.endCall, call });
+  @delegate('clients')
+  async onSIPRegistered(): Promise<void> {
+    this._postExternalMessage({ type: this.messageTypes.sipRegistered });
   }
 
-  onManualPassLead({ callbackDTS, ...params }: ManualPassLeadParams): void {
-    this._postMessage({
+  @delegate('clients')
+  async onSIPUnregistered(): Promise<void> {
+    this._postExternalMessage({ type: this.messageTypes.sipUnregistered });
+  }
+
+  @delegate('clients')
+  async onSIPUnstable(): Promise<void> {
+    this._postExternalMessage({ type: this.messageTypes.sipUnstable });
+  }
+
+  @delegate('clients')
+  async onSIPFailed(): Promise<void> {
+    this._postExternalMessage({ type: this.messageTypes.sipFailed });
+  }
+
+  @delegate('clients')
+  async onEndCall(call: any): Promise<void> {
+    this._postExternalMessage({ type: this.messageTypes.endCall, call });
+  }
+
+  @delegate('clients')
+  async onManualPassLead({ callbackDTS, ...params }: ManualPassLeadParams): Promise<void> {
+    this._postExternalMessage({
       type: this.messageTypes.manualPassLead,
       ...params,
     });
   }
 
-  onCallLead(lead: any, destination: string): void {
-    this._postMessage({ type: this.messageTypes.callLead, lead, destination });
+  @delegate('clients')
+  async onCallLead(lead: any, destination: string): Promise<void> {
+    this._postExternalMessage({ type: this.messageTypes.callLead, lead, destination });
   }
 
-  onLoadLeads(leads: any[]): void {
-    this._postMessage({ type: this.messageTypes.loadLeads, leads });
+  @delegate('clients')
+  async onLoadLeads(leads: any[]): Promise<void> {
+    this._postExternalMessage({ type: this.messageTypes.loadLeads, leads });
   }
 
   popUpWindow(): void {
@@ -332,7 +418,8 @@ class Adapter extends RcModule {
   /**
    * Push adapter state to parent window when state changes
    */
-  _pushAdapterState(): void {
+  @delegate('clients')
+  async _pushAdapterState(): Promise<void> {
     if (
       this._lastClosed !== this.closed ||
       this._lastMinimized !== this.minimized ||
@@ -363,6 +450,11 @@ class Adapter extends RcModule {
       type: this.transport.events.push,
       payload: msg,
     });
+  }
+
+  private _postExternalMessage(msg: any): void {
+    if (!this.portManager?.isActiveTab) return;
+    this._postMessage(msg);
   }
 }
 

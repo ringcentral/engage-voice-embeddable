@@ -10,14 +10,18 @@ import {
 } from '@ringcentral-integration/next-core';
 
 import { EvLoginStatus } from '../../../enums';
+import { EvCallbackTypes } from '../EvClient/enums';
 import { EvAuth } from '../EvAuth';
 import { EvCallMonitor } from '../EvCallMonitor';
 import type { RedirectOptions } from './Redirect.interface';
 import { EvClient } from '../EvClient';
 import { EvCall } from '../EvCall';
 import { EvCallDisposition } from '../EvCallDisposition';
+import { EvIntegratedSoftphone } from '../EvIntegratedSoftphone';
+import { EvSubscription } from '../EvSubscription';
 import { DispositionView } from '../../views/DispositionView';
 import { DialerView } from '../../views/DialerView';
+import { Adapter } from '../Adapter';
 
 /**
  * Redirect service - Handles router redirections based on login status
@@ -41,6 +45,9 @@ class Redirect extends RcModule {
     protected _evCallMonitor: EvCallMonitor,
     protected _evCall: EvCall,
     protected _evCallDisposition: EvCallDisposition,
+    protected _evIntegratedSoftphone: EvIntegratedSoftphone,
+    protected _evSubscription: EvSubscription,
+    protected _adapter: Adapter,
     protected _dialerView: DialerView,
     protected _dispositionView: DispositionView,
     @optional('RedirectOptions')
@@ -96,6 +103,7 @@ class Redirect extends RcModule {
     this._watchEvAuthStatus();
     this._watchEvLoginStatus();
     this._watchEvCallStatus();
+    this._watchSIPEvents();
   }
 
   /**
@@ -147,9 +155,9 @@ class Redirect extends RcModule {
 
   /**
    * Watch call status and redirect accordingly:
-   * - On ringing: trigger contact matching
-   * - On answered: set active call and navigate to activity call page
-   * - On ended: redirect from sub-activity paths back to parent
+   * - On ringing: trigger contact matching and notify adapter
+   * - On answered: set active call, navigate to activity call page, notify adapter
+   * - On ended: redirect from sub-activity paths back to parent, notify adapter
    */
   private _watchEvCallStatus(): void {
     this._evCallMonitor.onCallRinging(async () => {
@@ -157,6 +165,9 @@ class Redirect extends RcModule {
       const call = await this._evClient.getCurrentCall();
       if (call) {
         await this._evCallMonitor.getMatcher(call);
+        if (call.callType === 'INBOUND') {
+          this._adapter.onRingCall(call);
+        }
       }
     });
     this._evCallMonitor.onCallAnswered(async (call) => {
@@ -167,19 +178,23 @@ class Redirect extends RcModule {
       this._dialerView.setToNumber('');
       await this._evCallMonitor.getMatcher(call);
       this.gotoActivityCallPage(id);
+      this._adapter.onNewCall(call);
     });
     this._evCallMonitor.onCallEnded(async (call) => {
       this.logger.info('onCallEnded~~');
       if (!call?.session) {
         this._router.replace(this._dialerPath);
+        this._adapter.onEndCall(call);
         return;
       }
       const id = this._evClient.encodeUii(call.session);
       if (this._evCallDisposition.isDisposed(id)) {
         this._router.replace(this._dialerPath);
+        this._adapter.onEndCall(call);
         return;
       }
       this._redirectOnCallEnded();
+      this._adapter.onEndCall(call);
       if (!this._dispositionView.showSubmitStep) {
         this._router.replace(this._dialerPath);
       } else {
@@ -188,6 +203,18 @@ class Redirect extends RcModule {
           this._router.replace(path);
         }
       }
+    });
+  }
+
+  /**
+   * Watch SIP ringing/ended events and notify adapter
+   */
+  private _watchSIPEvents(): void {
+    this._evIntegratedSoftphone.onRinging(() => {
+      this._adapter.onSIPRingCall({ message: 'SIP Ringing' });
+    });
+    this._evSubscription.subscribe(EvCallbackTypes.SIP_ENDED, () => {
+      this._adapter.onSIPEndCall({ message: 'SIP Call Ended' });
     });
   }
 

@@ -16,6 +16,8 @@ import { EvWorkingState } from '../../services/EvWorkingState';
 import { EvAgentSession } from '../../services/EvAgentSession';
 import { EvAuth } from '../../services/EvAuth';
 import { EvClient } from '../../services/EvClient';
+import { Adapter } from '../../services/Adapter';
+import { ThirdPartyService } from '../../services/ThirdPartyService';
 import { LeadItem } from '../../components/LeadItem';
 import type { PhoneNumberData, ManualPassParams } from '../../components/LeadItem';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber';
@@ -48,6 +50,8 @@ class LeadsView extends RcViewModule {
     private evAgentSession: EvAgentSession,
     private evAuth: EvAuth,
     private evClient: EvClient,
+    private adapter: Adapter,
+    private thirdPartyService: ThirdPartyService,
     @optional('LeadsViewOptions')
     private leadsViewOptions?: LeadsViewOptions,
   ) {
@@ -56,14 +60,17 @@ class LeadsView extends RcViewModule {
 
   fetchLeads = async () => {
     await this.evLeads.fetchLeads();
+    this.adapter.onLoadLeads(this.evLeads.filteredLeads);
   };
 
   dialLead = async (lead: Lead, destination: string) => {
     await this.evLeads.dialLead(lead, destination);
+    this.adapter.onCallLead(lead, destination);
   };
 
   manualPassLead = async (params: ManualPassParams) => {
     await this.evLeads.manualPassLead(params);
+    this.adapter.onManualPassLead(params);
   };
 
   fetchDispositionList = async (campaignId: string): Promise<DispositionItem[]> => {
@@ -72,6 +79,10 @@ class LeadsView extends RcViewModule {
       value: item.dispositionId,
       label: item.disposition,
     }));
+  };
+
+  viewLead = async (lead: Lead) => {
+    await this.thirdPartyService.viewLead(lead);
   };
 
   component() {
@@ -86,6 +97,7 @@ class LeadsView extends RcViewModule {
       agentState,
       allowManualPass,
       defaultTimezone,
+      showViewLead,
     } = useConnector(() => ({
       filteredLeads: this.evLeads.filteredLeads,
       loading: this.evLeads.loading,
@@ -95,6 +107,7 @@ class LeadsView extends RcViewModule {
       agentState: this.evWorkingState.agentState?.agentState || '',
       allowManualPass: this.evAuth.agentConfig?.agentPermissions?.allowManualPass ?? false,
       defaultTimezone: (this.evAuth.authenticateResponse as any)?.regionalSettings?.timezoneName || 'America/New_York',
+      showViewLead: this.thirdPartyService.leadViewerEnabled,
     }));
 
     const agentBusy = AGENT_BUSY_STATES.includes(agentState);
@@ -143,6 +156,8 @@ class LeadsView extends RcViewModule {
                     disableManualPass={disableManualPass}
                     fetchDispositionList={this.fetchDispositionList}
                     defaultTimezone={defaultTimezone}
+                    showViewLeadButton={showViewLead}
+                    onViewLead={this.viewLead}
                   />
                 );
               })}
