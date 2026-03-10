@@ -40,6 +40,7 @@ export interface AppConfig {
 export const createApp = async (
   options?: Parameters<typeof createSharedApp>[0]['share'],
   additionalModules: Parameters<typeof createSharedApp>[0]['modules'] = [],
+  fromPopup = false,
 ) => {
   const config = process.env.APP_CONFIG;
   const {
@@ -66,6 +67,7 @@ export const createApp = async (
       type: 'Base',
     },
     analyticsKey,
+    fromPopup,
   });
 
   const app = await createSharedApp(appConfig);

@@ -8,6 +8,7 @@ import {
   IRouterOptions,
   ISharedAppOptions,
   IStorageOptions,
+  PortManagerOptions,
 } from '@ringcentral-integration/next-core';
 import {
   BlockPlugin,
@@ -70,6 +71,7 @@ import {
   Redirect,
   AnalyticsOptions,
   OAuth as OAuthWithJWT,
+  EvTabManagerOptions,
 } from './services';
 
 // Views
@@ -146,6 +148,7 @@ interface CreateAppEntryOptions {
   redirectUri?: string;
   jwt?: string;
   jwtOwnerId?: string;
+  fromPopup?: boolean;
   appVersion: string;
   prefix?: string;
   brandConfig: BaseBrandConfig;
@@ -171,6 +174,7 @@ export const getAppConfig = ({
   redirectUri = './redirect.html',
   jwt = '',
   jwtOwnerId = '',
+  fromPopup = false,
   analyticsKey,
 }: CreateAppEntryOptions) => {
   const { defaultLocale } = brandConfig;
@@ -211,6 +215,12 @@ export const getAppConfig = ({
     {
       provide: 'Prefix',
       useValue: prefix,
+    },
+    {
+      provide: 'PortManagerOptions',
+      useValue: {
+        disableAutoPickMainTab: true,
+      } satisfies PortManagerOptions,
     },
     {
       provide: 'BrandConfigOptions',
@@ -279,6 +289,12 @@ export const getAppConfig = ({
     Analytics,
     ThirdPartyService,
     TabManager,
+    {
+      provide: 'EvTabManagerOptions',
+      useValue: {
+        fromPopup,
+      } satisfies EvTabManagerOptions,
+    },
     {
       provide: OAuth,
       useClass: OAuthWithJWT,

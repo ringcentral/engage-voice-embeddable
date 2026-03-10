@@ -9,14 +9,19 @@ export const createWorker = () => {
   );
 };
 const worker = global.__rc_shared_worker__?.worker;
+const fromPopup = new URLSearchParams(window.location.search).get('fromPopup') === '1';
+
 async function runApp() {
-  const app = await createApp({
-    name: 'cx-embeddable',
-    port: 'client',
-    type: 'SharedWorker',
-    worker,
-    // forcedSyncClient: false,
-  });
+  const app = await createApp(
+    {
+      name: 'cx-embeddable',
+      port: 'client',
+      type: 'SharedWorker',
+      worker,
+    },
+    [],
+    fromPopup,
+  );
 
   if (typeof document !== 'undefined') {
     const container = document.getElementById('app');

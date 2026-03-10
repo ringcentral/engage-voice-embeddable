@@ -8,6 +8,7 @@ import {
   delegate,
   StoragePlugin,
   PortManager,
+  watch,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
 
@@ -35,7 +36,6 @@ export interface TabManagerEvent {
 })
 class TabManager extends RcModule {
   private _eventEmitter = new EventEmitter();
-  private _heartBeatExpire = 70000;
 
   constructor(
     @inject('Prefix') private prefix: string,
@@ -56,13 +56,44 @@ class TabManager extends RcModule {
 
   initialize() {
     if (this.fromPopup) {
-      this.setPopupTabId(this.id);
-      window.addEventListener('pagehide', () => {
-        if (this.popupTabId === this.id) {
-          this.setPopupTabId('');
-        }
+      this._initializePopup().catch((err) => {
+        this.logger.error('Failed to initialize popup as main client', err);
       });
+    } else {
+      this._initializeNonPopup();
     }
+  }
+
+  private async _initializePopup(): Promise<void> {
+    this.portManager.initMainClient$.next(true);
+    await this.setPopupIsBecomingMain(true);
+    await this.setPopupTabId(this.id);
+    this.portManager.onMainTab(() => {
+      this.setPopupIsBecomingMain(false);
+    });
+    window.addEventListener('pagehide', () => {
+      if (this.popupTabId === this.id) {
+        this.setPopupTabId('');
+      }
+    });
+  }
+
+  private _initializeNonPopup(): void {
+    if (!this.popupIsBecomingMain) {
+      this.portManager.initMainClient$.next(true);
+    }
+    watch(
+      this,
+      () => this.popupIsBecomingMain,
+      (isBecoming) => {
+        this.logger.info('popupIsBecomingMain', isBecoming);
+        if (isBecoming) {
+          globalThis.location.reload();
+        } else {
+          this.portManager.initMainClient$.next(true);
+        }
+      },
+    );
   }
 
   get id() {
@@ -72,14 +103,27 @@ class TabManager extends RcModule {
   @state
   popupTabId = '';
 
+  @state
+  popupIsBecomingMain = false;
+
   @action
   _setPopupTabId(tabId: string) {
     this.popupTabId = tabId;
   }
 
+  @action
+  _setPopupIsBecomingMain(value: boolean) {
+    this.popupIsBecomingMain = value;
+  }
+
   @delegate('server')
-  async setPopupTabId(tabId: string) {
+  async setPopupTabId(tabId: string): Promise<void> {
     this._setPopupTabId(tabId);
+  }
+
+  @delegate('server')
+  async setPopupIsBecomingMain(value: boolean): Promise<void> {
+    this._setPopupIsBecomingMain(value);
   }
 
   get fromPopup(): boolean {
@@ -97,8 +141,7 @@ class TabManager extends RcModule {
   }
 
   get hasMultipleTabs(): boolean {
-    // Check if multiple tabs are open
-    return false; // Simplified implementation
+    return false;
   }
 
   /**
