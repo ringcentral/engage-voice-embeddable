@@ -136,4 +136,21 @@ export class OAuth extends OAuthBase {
     }
     return uri;
   }
+
+  // override async setupOAuth() {
+  //   if (this.oAuthReady && window.oAuthCallback) return;
+
+  //   window.oAuthCallback = (callbackUri) => {
+  //     this._clearRedirectCheckTimeout();
+  //     this.handleCallbackLogin(callbackUri);
+  //   };
+
+  //   this.setOAuthReady(true);
+  // }
+
+  // override async destroyOAuth() {
+  //   if (!this.oAuthReady && !window.oAuthCallback) return;
+  //   window.oAuthCallback = null;
+  //   this.setOAuthReady(false);
+  // }
 }

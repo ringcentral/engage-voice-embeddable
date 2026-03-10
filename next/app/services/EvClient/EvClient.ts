@@ -1034,6 +1034,22 @@ class EvClient extends RcModule {
   async clearEvSession() {
     const Session = window.AgentSDK.shared.Session;
     Session.clearSession();
+    this.resetUIModel();
+  }
+
+  resetUIModel() {
+    const instance = this._sdk._getUIModel().getInstance();
+    if (instance.pingStatIntervalId) {
+      clearInterval(instance.pingStatIntervalId);
+    }
+    if (instance.statsIntervalId) {
+      clearInterval(instance.statsIntervalId);
+    }
+    instance.connectionSettings = {
+      hashCode: '', // used specifically for reconnects
+      reconnect: false, // variable tracks the type of login, on init it's false...once connected it's set to true
+      isMultiSocket: false,
+    };
   }
 
   @delegate('mainClient')

@@ -285,6 +285,7 @@ class EvAuth extends RcModule {
       try {
         await this.evClient.clearEvSession();
         await this.evClient.closeSocket();
+        // await this.evClient.resetUIModel();
       } catch (error) {
         this.logger.error('closeSocket error~~', error);
       }
@@ -455,6 +456,7 @@ class EvAuth extends RcModule {
     if (result) {
       return true;
     }
+    await this.auth.ensureValidAccessToken();
     const authenticateResponse = await this.authenticateWithToken({
       rcAccessToken: this.auth.accessToken,
       tokenType: 'Bearer',
@@ -509,9 +511,9 @@ class EvAuth extends RcModule {
       if (openSocketResult.error) {
         this.logger.info('retryOpenSocket~~', retryOpenSocket);
         if (retryOpenSocket) {
-          const { access_token } = await this.auth.refreshToken();
+          await this.auth.ensureValidAccessToken();
           const authenticateRes = await this.authenticateWithToken({
-            rcAccessToken: access_token,
+            rcAccessToken: this.auth.accessToken,
             shouldEmitAuthSuccess: false,
           });
           if (!authenticateRes) return;
