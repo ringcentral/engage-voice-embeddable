@@ -9,7 +9,6 @@ export const createWorker = () => {
   );
 };
 const worker = global.__rc_shared_worker__?.worker;
-const fromPopup = new URLSearchParams(window.location.search).get('fromPopup') === '1';
 
 async function runApp() {
   const app = await createApp(
@@ -20,7 +19,6 @@ async function runApp() {
       worker,
     },
     [],
-    fromPopup,
   );
 
   if (typeof document !== 'undefined') {

@@ -247,11 +247,27 @@ export const getBaseWebpackConfig = <T extends BaseAppConfig>({
                   // TODO: fix type
                   //@ts-ignore
                   projectConfig.appConfig.mfeConfig;
-                return getLoadWorkerTemplate(
+                const baseScript = getLoadWorkerTemplate(
                   nameSpace,
                   workerUrl,
                   chunkName,
                   mfeConfig ? JSON.stringify(mfeConfig) : '',
+                );
+                // Append stable page query params to the worker URL at runtime
+                // so the worker can read them via self.location.search.
+                // Uses a regex to match regardless of indentation in the template.
+                // Filters out volatile/page-only params (_t, fromAdapter, fromPopup)
+                // so the worker URL stays stable across reloads with the same config.
+                const sep = workerUrl.includes('?') ? '&' : '?';
+                return baseScript.replace(
+                  /const url = '[^']*';/,
+                  `const url = (function() {
+                    var base = '${workerUrl}';
+                    var p = new URLSearchParams(window.location.search);
+                    ['_t', 'fromAdapter', 'fromPopup'].forEach(function(k) { p.delete(k); });
+                    var s = p.toString();
+                    return s ? base + '${sep}' + s : base;
+                  })();`,
                 );
               };
 

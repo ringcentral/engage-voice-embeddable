@@ -100,6 +100,8 @@ import {
   OffhookButtonView,
   EvIntegratedSoftphoneView,
   ConnectivityView,
+  DispositionViewOptions,
+  ActiveCallViewOptions,
 } from './views';
 
 /**
@@ -148,6 +150,7 @@ interface CreateAppEntryOptions {
   redirectUri?: string;
   jwt?: string;
   jwtOwnerId?: string;
+  hideCallNote?: boolean;
   fromPopup?: boolean;
   appVersion: string;
   prefix?: string;
@@ -174,6 +177,7 @@ export const getAppConfig = ({
   redirectUri = './redirect.html',
   jwt = '',
   jwtOwnerId = '',
+  hideCallNote = false,
   fromPopup = false,
   analyticsKey,
 }: CreateAppEntryOptions) => {
@@ -386,7 +390,19 @@ export const getAppConfig = ({
       useValue: {
         showReChooseAccount: true,
       } satisfies SessionConfigViewOptions,
-    }
+    },
+    {
+      provide: 'DispositionViewOptions',
+      useValue: {
+        hideCallNote,
+      } satisfies DispositionViewOptions,
+    },
+    {
+      provide: 'ActiveCallViewOptions',
+      useValue: {
+        hideCallNote,
+      } satisfies ActiveCallViewOptions,
+    },
   ];
 
   return {

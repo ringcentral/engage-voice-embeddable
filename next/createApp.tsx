@@ -1,5 +1,6 @@
 import { createSharedApp } from '@ringcentral-integration/next-core';
 import { getAppConfig } from './app/getAppConfig';
+import { parseUri } from './lib/adapter/parseUri';
 
 /**
  * Engage Voice Agent SDK configuration
@@ -34,13 +35,51 @@ export interface AppConfig {
   analyticsKey: string;
 }
 
+interface UrlParams {
+  clientId?: string;
+  clientSecret?: string;
+  rcServer?: string;
+  evServer?: string;
+  disableLoginPopup?: boolean;
+  jwt?: string;
+  jwtOwnerId?: string;
+  redirectUri?: string;
+  hideCallNote?: boolean;
+  fromPopup?: boolean;
+}
+
+function parseBooleanParam(value: string | undefined): boolean {
+  return value === '1' || value === 'true';
+}
+
+function readUrlParams(): UrlParams {
+  const href =
+    typeof window !== 'undefined'
+      ? window.location.href
+      : typeof self !== 'undefined'
+        ? self.location.href
+        : '';
+  const params = parseUri(href);
+  return {
+    clientId: params.clientId || undefined,
+    clientSecret: params.clientSecret || undefined,
+    rcServer: params.rcServer || undefined,
+    evServer: params.evServer || undefined,
+    disableLoginPopup: parseBooleanParam(params.disableLoginPopup),
+    jwt: params.jwt || undefined,
+    jwtOwnerId: params.jwtOwnerId || undefined,
+    redirectUri: params.redirectUri || undefined,
+    hideCallNote: parseBooleanParam(params.hideCallNote),
+    fromPopup: parseBooleanParam(params.fromPopup),
+  };
+}
+
 /**
  * Create the Engage Voice Embeddable application
  */
 export const createApp = async (
   options?: Parameters<typeof createSharedApp>[0]['share'],
   additionalModules: Parameters<typeof createSharedApp>[0]['modules'] = [],
-  fromPopup = false,
 ) => {
   const config = process.env.APP_CONFIG;
   const {
@@ -51,23 +90,45 @@ export const createApp = async (
     analyticsKey,
   } = config as AppConfig;
 
+  const urlParams =
+    typeof window !== 'undefined' || typeof self !== 'undefined'
+      ? readUrlParams()
+      : ({} as UrlParams);
+
+  const mergedSdkConfig = {
+    ...sdkConfig,
+    ...(urlParams.clientId && { clientId: urlParams.clientId }),
+    ...(urlParams.clientSecret && { clientSecret: urlParams.clientSecret }),
+    ...(urlParams.rcServer && { server: urlParams.rcServer }),
+  };
+
+  const mergedEvAgentConfig = {
+    ...evAgentConfig,
+    ...(urlParams.evServer && { authHost: urlParams.evServer }),
+  };
+
   if (typeof document !== 'undefined') {
-    window.evAuthHost = evAgentConfig.authHost;
+    window.evAuthHost = mergedEvAgentConfig.authHost;
   }
 
   const appConfig = getAppConfig({
     appVersion: '0.0.1',
     prefix,
     brandConfig,
-    sdkConfig,
-    evAgentConfig,
+    sdkConfig: mergedSdkConfig,
+    evAgentConfig: mergedEvAgentConfig,
     modules: additionalModules,
     share: options ?? {
       name: 'cx-embeddable',
       type: 'Base',
     },
     analyticsKey,
-    fromPopup,
+    disableLoginPopup: urlParams.disableLoginPopup,
+    redirectUri: urlParams.redirectUri,
+    jwt: urlParams.jwt,
+    jwtOwnerId: urlParams.jwtOwnerId,
+    hideCallNote: urlParams.hideCallNote,
+    fromPopup: urlParams.fromPopup,
   });
 
   const app = await createSharedApp(appConfig);
