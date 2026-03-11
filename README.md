@@ -8,7 +8,7 @@ This is an out-of-the-box embeddable web application that help developers to int
 
 ## Visit Online
 
-Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/index.html) and login with RingCX account to get online demo.
+Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.x/index.html) and login with RingCX account to get online demo.
 
 ## Inject
 
@@ -16,7 +16,7 @@ Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/index.h
 <script>
   (function() {
     var rcs = document.createElement("script");
-    rcs.src = "https://ringcentral.github.io/engage-voice-embeddable/adapter.js";
+    rcs.src = "https://cdn.labs.ringcentral.com/ringcx-embeddable/1.x/adapter.js";
     var rcs0 = document.getElementsByTagName("script")[0];
     rcs0.parentNode.insertBefore(rcs, rcs0);
   })();
@@ -39,9 +39,13 @@ Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/index.h
 * Agent states
 * Voice queues
 * Dial modes
-   - Manual
-   - Predictive dial mode
-   - Preview dial mode
+  - Manual
+  - Predictive dial mode
+  - Preview dial mode
+* Call disposition
+  - Notes
+  - Disposition
+  - AI Summary
 
 ## Unsupported features:
 
@@ -99,9 +103,10 @@ If you create pull request to this repository and get merged, CI will deploy it 
 2. Run command to compile code and build release
 
 ```
-$ yarn build --hosting-url your_host_url
+$ HOSTING_URL=your_host_url yarn build
 ```
 
 Please replace `your_host_uri` with your own web host address, such as `https://ringcentral.github.io/engage-voice-embeddable`.
 
 3. Upload all files in `build/rc` folder to your web space. And visit it in browser.
+4. Add redirect uri `${your_host_url}/redirect.html` to your RingCentral client ID in RingCentral developers portal
