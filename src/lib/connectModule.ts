@@ -1,9 +1,22 @@
-import {
-  connectModule as baseConnectModule,
-  connectModuleProps,
-} from '@ringcentral-integration/widgets/lib/phoneContext';
+import type { EvPhone } from '../interfaces';
 
-import { Phone } from '../interfaces/Phone.type';
+/**
+ * Connect module props interface - local definition
+ */
+export interface ConnectModuleProps<P> {
+  phone: P;
+  getUIProps?: (props: { phone: P }) => Record<string, any>;
+  getUIFunctions?: (props: { phone: P }) => Record<string, any>;
+}
 
-export const connectModule = (props: connectModuleProps<Phone>) =>
-  baseConnectModule(props);
+/**
+ * Connect module utility - simplified local implementation
+ * @deprecated This is a legacy utility for connecting modules
+ */
+export const connectModule = <T = any>(props: ConnectModuleProps<EvPhone>) => {
+  const { phone, getUIProps, getUIFunctions } = props;
+  return {
+    ...getUIProps?.({ phone }),
+    ...getUIFunctions?.({ phone }),
+  } as T;
+};

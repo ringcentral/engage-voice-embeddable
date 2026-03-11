@@ -1,7 +1,7 @@
 import path from 'path';
 import type { WebpackConfigOptions } from '@ringcentral-integration/next-builder';
 import { DefinePlugin, type RuleSetRule } from 'webpack';
-import { getBaseWebpackConfig, merge } from './next/lib/webpack/builder.webpack';
+import { getBaseWebpackConfig, merge } from './src/lib/webpack/builder.webpack';
 import type { AppConfig } from './config';
 
 const getCustomRules = (): RuleSetRule[] => [
@@ -47,7 +47,7 @@ export const getWebpackConfig = (options: WebpackConfigOptions<AppConfig>) => {
           process.env.HOSTING_URL || '.',
         ),
         'process.env.APP_VERSION': JSON.stringify(
-          projectConfig.appConfig.appVersion || '',
+          projectConfig.appConfig.version.appVersion || '',
         ),
       }),
     ],

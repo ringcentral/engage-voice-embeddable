@@ -1,31 +1,30 @@
 {
-  "appVersion": "1.0.0-beta",
   "distPath": "dist",
   "buildPath": "build",
-  "themePath": "./next",
+  "themePath": "./src",
   "pages": [
     {
-      "index": "next/app.html",
-      "main": "next/app.ts"
+      "index": "src/app.html",
+      "main": "src/app.ts"
     },
     {
-      "main": "next/adapter.ts",
+      "main": "src/adapter.ts",
       "filename": "adapter.js"
     },
     {
-      "index": "next/redirect.html",
-      "main": "next/redirect.ts"
+      "index": "src/redirect.html",
+      "main": "src/redirect.ts"
     }
   ],
   "assets": [
-    { "from": "next/favicon.ico", "to": "favicon.ico" },
-    { "from": "next/icon.svg", "to": "icon.svg" },
-    { "from": "next/popup.html", "to": "popup.html" },
-    { "from": "next/index.html", "to": "index.html" },
-    { "from": "next/agentLibrary.js", "to": "agentLibrary.js" },
-    { "from": "next/assets/ringCXLogo.svg", "to": "assets/ringCXLogo.svg" },
-    { "from": "next/assets/logo.svg", "to": "assets/logo.svg" },
-    { "from": "next/assets/popup.svg", "to": "assets/popup.svg" }
+    { "from": "src/favicon.ico", "to": "favicon.ico" },
+    { "from": "src/icon.svg", "to": "icon.svg" },
+    { "from": "src/popup.html", "to": "popup.html" },
+    { "from": "src/index.html", "to": "index.html" },
+    { "from": "src/agentLibrary.js", "to": "agentLibrary.js" },
+    { "from": "src/assets/ringCXLogo.svg", "to": "assets/ringCXLogo.svg" },
+    { "from": "src/assets/logo.svg", "to": "assets/logo.svg" },
+    { "from": "src/assets/popup.svg", "to": "assets/popup.svg" }
   ],
   "environment": {
     "local": {

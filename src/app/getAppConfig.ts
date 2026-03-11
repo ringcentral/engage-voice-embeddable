@@ -275,6 +275,12 @@ export const getAppConfig = ({
     ConnectivityManager,
     ContactMatcher,
     ActivityMatcher,
+    {
+      provide: 'SettingsViewOptions',
+      useValue: {
+        version: appVersion,
+      },
+    }
   ];
 
   // Engage Voice services

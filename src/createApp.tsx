@@ -110,9 +110,10 @@ export const createApp = async (
   if (typeof document !== 'undefined') {
     window.evAuthHost = mergedEvAgentConfig.authHost;
   }
-
+  const appVersion = process.env.APP_VERSION;
+  
   const appConfig = getAppConfig({
-    appVersion: '0.0.1',
+    appVersion,
     prefix,
     brandConfig,
     sdkConfig: mergedSdkConfig,

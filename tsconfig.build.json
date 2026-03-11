@@ -6,14 +6,14 @@
     "noEmit": true
   },
   "include": [
-    "./next/**/*.ts",
-    "./next/**/*.tsx",
+    "./src/**/*.ts",
+    "./src/**/*.tsx",
     "./webpack.config.ts",
     "./gulpfile.ts"
   ],
   "exclude": [
-    "./next/**/*.test.ts",
-    "./next/**/*.test.tsx",
+    "./src/**/*.test.ts",
+    "./src/**/*.test.tsx",
     "node_modules",
     "build",
     "dist"

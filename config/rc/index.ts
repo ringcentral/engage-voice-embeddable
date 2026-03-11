@@ -1,5 +1,7 @@
 import type { AppConfig } from '..';
 import { brandConfig } from './brandConfig';
+import { version as packageVersion } from '../../package.json';
+const version = process.env.APP_VERSION || packageVersion;
 
 export default {
   brandConfig,
@@ -14,7 +16,7 @@ export default {
     allowMultiSocket: true,
     authHost: process.env.ENGAGE_VOICE_AUTH_SERVER || '',
     clientAppType: 'RCX_Embeddable',
-    clientAppVersion: '0.3.0',
+    clientAppVersion: version,
     componentName: 'EAG',
     isI18nEnabled: false,
   },
@@ -22,10 +24,10 @@ export default {
   enableIDB: false,
   version: {
     buildHash: process.env.BUILD_HASH,
-    releaseVersion: process.env.RELEASE_VERSION,
+    releaseVersion: version,
     appVersion: process.env.BUILD_HASH
-      ? `${process.env.APP_VERSION} (${process.env.BUILD_HASH})`
-      : process.env.RELEASE_VERSION,
+      ? `${version} (${process.env.BUILD_HASH})`
+      : version,
   },
   prefix: 'cx-embeddable',
 } as AppConfig;

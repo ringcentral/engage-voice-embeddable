@@ -8,9 +8,7 @@ This is an out-of-the-box embeddable web application that help developers to int
 
 ## Visit Online
 
-Visit [website](https://ringcentral.github.io/engage-voice-embeddable/) in GitHub pages.
-
-![demo](https://user-images.githubusercontent.com/7036536/133401087-2e60c93c-c9dc-48d1-9f24-f8419c5618ca.png)
+Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/index.html) and login with RingCX account to get online demo.
 
 ## Inject
 

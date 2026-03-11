@@ -1,8 +1,8 @@
-import { callErrors } from '@ringcentral-integration/commons/modules/Call';
 import { parse, format, formatTypes } from '@ringcentral-integration/phone-number';
 import cleanNumber from '@ringcentral-integration/phone-number/lib/cleanNumber';
-import { messageTypes } from '@ringcentral-integration/engage-voice-widgets/enums';
-import { EvTypeError } from '@ringcentral-integration/engage-voice-widgets/lib/EvTypeError';
+import { messageTypes, callErrors } from '../enums';
+
+import { EvTypeError } from './EvTypeError';
 
 export const parseNumber = (input: string) => {
   const { parsedNumber, isValid, hasInvalidChars } = parse({

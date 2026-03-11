@@ -9,7 +9,7 @@ import { getWebpackConfig } from './webpack.config';
 
 export async function devServer() {
   const projectConfig = getProjectConfig<AppConfig>();
-  projectConfig.themePath = path.resolve(__dirname, 'next');
+  projectConfig.themePath = path.resolve(__dirname, 'src');
   const webpackConfig = getWebpackConfig({
     projectConfig,
     devServer: true,
@@ -39,7 +39,7 @@ export async function devServer() {
         publicPath: '/',
       },
       port: projectConfig.devServerPort,
-      static: path.resolve(__dirname, 'next'),
+      static: path.resolve(__dirname, 'src'),
     },
     compiler,
   );
@@ -49,7 +49,7 @@ export async function devServer() {
 
 export async function build() {
   const projectConfig = getProjectConfig<AppConfig>();
-  projectConfig.themePath = path.resolve(__dirname, 'next');
+  projectConfig.themePath = path.resolve(__dirname, 'src');
   const webpackConfig = getWebpackConfig({
     projectConfig,
     templateParameters: {

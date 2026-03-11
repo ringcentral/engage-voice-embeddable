@@ -1,30 +1,20 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <title>RingCX Embeddable widget</title>
-  <meta name="description" content="a ringcentral widgets app">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, user-scalable=0, maximum-scale=1, minimum-scale=1"
-  >
-  <link rel="shortcut icon" href="./favicon.ico">
-  <style>
-    #appLoading {
-      text-align: center;
-      padding-top: 30px;
-    }
-  </style>
-</head>
-<body>
-  <div id="viewport">
-    <p id="appLoading">
-      Loading...
-    </p>
-  </div>
-  <audio id="remoteAudio"></audio>
-  <audio id="localAudio"></audio>
-  <script src="app.js"></script>
-</body>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <%= meta %> <%= fontSpring %>
+    <title><%= appName %></title>
+    <link rel="icon" type="image/x-icon" href="icon.svg" />
+    <script>
+      window.evAuthHost = '<%= agentConfig.authHost %>';
+    </script>
+    <script src="./agentLibrary.js"></script>
+    <!-- prettier-ignore -->
+    <%= themeInject %>
+    <%= workerScript('__rc_shared_worker__', 'worker') %>
+  </head>
+  <body>
+    <div id="app"><%= loadingSpring %></div>
+    <audio id="remoteAudio"></audio>
+    <audio id="localAudio"></audio>
+  </body>
 </html>
