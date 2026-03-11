@@ -199,6 +199,7 @@ class ThirdPartyService extends RcModule {
           data: decodedQueries,
         },
       });
+      this.logger.info('matchContacts data~~', data);
       if (!data || Object.keys(data).length === 0) {
         return result;
       }

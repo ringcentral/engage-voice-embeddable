@@ -428,6 +428,16 @@ class Adapter extends AdapterCore {
     }
   }
 
+  override renderAdapterSize(): void {
+    super.renderAdapterSize();
+    if (this._fromPopup) {
+      this._contentFrameContainerEl.style.width = '100%';
+      this._contentFrameContainerEl.style.height = 'calc(100% - 36px)';
+      this._contentFrameEl.style.width = '100%';
+      this._contentFrameEl.style.height = '100%';
+    }
+  }
+
   /**
    * Set ringing state (no-op for EV adapter)
    */

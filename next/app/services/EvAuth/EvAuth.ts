@@ -29,6 +29,7 @@ import { EvClient } from '../EvClient';
 import { EvSubscription } from '../EvSubscription';
 import { OAuth } from '../OAuth';
 import { Analytics } from '../Analytics';
+import { TabManager } from '../EvTabManager';
 
 import type {
   EvAuthOptions,
@@ -53,6 +54,7 @@ class EvAuth extends RcModule {
   private _eventEmitter = new EventEmitter();
 
   public canUserLogoutFn: () => Promise<boolean> = async () => true;
+  private _connectOrReauthenticatePromise: Promise<void> | null = null;
 
   constructor(
     private evClient: EvClient,
@@ -64,6 +66,7 @@ class EvAuth extends RcModule {
     private storage: StoragePlugin,
     private portManager: PortManager,
     private analytics: Analytics,
+    private tabManager: TabManager,
     @optional() private oAuth?: OAuth,
     @optional('EvAuthOptions') private evAuthOptions?: EvAuthOptions,
   ) {
@@ -74,10 +77,20 @@ class EvAuth extends RcModule {
         this.initialize();
         this.portManager.onMainTabChange(async () => {
           this.logger.info('onMainTabChange~~');
+          if (this.tabManager.popupIsBecomingMain) {
+            this.logger.info('onMainTabChange~~, popupIsBecomingMain, return');
+            return;
+          }
           if (!this.auth.loggedIn || this.loginStatus !== EvLoginStatus.AUTH_SUCCESS) {
             return;
           }
-          await this._connectOrReauthenticate();
+          if (this._connectOrReauthenticatePromise) {
+            await this._connectOrReauthenticatePromise;
+            this._connectOrReauthenticatePromise = null;
+          }
+          this._connectOrReauthenticatePromise = this._connectOrReauthenticate();
+          await this._connectOrReauthenticatePromise;
+          this._connectOrReauthenticatePromise = null;
         });
       });
     } else {
@@ -324,7 +337,13 @@ class EvAuth extends RcModule {
           !jwtOwnerChanged
         ) {
           this.logger.info('auto-login~~');
-          await this._connectOrReauthenticate();
+          if (this._connectOrReauthenticatePromise) {
+            await this._connectOrReauthenticatePromise;
+            return;
+          }
+          this._connectOrReauthenticatePromise = this._connectOrReauthenticate();
+          await this._connectOrReauthenticatePromise;
+          this._connectOrReauthenticatePromise = null;
         }
       },
       { multiple: true },
@@ -399,17 +418,16 @@ class EvAuth extends RcModule {
 
   @delegate('server')
   async authenticateWithToken({
-    rcAccessToken = this.auth.accessToken,
-    tokenType = 'Bearer',
     shouldEmitAuthSuccess = true,
   }: AuthenticateWithTokenParams = {}) {
     this.logger.info('authenticateWithToken', shouldEmitAuthSuccess);
     try {
+      await this.auth.ensureValidAccessToken();
       await this.evClient.initSDK();
       const authenticateResponse =
         await this.evClient.getAndHandleAuthenticateResponse(
-          rcAccessToken,
-          tokenType,
+          this.auth.accessToken,
+          'Bearer',
         );
       if (authenticateResponse.error) {
         throw new EvTypeError({
@@ -456,10 +474,7 @@ class EvAuth extends RcModule {
     if (result) {
       return true;
     }
-    await this.auth.ensureValidAccessToken();
     const authenticateResponse = await this.authenticateWithToken({
-      rcAccessToken: this.auth.accessToken,
-      tokenType: 'Bearer',
       shouldEmitAuthSuccess: false,
     });
     return !!authenticateResponse;
@@ -511,9 +526,7 @@ class EvAuth extends RcModule {
       if (openSocketResult.error) {
         this.logger.info('retryOpenSocket~~', retryOpenSocket);
         if (retryOpenSocket) {
-          await this.auth.ensureValidAccessToken();
           const authenticateRes = await this.authenticateWithToken({
-            rcAccessToken: this.auth.accessToken,
             shouldEmitAuthSuccess: false,
           });
           if (!authenticateRes) return;
@@ -557,10 +570,9 @@ class EvAuth extends RcModule {
   }
 
   @delegate('server')
-  async loginAgent(token: string = this.auth.accessToken): Promise<void> {
+  async loginAgent(): Promise<void> {
     this.logger.info('loginAgent~~');
     const authenticateRes = await this.authenticateWithToken({
-      rcAccessToken: token,
       shouldEmitAuthSuccess: false,
     });
     if (!authenticateRes) return;

@@ -36,6 +36,7 @@ export interface TabManagerEvent {
 })
 class TabManager extends RcModule {
   private _eventEmitter = new EventEmitter();
+  private _popupInitialized = false;
 
   constructor(
     @inject('Prefix') private prefix: string,
@@ -56,6 +57,8 @@ class TabManager extends RcModule {
 
   initialize() {
     if (this.fromPopup) {
+      if (this._popupInitialized) return;
+      this._popupInitialized = true;
       this._initializePopup().catch((err) => {
         this.logger.error('Failed to initialize popup as main client', err);
       });
@@ -65,12 +68,14 @@ class TabManager extends RcModule {
   }
 
   private async _initializePopup(): Promise<void> {
-    this.portManager.initMainClient$.next(true);
-    await this.setPopupIsBecomingMain(true);
-    await this.setPopupTabId(this.id);
     this.portManager.onMainTab(() => {
       this.setPopupIsBecomingMain(false);
     });
+    this.portManager.initMainClient$.next(true);
+    if (!this.portManager.isMainTab) {
+      await this.setPopupIsBecomingMain(true);
+    }
+    await this.setPopupTabId(this.id);
     window.addEventListener('pagehide', () => {
       if (this.popupTabId === this.id) {
         this.setPopupTabId('');
@@ -79,7 +84,7 @@ class TabManager extends RcModule {
   }
 
   private _initializeNonPopup(): void {
-    if (!this.popupIsBecomingMain) {
+    if (!this.popupIsBecomingMain && !this.isPopupWindowOpened) {
       this.portManager.initMainClient$.next(true);
     }
     watch(

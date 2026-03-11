@@ -21,5 +21,6 @@ export * from './EvRequeueCall';
 export * from './EvAgentScript';
 export * from './EvCallDataSource';
 export * from './EvCallMonitor';
+export * from './Auth';
 export * from './OAuth';
 export * from './Redirect';

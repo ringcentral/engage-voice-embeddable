@@ -164,10 +164,10 @@ class Redirect extends RcModule {
       this.logger.info('onCallRinging~~');
       const call = await this._evClient.getCurrentCall();
       if (call) {
-        await this._evCallMonitor.getMatcher(call);
         if (call.callType === 'INBOUND') {
           this._adapter.onRingCall(call);
         }
+        await this._evCallMonitor.getMatcher(call);
       }
     });
     this._evCallMonitor.onCallAnswered(async (call) => {
@@ -176,9 +176,9 @@ class Redirect extends RcModule {
       const id = this._evClient.encodeUii(call.session);
       this._evCall.setActivityCallId(id);
       this._dialerView.setToNumber('');
-      await this._evCallMonitor.getMatcher(call);
       this.gotoActivityCallPage(id);
       this._adapter.onNewCall(call);
+      await this._evCallMonitor.getMatcher(call);
     });
     this._evCallMonitor.onCallEnded(async (call) => {
       this.logger.info('onCallEnded~~');

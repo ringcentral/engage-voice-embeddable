@@ -50,6 +50,7 @@ import { AppView } from './AppView';
 
 // Services
 import {
+  Auth as AuthExt,
   EvClient,
   EvSubscription,
   EvAuth,
@@ -259,7 +260,10 @@ export const getAppConfig = ({
       provide: 'AuthOptions',
       useValue: { usePKCE: true } satisfies AuthOptions,
     },
-    Auth,
+    {
+      provide: Auth,
+      useClass: AuthExt,
+    },
     RateLimiter,
     {
       provide: StorageOptions,

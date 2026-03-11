@@ -196,10 +196,6 @@ class EvAgentSession extends RcModule {
   @state
   formGroup: FormGroup = DEFAULT_FORM_GROUP;
 
-  @storage
-  @state
-  accessToken = '';
-
   get isExternalPhone(): boolean {
     return this.formGroup.loginType === loginTypes.external;
   }
@@ -389,16 +385,6 @@ class EvAgentSession extends RcModule {
   }
 
   @action
-  _setAccessToken(token: string) {
-    this.accessToken = token;
-  }
-
-  @delegate('server')
-  async setAccessToken(token: string): Promise<void> {
-    this._setAccessToken(token);
-  }
-
-  @action
   _setConfigSuccess(status: boolean) {
     this.logger.info('setConfigSuccess~', status);
     this.configSuccess = status;
@@ -563,6 +549,7 @@ class EvAgentSession extends RcModule {
         result = (await this._connectEvServer(config)).result;
       }
       await this._handleAgentResult({ config: result.data, needAssignFormGroupValue });
+      this.auth.setNotFreshLogin();
       if (triggerEvent) {
         this._emitTriggerConfig();
         await this.setConfigSuccess(true);
@@ -638,12 +625,10 @@ class EvAgentSession extends RcModule {
       if (alertMessage) {
         this.toast.danger({ message: alertMessage, ttl: 0 });
       }
-      const { access_token } = await this.auth.refreshToken();
-      await this.setAccessToken(access_token);
       await this.evAuth.logoutAgent();
       // Wait for server to finish logout
       await sleep(WAIT_EV_SERVER_ROLLBACK_DELAY);
-      await this.evAuth.loginAgent(this.accessToken);
+      await this.evAuth.loginAgent();
     };
     return isBlock ? this.block.next(fn) : fn();
   }
@@ -655,7 +640,7 @@ class EvAgentSession extends RcModule {
     return new Promise<Promise<void>>((resolve) => {
       this.evAuth.onceLogout(async () => {
         await sleep(WAIT_EV_SERVER_ROLLBACK_DELAY);
-        resolve(this.evAuth.loginAgent(this.accessToken));
+        resolve(this.evAuth.loginAgent());
       });
     });
   }

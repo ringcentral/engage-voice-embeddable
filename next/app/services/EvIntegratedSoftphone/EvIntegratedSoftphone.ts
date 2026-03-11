@@ -24,6 +24,7 @@ import { EvSubscription } from '../EvSubscription';
 import { EvAgentSession } from '../EvAgentSession';
 import { EvPresence } from '../EvPresence';
 import { EvCall } from '../EvCall';
+import { TabManager } from '../EvTabManager';
 import type {
   EvIntegratedSoftphoneOptions,
   SipState,
@@ -58,6 +59,7 @@ class EvIntegratedSoftphone extends RcModule {
     private storagePlugin: StoragePlugin,
     private portManager: PortManager,
     private moduleRef: ModuleRef,
+    private tabManager: TabManager,
     @optional('EvIntegratedSoftphoneOptions')
     private evIntegratedSoftphoneOptions?: EvIntegratedSoftphoneOptions,
   ) {
@@ -71,6 +73,7 @@ class EvIntegratedSoftphone extends RcModule {
           // so when main tab is changed, we need to reset the sip state.
           // So it can reconnect at new main tab
           this.logger.info('onMainTabChange~~');
+          if (this.tabManager.popupIsBecomingMain) return;
           this._sipConnected = false;
           this._resetSip();
           this._eventEmitter.emit(EvSoftphoneEvents.RESET);
