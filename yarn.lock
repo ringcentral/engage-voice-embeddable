@@ -3482,7 +3482,7 @@
     "@jridgewell/resolve-uri" "^3.0.3"
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
-"@jridgewell/trace-mapping@^0.3.12", "@jridgewell/trace-mapping@^0.3.23", "@jridgewell/trace-mapping@^0.3.28":
+"@jridgewell/trace-mapping@^0.3.12", "@jridgewell/trace-mapping@^0.3.20", "@jridgewell/trace-mapping@^0.3.23", "@jridgewell/trace-mapping@^0.3.28":
   version "0.3.31"
   resolved "https://registry.yarnpkg.com/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz#db15d6781c931f3a251a3dac39501c98a6082fd0"
   integrity sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==
@@ -4087,9 +4087,10 @@
     redux "^4.2.0"
     sip.js "0.11.6"
 
-"@ringcentral-integration/i18n-dayjs@*", "@ringcentral-integration/i18n-dayjs@git+https://github.com/ringcentral/ringcentral-js-widgets.git#i18n-dayjs-release":
-  version "0.16.0"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#0bf06b6ce164ec565d00053e053bc3f8a132a366"
+"@ringcentral-integration/i18n-dayjs@*", "@ringcentral-integration/i18n-dayjs@0.16.0-next":
+  version "0.16.0-next"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/i18n-dayjs/-/i18n-dayjs-0.16.0-next.tgz#5faaccd52f74e280a793ed644b76187959957410"
+  integrity sha512-m3p4G67KL4di57jBlZMgou4XkZ3TiPwHlaFAwzzIhdabsKUM6o0+yt6lX/WdpGwEkp0+q+1qAuFy6r6MEiA0mQ==
   dependencies:
     dayjs "^1.11.7"
 
@@ -4119,9 +4120,10 @@
     through2 "^2.0.5"
     xml-js "^1.6.2"
 
-"@ringcentral-integration/micro-auth@*", "@ringcentral-integration/micro-auth@git+https://github.com/ringcentral/ringcentral-js-widgets.git#micro-auth-release":
+"@ringcentral-integration/micro-auth@*", "@ringcentral-integration/micro-auth@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#ef65bf9b6b587bd5a077068d6c7b1c409533f98b"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/micro-auth/-/micro-auth-0.0.1.tgz#66b4f43b2eef5af2cb713adf5964d1170c0b11e3"
+  integrity sha512-urcpKvA0vtIeV8cMzkkavj3BxlM11cvbPD24S9MDtz6qayOdjzayax+immhmOz7C01ZbbrsxxokHBQpV4Zz3Qg==
   dependencies:
     "@ringcentral-integration/commons" "*"
     "@ringcentral-integration/i18n" "*"
@@ -4139,9 +4141,10 @@
     react-dom "^17.0.2"
     ua-parser-js "^2.0.3"
 
-"@ringcentral-integration/micro-contacts@*", "@ringcentral-integration/micro-contacts@git+https://github.com/ringcentral/ringcentral-js-widgets.git#micro-contacts-release":
+"@ringcentral-integration/micro-contacts@*", "@ringcentral-integration/micro-contacts@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#648594acafbe1e2584f814a2cf8d848b0714a2ef"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/micro-contacts/-/micro-contacts-0.0.1.tgz#ace357712e3b3f447b604c0ef283a85f97aedcb8"
+  integrity sha512-3k0rCvprux0fTgL6WJCCjxnURen4cTXVi7JIaXAIG312dXDmn82xzHSWWpvc266QIW6N31PK9+9sjSN6IFJzmQ==
   dependencies:
     "@ringcentral-integration/commons" "*"
     "@ringcentral-integration/i18n" "*"
@@ -4157,9 +4160,10 @@
     react "^17.0.2"
     react-dom "^17.0.2"
 
-"@ringcentral-integration/micro-core@*", "@ringcentral-integration/micro-core@git+https://github.com/ringcentral/ringcentral-js-widgets.git#micro-core-release":
+"@ringcentral-integration/micro-core@*", "@ringcentral-integration/micro-core@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#a065b22919c711acbb86226c6acf18d64e6b590c"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/micro-core/-/micro-core-0.0.1.tgz#6ab8cf5ae7a8753ef4a05a1c23c25d41d2bc32b0"
+  integrity sha512-nkxvyBlEfjE8QRWkucCjqDq6MMgedC30EKiwomvg8tibLgP0W/rp1oVBc23vpzCfy6qME3HBd2kd2U1zjH6FdA==
   dependencies:
     "@ringcentral-integration/commons" "*"
     "@ringcentral-integration/i18n" "*"
@@ -4178,9 +4182,10 @@
     react-dom "^17.0.2"
     ua-parser-js "^2.0.3"
 
-"@ringcentral-integration/micro-coworker@*", "@ringcentral-integration/micro-coworker@git+https://github.com/ringcentral/ringcentral-js-widgets.git#micro-coworker-release":
+"@ringcentral-integration/micro-coworker@*", "@ringcentral-integration/micro-coworker@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#f65133b42cc7dbb63e6660e2e5aa8856f0627d68"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/micro-coworker/-/micro-coworker-0.0.1.tgz#01bfff2feea1d640ac5d95f63cedf49cd83843cc"
+  integrity sha512-Ti72FZKLRmTfyTNcTA5DS0vDIFBJKL8Gpv42xBsCE18DXFVZJdTOdRx9mevlSwWQoamocakrhuLyvSkYN3V1xw==
   dependencies:
     "@ringcentral-integration/commons" "*"
     "@ringcentral-integration/i18n" "*"
@@ -4197,9 +4202,10 @@
     react "^17.0.2"
     react-dom "^17.0.2"
 
-"@ringcentral-integration/micro-meeting@*", "@ringcentral-integration/micro-meeting@git+https://github.com/ringcentral/ringcentral-js-widgets.git#micro-meeting-release":
+"@ringcentral-integration/micro-meeting@*", "@ringcentral-integration/micro-meeting@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#adb8d65f14de5f637ab30a4621eb6f74be0d7762"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/micro-meeting/-/micro-meeting-0.0.1.tgz#c692f0497a1dd45f3e81c310cda6bdfdf580853c"
+  integrity sha512-bFqZ6KShaBG7LLVsAxmgDtAdlL8g1eKyDlaqf7k+IsBNQW9XnSYSjH5hSX3oohNuAAG8ZpnB/7earWQM4SgV1A==
   dependencies:
     "@ringcentral-integration/commons" "*"
     "@ringcentral-integration/i18n" "*"
@@ -4216,9 +4222,10 @@
     react "^17.0.2"
     react-dom "^17.0.2"
 
-"@ringcentral-integration/micro-message@*", "@ringcentral-integration/micro-message@git+https://github.com/ringcentral/ringcentral-js-widgets.git#micro-message-release":
+"@ringcentral-integration/micro-message@*", "@ringcentral-integration/micro-message@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#882c426eb0767560d18d56b4e1bff4b536710aa4"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/micro-message/-/micro-message-0.0.1.tgz#c7076431d0e96ad76d14a613ce09ff7acf9b4256"
+  integrity sha512-YxMQ1HI9wfgwiEk7C/E13W+F+xW9ggJ+Ilf/PYnKd2zhEC728YBJJLM4jUsgESBLtFGjaCXtSQvsN4KC7jZG+w==
   dependencies:
     "@ringcentral-integration/commons" "*"
     "@ringcentral-integration/i18n" "*"
@@ -4235,9 +4242,10 @@
     react "^17.0.2"
     react-dom "^17.0.2"
 
-"@ringcentral-integration/micro-next-commons@git+https://github.com/ringcentral/ringcentral-js-widgets.git#micro-next-commons-release":
+"@ringcentral-integration/micro-next-commons@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#c574b348573551ffff6284f79f8565a337b35ab4"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/micro-next-commons/-/micro-next-commons-0.0.1.tgz#3727494fe29d2803ab75046854d2cbd73660b2bb"
+  integrity sha512-tJKHBfACSZaG7MBSbMZ61Wi1aqyzvq9b0nzYHRdfTJ6MmkqH+Wv9MymFxDjib09YsRKhgPgk9ZL37flO5/B5gA==
   dependencies:
     "@ringcentral-integration/commons" "*"
     "@ringcentral-integration/i18n" "*"
@@ -4262,9 +4270,10 @@
     react "^17.0.2"
     react-dom "^17.0.2"
 
-"@ringcentral-integration/micro-phone@*", "@ringcentral-integration/micro-phone@git+https://github.com/ringcentral/ringcentral-js-widgets.git#micro-phone-release":
+"@ringcentral-integration/micro-phone@*", "@ringcentral-integration/micro-phone@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#08e95019f90d41d33d02b84dedbcfaf62e53a2a9"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/micro-phone/-/micro-phone-0.0.1.tgz#0c4dc69a1cf953be0639eb1db63cc4bbecfc2d47"
+  integrity sha512-0Gx8lq2Cq8OzYGuSHuE8uhJ1wXGSj3wFbAC49wTXTcxirRwMK2RXF0l53n054RjsyR63Ji2NoR8czldgrv57kQ==
   dependencies:
     "@material-ui/icons" "^4.11.3"
     "@ringcentral-integration/commons" "*"
@@ -4286,9 +4295,10 @@
     react "^17.0.2"
     react-dom "^17.0.2"
 
-"@ringcentral-integration/micro-setting@*", "@ringcentral-integration/micro-setting@git+https://github.com/ringcentral/ringcentral-js-widgets.git#micro-setting-release":
+"@ringcentral-integration/micro-setting@*", "@ringcentral-integration/micro-setting@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#4a612304d248753d8cf505cd450c4d4f07ff1c37"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/micro-setting/-/micro-setting-0.0.1.tgz#25907b91777b9e3c06466ae07c07550e3c899269"
+  integrity sha512-v5mGNqZ5GGaaWHdtAHE/MffE8+RjfVICrTCQ78Xs+5okEsZcmz5iN4Wx8jDi/iLPElb/JN3Ga8bOhzQbnYJCFg==
   dependencies:
     "@ringcentral-integration/commons" "*"
     "@ringcentral-integration/i18n" "*"
@@ -4304,6 +4314,28 @@
     ramda "^0.28.0"
     react "^17.0.2"
     react-dom "^17.0.2"
+
+"@ringcentral-integration/next-builder@0.0.1":
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/next-builder/-/next-builder-0.0.1.tgz#bc0038a48e97d186bafdca85c91a986a23c7f0eb"
+  integrity sha512-goRZIJcRYT1sMYPXSawo4YdUppwKeVkhsCjpaLr8pl2WwPaL4j367xw7ewTW9nfe8chxE2tPjGBHFGNMO8dU+A==
+  dependencies:
+    "@ringcentral-integration/i18n" "*"
+    "@ringcentral-integration/next-core" "*"
+    "@ringcentral-integration/next-integration" "*"
+    "@ringcentral-integration/next-widgets" "*"
+    "@ringcentral-integration/widgets" "*"
+    "@types/cli-table" "^0.3.1"
+    "@types/cors" "^2.8.17"
+    cli-table "^0.3.11"
+    copy-webpack-plugin "^11.0.0"
+    cors "^2.8.5"
+    express "^4.16.4"
+    fs-extra "^10.1.0"
+    html-webpack-plugin "^5.3.2"
+    typescript-json-schema "^0.54.0"
+    webpack "^5.89.0"
+    webpack-merge "^5.10.0"
 
 "@ringcentral-integration/next-builder@git+https://github.com/ringcentral/ringcentral-js-widgets.git#next-builder-release":
   version "1.0.0"
@@ -4326,9 +4358,10 @@
     webpack "^5.89.0"
     webpack-merge "^5.10.0"
 
-"@ringcentral-integration/next-core@*", "@ringcentral-integration/next-core@git+https://github.com/ringcentral/ringcentral-js-widgets.git#next-core-release":
+"@ringcentral-integration/next-core@*", "@ringcentral-integration/next-core@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#a8c0ff45ff3d57fa5fc5abfb486ae4c14a4bd685"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/next-core/-/next-core-0.0.1.tgz#528cec722d7111b736d482225c79b17644a0aa6e"
+  integrity sha512-2sKeLurXIEp/gO0gXSfIsFg/u4u19trXlW34jutwqLWnvw6KrpRBWMj5uoX+DZlzYk/Khm0nVyPDnZ62pSctfw==
   dependencies:
     "@ringcentral-integration/utils" "*"
     "@ringcentral/mfe-logger" "^0.4.18"
@@ -4342,22 +4375,25 @@
     rxjs "^7.8.0"
     uuid "^9.0.1"
 
-"@ringcentral-integration/next-integration@*", "@ringcentral-integration/next-integration@git+https://github.com/ringcentral/ringcentral-js-widgets.git#next-integration-release":
+"@ringcentral-integration/next-integration@*", "@ringcentral-integration/next-integration@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#f868ccb420950dbf4e9189c33dc2d8ee9a747ddc"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/next-integration/-/next-integration-0.0.1.tgz#07dcda47fe7618dd4b59cf73aafec98443717d8b"
+  integrity sha512-84LRBbCHl3YJbQCfKC6fW6xh6bGIo8zEMaNjiC8DpZdgkFfsJ9VU2KfHIbTAfQAxcr6XneYl7otxgSg8G7R/4A==
   dependencies:
     "@ringcentral-integration/next-core" "*"
     "@ringcentral-integration/utils" "*"
 
-"@ringcentral-integration/next-micro@*", "@ringcentral-integration/next-micro@git+https://github.com/ringcentral/ringcentral-js-widgets.git#next-micro-release":
+"@ringcentral-integration/next-micro@*", "@ringcentral-integration/next-micro@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#6cfec64c595b4f5bc15202fcb202de7def4ef366"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/next-micro/-/next-micro-0.0.1.tgz#fabfe4923276625a8771bfc241772ac6fa6d1f4c"
+  integrity sha512-lxiX/IS1lis6euX4Dp23TMh5+tD3Ws1B85cQaug4Ivpj0TjBj1nIUBG9vzgaRRK3VNMM32Qesvl3wjLQxuGw5Q==
   dependencies:
     "@ringcentral/mfe-react" "^0.4.18"
 
-"@ringcentral-integration/next-widgets@*", "@ringcentral-integration/next-widgets@git+https://github.com/ringcentral/ringcentral-js-widgets.git#next-widgets-release":
+"@ringcentral-integration/next-widgets@*", "@ringcentral-integration/next-widgets@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#5635eb3d4fd2233cc4195a0f9b730de02fb7a479"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/next-widgets/-/next-widgets-0.0.1.tgz#8048572b303b743b1dc92afdd71244deb699849c"
+  integrity sha512-NylXJKWZ7i7dumwOsQEvv7ocYmE+b/VGfIYgIyrHKmmkm24FmX1O1XQ6p5kd11R9agv8qOd2KIA+6MwYAC+bUg==
   dependencies:
     "@emoji-mart/react" "^1.0.1"
     "@ringcentral-integration/i18n" "*"
@@ -4385,9 +4421,10 @@
     hammerjs "^2.0.8"
     react-use "^17.5.0"
 
-"@ringcentral-integration/rjsf-juno@*", "@ringcentral-integration/rjsf-juno@git+https://github.com/ringcentral/ringcentral-js-widgets.git#rjsf-juno-release":
+"@ringcentral-integration/rjsf-juno@*", "@ringcentral-integration/rjsf-juno@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#93cbe624b45191f072469af34ba0dbbc387cde82"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/rjsf-juno/-/rjsf-juno-0.0.1.tgz#afc7e3cf087aec7097f64436bec62629b0621dad"
+  integrity sha512-kvPL/JbXtGjZfy8HUZDr9M8bf3oUekiShnefw9kXFzdeUgMtyEdDVRdqb0aNNNAHQO+wcdAupC+ls46xmowVhQ==
   dependencies:
     "@ringcentral/juno" "^2.42.0"
     "@ringcentral/juno-icon" "^1.80.0"
@@ -4395,9 +4432,10 @@
     "@rjsf/utils" "^5.18.3"
     dayjs "^1.11.7"
 
-"@ringcentral-integration/rjsf-spring@git+https://github.com/ringcentral/ringcentral-js-widgets.git#rjsf-spring-release":
+"@ringcentral-integration/rjsf-spring@0.0.1":
   version "0.0.1"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#9bfe019c2e4df8cbdbd144be00b07feacd05d92a"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/rjsf-spring/-/rjsf-spring-0.0.1.tgz#f925c6ddb6f132cb301be975ef290225ed0116e7"
+  integrity sha512-4hdUl7I09lUVguum7UTc6VYkxfqgCXTABeGbeAy/Uelo6/qzSmHXfSUJTClZ8UjypeYgQzs7BmjQH3yJ7/DgzA==
   dependencies:
     "@ringcentral/spring-icon" "1.7.0"
     "@ringcentral/spring-ui" "1.7.0"
@@ -4405,9 +4443,10 @@
     "@rjsf/utils" "^5.18.3"
     dayjs "^1.11.7"
 
-"@ringcentral-integration/utils@*", "@ringcentral-integration/utils@git+https://github.com/ringcentral/ringcentral-js-widgets.git#utils-release":
-  version "0.16.0"
-  resolved "git+https://github.com/ringcentral/ringcentral-js-widgets.git#fcba3656c2943e2201e61f91cf7a43ab6e898603"
+"@ringcentral-integration/utils@*", "@ringcentral-integration/utils@0.16.0-next":
+  version "0.16.0-next"
+  resolved "https://registry.yarnpkg.com/@ringcentral-integration/utils/-/utils-0.16.0-next.tgz#fb9628abd27996dcdfbf9f87460ebb16e9638204"
+  integrity sha512-UC8dnG/boCkx+ZFrbBIb6+/26DsNL/6wWOXPqUXE5NPhQsKTEheeO7OFl9qyspwLvLm9LzijGa+o11dsQy5HJw==
   dependencies:
     string-template "^1.0.0"
     tailwind-merge "^2.5.4"
