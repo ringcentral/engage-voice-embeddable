@@ -736,12 +736,22 @@ class EvAgentSession extends RcModule {
 
   private async _connectEvServer(
     config: EvConfigureAgentOptions,
-  ): Promise<{ result: { data: EvAgentConfig }; existingLoginFound: boolean }> {
+  ): Promise<{ result: { data: EvAgentConfig | { status: string } }; existingLoginFound: boolean }> {
     const authorized = await this.evAuth.refreshEvToken();
     if (!authorized) {
       throw new Error(messageTypes.AUTHORIZATION_ERROR);
     }
     let result = await this.evClient.configureAgent(config);
+    if (!result.data) {
+      return {
+        result: {
+          data: {
+            status: messageTypes.AUTHORIZATION_ERROR,
+          },
+        },
+        existingLoginFound: false,
+      };
+    }
     const { status } = result.data;
     this.logger.info('configureAgent status~~', status);
     const existingLoginFound = status === messageTypes.EXISTING_LOGIN_FOUND;
