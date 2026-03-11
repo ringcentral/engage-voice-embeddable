@@ -17,7 +17,7 @@ import { EvAgentSession } from '../../services/EvAgentSession';
 import { EvAuth } from '../../services/EvAuth';
 import { EvClient } from '../../services/EvClient';
 import { Adapter } from '../../services/Adapter';
-import { ThirdPartyService } from '../../services/ThirdPartyService';
+import { ThirdParty } from '../../services/ThirdParty';
 import { LeadItem } from '../../components/LeadItem';
 import type { PhoneNumberData, ManualPassParams } from '../../components/LeadItem';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber';
@@ -51,7 +51,7 @@ class LeadsView extends RcViewModule {
     private evAuth: EvAuth,
     private evClient: EvClient,
     private adapter: Adapter,
-    private thirdPartyService: ThirdPartyService,
+    private thirdParty: ThirdParty,
     @optional('LeadsViewOptions')
     private leadsViewOptions?: LeadsViewOptions,
   ) {
@@ -82,7 +82,7 @@ class LeadsView extends RcViewModule {
   };
 
   viewLead = async (lead: Lead) => {
-    await this.thirdPartyService.viewLead(lead);
+    await this.thirdParty.viewLead(lead);
   };
 
   component() {
@@ -107,7 +107,7 @@ class LeadsView extends RcViewModule {
       agentState: this.evWorkingState.agentState?.agentState || '',
       allowManualPass: this.evAuth.agentConfig?.agentPermissions?.allowManualPass ?? false,
       defaultTimezone: (this.evAuth.authenticateResponse as any)?.regionalSettings?.timezoneName || 'America/New_York',
-      showViewLead: this.thirdPartyService.leadViewerEnabled,
+      showViewLead: this.thirdParty.leadViewerEnabled,
     }));
 
     const agentBusy = AGENT_BUSY_STATES.includes(agentState);

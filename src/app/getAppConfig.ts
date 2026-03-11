@@ -67,7 +67,7 @@ import {
   EvLeads,
   Adapter,
   Analytics,
-  ThirdPartyService,
+  ThirdParty,
   TabManager,
   Redirect,
   AnalyticsOptions,
@@ -301,7 +301,7 @@ export const getAppConfig = ({
     EvLeads,
     Adapter,
     Analytics,
-    ThirdPartyService,
+    ThirdParty,
     TabManager,
     {
       provide: 'EvTabManagerOptions',

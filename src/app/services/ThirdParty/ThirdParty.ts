@@ -19,9 +19,9 @@ import { contactMatchIdentifyDecode } from '../../../lib/contactMatchIdentify';
 import { thirdPartyMessageTypes } from '../../../enums';
 
 /**
- * ThirdPartyService options for configuration
+ * ThirdParty options for configuration
  */
-export interface ThirdPartyServiceOptions {
+export interface ThirdPartyOptions {
   targetWindow?: Window;
 }
 
@@ -37,13 +37,13 @@ export interface ServiceConfig {
 }
 
 /**
- * ThirdPartyService module - Contact/activity matching and call logging
+ * ThirdParty module - Contact/activity matching and call logging
  * Handles third-party integration via MessageTransport request/response pattern
  */
 @injectable({
-  name: 'ThirdPartyService',
+  name: 'ThirdParty',
 })
-class ThirdPartyService extends RcModule {
+class ThirdParty extends RcModule {
   public transport!: MessageTransport;
   public messageTypes = thirdPartyMessageTypes;
 
@@ -51,8 +51,8 @@ class ThirdPartyService extends RcModule {
     protected portManager: PortManager,
     @optional() private contactMatcher?: ContactMatcher,
     @optional() private activityMatcher?: ActivityMatcher,
-    @optional('ThirdPartyServiceOptions')
-    private thirdPartyServiceOptions?: ThirdPartyServiceOptions,
+    @optional('ThirdPartyOptions')
+    private thirdPartyOptions?: ThirdPartyOptions,
   ) {
     super();
     if (this.portManager?.shared) {
@@ -68,7 +68,7 @@ class ThirdPartyService extends RcModule {
     this.logger.info('initialize~~');
     if (typeof window === 'undefined') return;
     this.transport = new MessageTransport({
-      targetWindow: this.thirdPartyServiceOptions?.targetWindow ?? window.parent,
+      targetWindow: this.thirdPartyOptions?.targetWindow ?? window.parent,
     } as any);
     this.addListeners();
     this.onAppStart();
@@ -290,4 +290,4 @@ class ThirdPartyService extends RcModule {
   }
 }
 
-export { ThirdPartyService };
+export { ThirdParty };

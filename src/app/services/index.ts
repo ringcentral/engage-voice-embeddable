@@ -14,7 +14,7 @@ export * from './EvTransferCall';
 export * from './EvLeads';
 export * from './Adapter';
 export * from './Analytics';
-export * from './ThirdPartyService';
+export * from './ThirdParty';
 export * from './EvTabManager';
 export * from './EvActiveCallControl';
 export * from './EvRequeueCall';

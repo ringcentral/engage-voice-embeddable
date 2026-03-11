@@ -32,7 +32,7 @@ import { EvCallDisposition } from '../../services/EvCallDisposition';
 import { EvWorkingState } from '../../services/EvWorkingState';
 import { EvAgentScript } from '../../services/EvAgentScript';
 import { EvActiveCallControl } from '../../services/EvActiveCallControl';
-import { ThirdPartyService } from '../../services/ThirdPartyService';
+import { ThirdParty } from '../../services/ThirdParty';
 import { EvClient } from '../../services/EvClient';
 import { dialoutStatuses } from '../../../enums';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
@@ -95,7 +95,7 @@ class DispositionView extends RcViewModule {
     private evWorkingState: EvWorkingState,
     private evAgentScript: EvAgentScript,
     private evActiveCallControl: EvActiveCallControl,
-    private thirdPartyService: ThirdPartyService,
+    private thirdParty: ThirdParty,
     private evClient: EvClient,
     private router: RouterPlugin,
     private toast: Toast,
@@ -457,14 +457,14 @@ class DispositionView extends RcViewModule {
     const disposition = this.evCallDisposition.getDisposition(this.callId);
     try {
       if (this.callLogData) {
-        await this.thirdPartyService.logCall({
+        await this.thirdParty.logCall({
           call: this.callLogData,
           task: disposition,
           sessionId: this.callId,
         });
       }
     } catch (e) {
-      this.logger.error('thirdPartyService logCall error~~', e);
+      this.logger.error('thirdParty logCall error~~', e);
     }
     const dialogId = call?.session.dialogId;
     const dispositionId = disposition?.dispositionId;
