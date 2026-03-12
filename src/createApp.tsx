@@ -1,6 +1,6 @@
 import { createSharedApp } from '@ringcentral-integration/next-core';
 import { getAppConfig } from './app/getAppConfig';
-import { parseUri } from './lib/adapter/parseUri';
+import { parseUri } from './lib/Adapter/parseUri';
 
 /**
  * Engage Voice Agent SDK configuration
@@ -111,7 +111,7 @@ export const createApp = async (
     window.evAuthHost = mergedEvAgentConfig.authHost;
   }
   const appVersion = process.env.APP_VERSION;
-  
+
   const appConfig = getAppConfig({
     appVersion,
     prefix,

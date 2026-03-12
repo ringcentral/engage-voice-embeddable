@@ -1,11 +1,11 @@
-import { parseUri } from './lib/adapter/parseUri';
+import { parseUri } from './lib/Adapter/parseUri';
 
 // @ts-ignore
 import logoUrl from '!url-loader!brand-logo-path/assets/logo.svg';
 // @ts-ignore
 import iconUrl from '!url-loader!brand-logo-path/icon.svg';
 
-import Adapter from './lib/adapter/Adapter';
+import Adapter from './lib/Adapter/Adapter';
 
 declare global {
   interface Window {
