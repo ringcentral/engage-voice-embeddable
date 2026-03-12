@@ -497,6 +497,7 @@ class EvAuth extends RcModule {
           if (isSettled) {
             return;
           }
+          console.log('login phase 1 resolved~~', agentConfig);
           isSettled = true;
           clearTimeout(timerId);
           resolve(agentConfig);
@@ -505,6 +506,7 @@ class EvAuth extends RcModule {
           if (isSettled) {
             return;
           }
+          console.error('login phase 1 timeout~~');
           isSettled = true;
           this._eventEmitter.off(EvCallbackTypes.LOGIN_PHASE_1, handleLoginPhase1);
           reject(
