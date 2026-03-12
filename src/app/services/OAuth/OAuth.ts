@@ -4,6 +4,10 @@ import {
   watch,
   PortManager,
   RouterPlugin,
+  delegate,
+  storage,
+  state,
+  action,
 } from '@ringcentral-integration/next-core';
 import {
   Auth,
@@ -59,24 +63,24 @@ export class OAuth extends OAuthBase {
     return (this._oAuthOptions as OAuthOptions)?.disableLoginPopup || false;
   }
 
-  get jwtOwnerId(): string | null {
-    if (!window.localStorage) return null;
-    return localStorage.getItem(`${this.prefix}-jwt-owner-id`);
-  }
-
   get jwtOwnerChanged(): boolean {
     const options = this._oAuthOptions as OAuthOptions;
     return !!options?.jwtOwnerId && options.jwtOwnerId !== this.jwtOwnerId;
   }
 
+  @storage
+  @state
+  jwtOwnerId: string | null = null;
+
+  @action
   setJwtOwnerId(jwtOwnerId: string): void {
-    if (!window.localStorage) return;
-    localStorage.setItem(`${this.prefix}-jwt-owner-id`, jwtOwnerId);
+    this.jwtOwnerId = jwtOwnerId;
   }
 
   /**
    * Handle JWT login with owner change detection
    */
+  @delegate('server')
   async handleJwtLogin(): Promise<void> {
     const options = this._oAuthOptions as OAuthOptions;
     if (!options?.jwt) return;
@@ -109,6 +113,7 @@ export class OAuth extends OAuthBase {
   }
 
   override initialize(): void {
+    // run on client side
     super.initialize();
     // Watch for auth status changes to handle JWT login
     watch(
@@ -116,6 +121,7 @@ export class OAuth extends OAuthBase {
       () => [this.ready, this._auth.loginStatus] as const,
       async () => {
         if (!this.ready) return;
+        if (!this._portManager?.isActiveTab) return;
         if (this._auth.loginStatus === loginStatus.beforeLogout) {
           // Do not jwt login after logout
           this._userLogout = true;
@@ -136,21 +142,4 @@ export class OAuth extends OAuthBase {
     }
     return uri;
   }
-
-  // override async setupOAuth() {
-  //   if (this.oAuthReady && window.oAuthCallback) return;
-
-  //   window.oAuthCallback = (callbackUri) => {
-  //     this._clearRedirectCheckTimeout();
-  //     this.handleCallbackLogin(callbackUri);
-  //   };
-
-  //   this.setOAuthReady(true);
-  // }
-
-  // override async destroyOAuth() {
-  //   if (!this.oAuthReady && !window.oAuthCallback) return;
-  //   window.oAuthCallback = null;
-  //   this.setOAuthReady(false);
-  // }
 }

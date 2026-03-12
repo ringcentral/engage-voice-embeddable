@@ -126,6 +126,7 @@ class Adapter extends RcModule {
       targetWindow: this.adapterOptions?.targetWindow ?? window.parent,
     } as any);
     this.addListeners();
+    this._setupStateWatcher();
   }
 
   /**
@@ -144,7 +145,6 @@ class Adapter extends RcModule {
     this.evSubscription.subscribe(EvCallbackTypes.SIP_REGISTRATION_FAILED, () => {
       this.onSIPFailed();
     });
-    this._setupStateWatcher();
   }
 
   @storage
@@ -285,13 +285,6 @@ class Adapter extends RcModule {
   }
 
   /**
-   * Called when state changes - pushes adapter state to parent
-   */
-  onStateChange(): void {
-    this._pushAdapterState();
-  }
-
-  /**
    * Send response for request type messages
    */
   protected response({ requestId, result }: { requestId: string; result: any }): void {
@@ -418,7 +411,6 @@ class Adapter extends RcModule {
   /**
    * Push adapter state to parent window when state changes
    */
-  @delegate('clients')
   async _pushAdapterState(): Promise<void> {
     if (
       this._lastClosed !== this.closed ||
