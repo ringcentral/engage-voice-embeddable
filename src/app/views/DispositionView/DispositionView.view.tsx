@@ -37,6 +37,7 @@ import { EvClient } from '../../services/EvClient';
 import { dialoutStatuses } from '../../../enums';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
 import { getClockByTimestamp } from '../../../lib/getClockByTimestamp';
+import { formatEvCallForConnected } from '../../../lib/formatEvCall';
 import type {
   EvCallDispositionData,
 } from '../../services/EvCallDisposition/EvCallDisposition.interface';
@@ -421,35 +422,9 @@ class DispositionView extends RcViewModule {
 
   @computed((that: DispositionView) => [that.currentCall])
   get callLogData() {
-    const call = this.currentCall as any;
+    const call = this.currentCall;
     if (!call) return null;
-    const isOutbound = call.callType === 'OUTBOUND';
-    const contactMatches: any[] = call.contactMatches || [];
-    const name = contactMatches[0]?.name;
-    const fromNumber = isOutbound ? call.dnis : call.ani;
-    const toNumber = isOutbound ? call.ani : call.dnis;
-    return {
-      id: call.uii,
-      direction: call.callType,
-      from: {
-        phoneNumber: fromNumber,
-        name: !isOutbound ? name : fromNumber,
-      },
-      to: {
-        phoneNumber: toNumber,
-        name: isOutbound ? name : toNumber,
-      },
-      telephonyStatus: 'CallConnected',
-      sessionId: call.session?.sessionId,
-      telephonySessionId: call.uii,
-      partyId: call.agentId,
-      startTime: call.queueDts ? new Date(call.queueDts).getTime() : undefined,
-      offset: 0,
-      fromMatches: [] as any[],
-      toMatches: [] as any[],
-      activityMatches: [] as any[],
-      recordingUrl: call.session?.recordingUrl,
-    };
+    return formatEvCallForConnected(call as any);
   }
 
   private async doDisposeCall() {

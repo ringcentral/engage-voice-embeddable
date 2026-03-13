@@ -11,6 +11,7 @@ import {
 
 import { EvLoginStatus } from '../../../enums';
 import { EvCallbackTypes } from '../EvClient/enums';
+import { formatEvCallForRing, formatEvCallForConnected } from '../../../lib/formatEvCall';
 import { EvAuth } from '../EvAuth';
 import { EvCallMonitor } from '../EvCallMonitor';
 import type { RedirectOptions } from './Redirect.interface';
@@ -165,7 +166,7 @@ class Redirect extends RcModule {
       const call = await this._evClient.getCurrentCall();
       if (call) {
         if (call.callType === 'INBOUND') {
-          this._adapter.onRingCall(call);
+          this._adapter.onRingCall(formatEvCallForRing(call));
         }
         await this._evCallMonitor.getMatcher(call);
       }
@@ -177,24 +178,24 @@ class Redirect extends RcModule {
       this._evCall.setActivityCallId(id);
       this._dialerView.setToNumber('');
       this.gotoActivityCallPage(id);
-      this._adapter.onNewCall(call);
+      this._adapter.onNewCall(formatEvCallForConnected(call));
       await this._evCallMonitor.getMatcher(call);
     });
     this._evCallMonitor.onCallEnded(async (call) => {
       this.logger.info('onCallEnded~~');
       if (!call?.session) {
         this._router.replace(this._dialerPath);
-        this._adapter.onEndCall(call);
+        this._adapter.onEndCall(call ? formatEvCallForConnected(call) : call);
         return;
       }
       const id = this._evClient.encodeUii(call.session);
       if (this._evCallDisposition.isDisposed(id)) {
         this._router.replace(this._dialerPath);
-        this._adapter.onEndCall(call);
+        this._adapter.onEndCall(formatEvCallForConnected(call));
         return;
       }
       this._redirectOnCallEnded();
-      this._adapter.onEndCall(call);
+      this._adapter.onEndCall(formatEvCallForConnected(call));
       if (!this._dispositionView.showSubmitStep) {
         this._router.replace(this._dialerPath);
       } else {
