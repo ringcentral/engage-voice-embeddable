@@ -54,7 +54,6 @@ import type {
   EvClientManualOutdialParams,
 } from './EvClient.interface';
 import { Environment } from '../Environment';
-import { AgentSDK } from 'next/agentLibrary';
 
 type ListenerType = (typeof EvCallbackTypes)['OPEN_SOCKET' | 'CLOSE_SOCKET'];
 
@@ -353,6 +352,9 @@ class EvClient extends RcModule {
         rcAccessToken,
         tokenType,
         async (res: RawEvAuthenticateAgentWithRcAccessTokenRes) => {
+          if (res.type === 'Authenticate Error' || res.err) {
+            return resolve(res);
+          }
           res.rcAccessToken = rcAccessToken;
           // There three token types in the app
           // 1. RC token from RingCentral Single Sign-on API
@@ -499,10 +501,29 @@ class EvClient extends RcModule {
 
   @delegate('mainClient')
   async logoutAgent(agentId: string): Promise<EvLogoutAgentResponse> {
-    return new Promise<EvLogoutAgentResponse>((resolve) => {
+    const uiModel = this._sdk._getUIModel().getInstance();
+    if (!uiModel.agentSettings.isLoggedIn) {
+      return {
+        message: 'Agent is not logged in',
+        status: 'OK',
+        detail: 'Agent is not logged in',
+      };
+    }
+    const logoutPromise = new Promise<EvLogoutAgentResponse>((resolve) => {
       this._sdk.logoutAgent(agentId, (result: EvLogoutAgentResponse) => {
         resolve(result);
       });
+    });
+    return waitUntilTo(() => logoutPromise, {
+      interval: 0,
+      timeout: 10 * 1000,
+    }).catch((e) => {
+      this.logger.warn('logoutAgent timeout~~', e);
+      return {
+        message: 'Logout timed out',
+        status: 'TIMEOUT',
+        detail: 'logoutAgent did not respond within the timeout period',
+      };
     });
   }
 
@@ -1050,6 +1071,7 @@ class EvClient extends RcModule {
       reconnect: false, // variable tracks the type of login, on init it's false...once connected it's set to true
       isMultiSocket: false,
     };
+    instance.applicationSettings.isLoggedInIS = false;
   }
 
   @delegate('mainClient')
@@ -1059,6 +1081,9 @@ class EvClient extends RcModule {
   }): Promise<any | null> {
     const fullUserDetails = this.getFullUserDetails();
     const rcAccountId = fullUserDetails.rcAccountId;
+    if (!rcAccountId) {
+      return;
+    }
     const rcxSubAccountId = this._sdk.getAgentSettings().accountId;
     const authenticateRequest = this._sdk.getAuthenticateRequest();
     const engageAccessToken = `Bearer ${authenticateRequest.engageAccessToken}`;
