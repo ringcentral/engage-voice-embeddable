@@ -8,7 +8,9 @@ This is an out-of-the-box embeddable web application that help developers to int
 
 ## Visit Online
 
-Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.x/index.html) and login with RingCX account to get online demo.
+Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/index.html) and login with RingCX account to get online demo.
+
+![demo](https://github.com/user-attachments/assets/10e439f1-a3ee-43c0-b9e8-07beb7b99eb5)
 
 ## Inject
 
@@ -16,7 +18,7 @@ Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.x/index.htm
 <script>
   (function() {
     var rcs = document.createElement("script");
-    rcs.src = "https://cdn.labs.ringcentral.com/ringcx-embeddable/1.x/adapter.js";
+    rcs.src = "https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/adapter.js";
     var rcs0 = document.getElementsByTagName("script")[0];
     rcs0.parentNode.insertBefore(rcs, rcs0);
   })();
