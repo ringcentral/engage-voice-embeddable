@@ -742,7 +742,7 @@ class EvAgentSession extends RcModule {
       throw new Error(messageTypes.AUTHORIZATION_ERROR);
     }
     let result = await this.evClient.configureAgent(config);
-    if (!result.data) {
+    if (!result || !result.data) {
       return {
         result: {
           data: {

@@ -411,6 +411,7 @@ class EvAuth extends RcModule {
   async newReconnect(isBlock = true) {
     this.logger.info('newReconnect~~');
     this._setLoginStatus(EvLoginStatus.REAUTHING);
+    await this.evClient.clearEvSession();
     await this.evClient.closeSocket();
     const fn = () => this.loginAgent();
     return isBlock ? this.block.next(fn) : fn();
