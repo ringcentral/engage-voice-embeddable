@@ -94,18 +94,11 @@ class EvAuth extends RcModule {
         });
       });
       this.portManager.onClient(() => {
-        watch(
-          this,
-          () => this.isEvLogged,
-          () => {
-            if (this.isEvLogged) {
-              this.identifyAnalyticsUser();
-            }
-          },
-        );
+        this.initializeClient();
       });
     } else {
       this.initialize();
+      this.initializeClient();
     }
   }
 
@@ -370,6 +363,18 @@ class EvAuth extends RcModule {
         await this.authenticateWithToken();
       }
     });
+  }
+
+  initializeClient() {
+    watch(
+      this,
+      () => this.isEvLogged,
+      () => {
+        if (this.isEvLogged) {
+          this.identifyAnalyticsUser();
+        }
+      },
+    );
   }
 
   private _logout = async () => {

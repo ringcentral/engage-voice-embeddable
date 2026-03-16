@@ -21,6 +21,7 @@ export default {
     isI18nEnabled: false,
   },
   analyticsKey: process.env.MIXPANEL_KEY || '',
+  analyticsSecretKey: process.env.ANALYTICS_SECRET_KEY || '',
   enableIDB: false,
   version: {
     buildHash: process.env.BUILD_HASH,

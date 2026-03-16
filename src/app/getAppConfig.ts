@@ -181,6 +181,7 @@ export const getAppConfig = ({
   hideCallNote = false,
   fromPopup = false,
   analyticsKey,
+  analyticsSecretKey,
 }: CreateAppEntryOptions) => {
   const { defaultLocale } = brandConfig;
 
@@ -392,6 +393,7 @@ export const getAppConfig = ({
       provide: 'AnalyticsOptions',
       useValue: {
         analyticsKey,
+        analyticsSecretKey,
         enableMixpanel: true,
         appVersion,
         externalClientId: sdkConfig.clientId,

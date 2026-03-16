@@ -13,6 +13,7 @@ import {
   PortManager,
   delegate,
   RouterPlugin,
+  watch,
 } from '@ringcentral-integration/next-core';
 import { sleep } from '@ringcentral-integration/commons/utils';
 import { EventEmitter } from 'events';
@@ -102,8 +103,12 @@ class EvAgentSession extends RcModule {
       this.portManager.onServer(() => {
         this._initialize();
       });
+      this.portManager.onClient(() => {
+        this._initializeClient();
+      });
     } else {
       this._initialize();
+      this._initializeClient();
     }
   }
 
@@ -147,6 +152,18 @@ class EvAgentSession extends RcModule {
       this.logger.info('onLoginSuccess event');
       await this.initAgentSession();
     });
+  }
+
+  private _initializeClient() {
+    watch(
+      this,
+      () => this.configSuccess,
+      () => {
+        if (this.configSuccess) {
+          this.evAuth.identifyAnalyticsUser();
+        }
+      },
+    );
   }
 
   /**

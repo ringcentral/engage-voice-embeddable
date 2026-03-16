@@ -14,6 +14,10 @@ export interface AnalyticsOptions {
    */
   analyticsKey?: string;
   /**
+   * Analytics secret key
+   */
+  analyticsSecretKey?: string;
+  /**
    * App version
    */
   appVersion?: string;

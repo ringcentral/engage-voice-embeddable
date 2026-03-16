@@ -88,6 +88,7 @@ export const createApp = async (
     sdkConfig,
     evAgentConfig,
     analyticsKey,
+    analyticsSecretKey,
   } = config as AppConfig;
 
   const urlParams =
@@ -124,6 +125,7 @@ export const createApp = async (
       type: 'Base',
     },
     analyticsKey,
+    analyticsSecretKey,
     disableLoginPopup: urlParams.disableLoginPopup,
     redirectUri: urlParams.redirectUri,
     jwt: urlParams.jwt,

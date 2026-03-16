@@ -40,17 +40,12 @@ import { needMatchSecondRoutes, trackRoutersMap } from './analyticsRouters';
 import { globalTrackEvent$ } from './trackEvent';
 
 /**
- * Secret key for hashing user IDs
- */
-const ANALYTICS_SECRET_KEY = process.env.ANALYTICS_SECRET_KEY || '';
-
-/**
  * Hash an ID using SHA-256
  */
-async function getHashId(id: string | undefined): Promise<string | null> {
+async function getHashId(id: string | undefined, analyticsSecretKey: string): Promise<string | null> {
   if (!id) return null;
   const encoder = new TextEncoder();
-  const data = encoder.encode(`${id}:${ANALYTICS_SECRET_KEY}`);
+  const data = encoder.encode(`${id}:${analyticsSecretKey}`);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -207,8 +202,9 @@ class Analytics extends RcModule implements IAnalytics {
    */
   async identify(options: IdentifyOptions): Promise<void> {
     this.logger.info('identify~~');
-    const hashedUserId = await getHashId(options.userId);
-    const hashedAccountId = await getHashId(options.accountId);
+    const analyticsSecretKey = this._analyticsOptions?.analyticsSecretKey;
+    const hashedUserId = await getHashId(options.userId, analyticsSecretKey);
+    const hashedAccountId = await getHashId(options.accountId, analyticsSecretKey);
     if (hashedAccountId) {
       this._hashedAccountId = hashedAccountId;
     }
