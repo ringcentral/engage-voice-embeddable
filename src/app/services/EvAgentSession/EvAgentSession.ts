@@ -41,6 +41,8 @@ import type {
   EvConfigureAgentOptions,
 } from './EvAgentSession.interface';
 import i18n, { t } from './i18n';
+import { track } from '../Analytics/track';
+import { trackEvents } from '../../../lib/trackEvents';
 
 const WAIT_EV_SERVER_ROLLBACK_DELAY = 2000;
 
@@ -406,6 +408,10 @@ class EvAgentSession extends RcModule {
     this.selectedSkillProfileId = skillProfileId;
   }
 
+  @track((_: EvAgentSession, skillProfileId: string) => [
+    trackEvents.agentSessionSetSkillProfileId,
+    { value: skillProfileId },
+  ])
   @delegate('server')
   async setSkillProfileId(skillProfileId: string): Promise<void> {
     this._setSkillProfileId(skillProfileId);
@@ -416,6 +422,10 @@ class EvAgentSession extends RcModule {
     this.selectedInboundQueueIds = ids;
   }
 
+  @track((_: EvAgentSession, ids: string[]) => [
+    trackEvents.agentSessionSetInboundQueueIds,
+    { value: ids },
+  ])
   @delegate('server')
   async setInboundQueueIds(ids: string[]): Promise<void> {
     this._setInboundQueueIds(ids);
@@ -521,6 +531,17 @@ class EvAgentSession extends RcModule {
   /**
    * Configure agent session
    */
+  @track((that: EvAgentSession) => [
+    trackEvents.agentSessionConfigureAgent,
+    {
+      'Voice connection': that.loginType,
+      'Skill profile set': !!that.selectedSkillProfile,
+      'Inbound queues length': that.selectedInboundQueues.length,
+      'Auto answer': that.autoAnswer,
+      'Dial group set': !!that.dialGroupId,
+      'Dial mode': that.currentDialMode,
+    },
+  ])
   @delegate('server')
   async configureAgent({
     config: inputConfig,

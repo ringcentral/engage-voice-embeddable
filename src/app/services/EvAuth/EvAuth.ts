@@ -93,6 +93,17 @@ class EvAuth extends RcModule {
           this._connectOrReauthenticatePromise = null;
         });
       });
+      this.portManager.onClient(() => {
+        watch(
+          this,
+          () => this.isEvLogged,
+          () => {
+            if (this.isEvLogged) {
+              this.identifyAnalyticsUser();
+            }
+          },
+        );
+      });
     } else {
       this.initialize();
     }
@@ -315,9 +326,6 @@ class EvAuth extends RcModule {
     this.evSubscription.subscribe(EvCallbackTypes.LOGIN_PHASE_1, (...args: any[]) => {
       this.logger.info('evSubscription.subscribe LOGIN_PHASE_1~~');
       this._eventEmitter.emit(EvCallbackTypes.LOGIN_PHASE_1, ...args);
-    })
-    this.onLoginSuccess(() => {
-      this.identifyAnalyticsUser();
     });
     watch(
       this,
@@ -372,11 +380,12 @@ class EvAuth extends RcModule {
     return this.evSubscription.once(EvCallbackTypes.LOGOUT, cb);
   }
 
-  @delegate('clients')
   async identifyAnalyticsUser() {
     try {
+      this.logger.info('identifyAnalyticsUser~~');
       const userDetails = this.evClient.getFullUserDetails();
       if (!userDetails) {
+        this.logger.info('identifyAnalyticsUser~~, no user details');
         return;
       }
       const userId = `${userDetails.rcUserId}`;

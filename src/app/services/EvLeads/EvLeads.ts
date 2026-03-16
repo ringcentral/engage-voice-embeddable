@@ -19,6 +19,8 @@ import { EvAuth } from '../EvAuth';
 import { EvSubscription } from '../EvSubscription';
 import { EvCall } from '../EvCall';
 import type { EvLeadsOptions, Lead, ManualPassParams } from './EvLeads.interface';
+import { track } from '../Analytics/track';
+import { trackEvents } from '../../../lib/trackEvents';
 
 // Available to show in the leads panel
 export const AVAILABLE_LEAD_STATES = [
@@ -209,6 +211,7 @@ class EvLeads extends RcModule {
   /**
    * Manual pass a lead with disposition
    */
+  @track(trackEvents.manualPassLead)
   @delegate('server')
   async manualPassLead({
     lead,
@@ -238,6 +241,7 @@ class EvLeads extends RcModule {
   /**
    * Fetch leads from preview dial
    */
+  @track(trackEvents.fetchLeads)
   @delegate('server')
   async fetchLeads(): Promise<boolean> {
     if (this.loading) {
@@ -265,6 +269,7 @@ class EvLeads extends RcModule {
   /**
    * Dial a lead
    */
+  @track(trackEvents.callLead)
   @delegate('server')
   async dialLead(lead: Lead, destination: string): Promise<void> {
     const destinationE164 = isE164(destination) ? destination : undefined;

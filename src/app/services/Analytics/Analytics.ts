@@ -189,11 +189,11 @@ class Analytics extends RcModule implements IAnalytics {
             return EMPTY;
           }
           const { router, eventPostfix } = target;
-          this.track(`Navigation: Click/${eventPostfix}`, { router });
+          this.page(eventPostfix, { currentURL: router });
           // Track linger event after threshold
           return timer(this._lingerThreshold).pipe(
             tap(() => {
-              this.track(`Navigation: Linger/${eventPostfix}`, { router });
+              this.track(`Navigation: View/${eventPostfix}`, { router });
             }),
           );
         }),
@@ -305,7 +305,12 @@ class Analytics extends RcModule implements IAnalytics {
     if (!path) return null;
     const routes = path.split('/');
     let formatRoute: string | null = null;
-    if (routes.length >= 3 && needMatchSecondRoutes.includes(routes[1])) {
+    if (routes.length >= 4 && routes[1] === 'activityCallLog') {
+      // /activityCallLog/:id/<subRoute> — skip dynamic id, match on sub-route
+      formatRoute = routes[3]
+        ? `/activityCallLog/${routes[3]}`
+        : '/activityCallLog';
+    } else if (routes.length >= 3 && needMatchSecondRoutes.includes(routes[1])) {
       formatRoute = `/${routes[1]}/${routes[2]}`;
     } else if (routes.length > 1) {
       formatRoute = `/${routes[1]}`;

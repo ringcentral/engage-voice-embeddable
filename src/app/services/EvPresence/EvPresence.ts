@@ -10,6 +10,7 @@ import {
   StoragePlugin,
   PortManager,
   delegate,
+  ModuleRef,
 } from '@ringcentral-integration/next-core';
 import { EventEmitter } from 'events';
 import { Beforeunload } from '@ringcentral-integration/micro-core/src/app/services';
@@ -31,6 +32,9 @@ import { EvClient } from '../EvClient';
 import { EvSubscription } from '../EvSubscription';
 import { EvCallDataSource } from '../EvCallDataSource';
 import type { EvPresenceOptions, EvAgentRecording } from './EvPresence.interface';
+import { track } from '../Analytics/track';
+import { trackEvents } from '../../../lib/trackEvents';
+import type { EvAgentSession } from '../EvAgentSession';
 
 /**
  * EvPresence module - Call presence and offhook state management
@@ -59,6 +63,7 @@ class EvPresence extends RcModule {
     private beforeunload: Beforeunload,
     private storagePlugin: StoragePlugin,
     private portManager: PortManager,
+    private moduleRef: ModuleRef,
     @optional('EvPresenceOptions') private evPresenceOptions?: EvPresenceOptions,
   ) {
     super();
@@ -225,6 +230,17 @@ class EvPresence extends RcModule {
    * Store raw call data (enriched with timestamp, gate, agentRecording).
    * Call is added to callIds/callsMapping when ADD_SESSION arrives.
    */
+  @track((that: EvPresence, call: EvBaseCall) => [
+    call.callType === 'INBOUND'
+      ? trackEvents.callInboundCallConnected
+      : trackEvents.outboundCallConnected,
+    {
+      recordingSetting: that.getRecordingSettings(call.agentRecording as unknown as EvAgentRecording),
+      voiceConnection: that.moduleRef.get<EvAgentSession>('EvAgentSession')?.loginType,
+      isOffhook: that.isOffhook,
+      isOffhooking: that.isOffhooking,
+    },
+  ])
   async addNewCall(call: EvBaseCall) {
     await this.evCallDataSource.addNewCall(call);
   }

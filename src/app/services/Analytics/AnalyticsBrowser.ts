@@ -23,7 +23,7 @@ export class AnalyticsBrowser {
     }
     const mixpanelModule = await import('mixpanel-browser');
     const mixpanel = mixpanelModule.default;
-    mixpanel.init(this._mixpanelToken);
+    mixpanel.init(this._mixpanelToken, { persistence: 'localStorage' });
     // According to EU policy, disable IP address tracking
     mixpanel.set_config({ ip: false });
     // Override track to sanitize URL params

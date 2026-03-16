@@ -28,6 +28,8 @@ import { EvSubscription } from '../EvSubscription';
 import { EvWorkingState } from '../EvWorkingState';
 import { parseNumber } from '../../../lib/parseNumber';
 import { checkCountryCode } from '../../../lib/checkCountryCode';
+import { track } from '../Analytics/track';
+import { trackEvents } from '../../../lib/trackEvents';
 import type {
   EvCallOptions,
   DialoutFormGroup,
@@ -361,6 +363,10 @@ class EvCall extends RcModule {
   /**
    * Initiate an outbound call
    */
+  @track((that: EvCall) => [
+    trackEvents.outbound,
+    { value: that.evAgentSession.loginType },
+  ])
   @delegate('server')
   async dialout(phoneNumber: string): Promise<void> {
     this.logger.info('dialout~~', phoneNumber);

@@ -17,6 +17,8 @@ import {
 
 import { contactMatchIdentifyDecode } from '../../../lib/contactMatchIdentify';
 import { thirdPartyMessageTypes } from '../../../enums';
+import { track } from '../Analytics/track';
+import { trackEvents } from '../../../lib/trackEvents';
 
 /**
  * ThirdParty options for configuration
@@ -256,6 +258,7 @@ class ThirdParty extends RcModule {
    * Log a call via parent window request/response.
    * Refreshes activity matches after successful logging.
    */
+  @track(trackEvents.logCall)
   @delegate('clients')
   async logCall(data: any): Promise<void> {
     if (!this.service.callLoggerEnabled) return;
@@ -277,6 +280,7 @@ class ThirdParty extends RcModule {
   /**
    * View a lead via parent window request/response
    */
+  @track(trackEvents.viewLead)
   @delegate('clients')
   async viewLead(data: any): Promise<void> {
     if (!this.service.leadViewerEnabled) return;

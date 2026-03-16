@@ -12,6 +12,22 @@ export const trackEvents = {
 
   // EvAuth, Authentication & Login & Agent UserId
   loginAgent: 'User Setting: Login Agent',
+
+  // EvCall, Outbound dialing
+  outbound: 'Outbound Call',
+
+  // EvPresence, Call connection events
+  callInboundCallConnected: 'Call: Inbound call connected',
+  outboundCallConnected: 'Outbound Call Connected',
+
+  // ThirdParty, CRM integration events
+  logCall: 'Log call',
+  viewLead: 'View lead',
+
+  // EvLeads, Lead management events
+  fetchLeads: 'Fetch leads',
+  callLead: 'Call lead',
+  manualPassLead: 'Manual pass lead',
 } as const;
 
 export type TrackEvents = (typeof trackEvents)[keyof typeof trackEvents];

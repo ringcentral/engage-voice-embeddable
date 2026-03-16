@@ -393,6 +393,8 @@ export const getAppConfig = ({
       useValue: {
         analyticsKey,
         enableMixpanel: true,
+        appVersion,
+        externalClientId: sdkConfig.clientId,
       } satisfies AnalyticsOptions,
     },
     {
