@@ -316,10 +316,6 @@ class EvAuth extends RcModule {
       this._emitLogoutBefore();
       await this.newReconnect();
     });
-    this.evSubscription.subscribe(EvCallbackTypes.LOGIN_PHASE_1, (...args: any[]) => {
-      this.logger.info('evSubscription.subscribe LOGIN_PHASE_1~~');
-      this._eventEmitter.emit(EvCallbackTypes.LOGIN_PHASE_1, ...args);
-    });
     watch(
       this,
       () => [
@@ -506,32 +502,6 @@ class EvAuth extends RcModule {
       retryOpenSocket,
     );
     try {
-      const getAgentConfig = new Promise<EvAgentConfig>((resolve, reject) => {
-        let isSettled = false;
-        const handleLoginPhase1 = (agentConfig: EvAgentConfig) => {
-          if (isSettled) {
-            return;
-          }
-          console.log('login phase 1 resolved~~', agentConfig);
-          isSettled = true;
-          clearTimeout(timerId);
-          resolve(agentConfig);
-        };
-        const timerId = setTimeout(() => {
-          if (isSettled) {
-            return;
-          }
-          console.error('login phase 1 timeout~~');
-          isSettled = true;
-          this._eventEmitter.off(EvCallbackTypes.LOGIN_PHASE_1, handleLoginPhase1);
-          reject(
-            new EvTypeError({
-              type: messageTypes.CONNECT_TIMEOUT,
-            }),
-          );
-        }, AGENT_CONFIG_TIMEOUT_MS);
-        this._eventEmitter.once(EvCallbackTypes.LOGIN_PHASE_1, handleLoginPhase1);
-      });
       const selectedAgentId = this.agentId;
       if (!selectedAgentId) {
         throw new EvTypeError({
@@ -557,7 +527,12 @@ class EvAuth extends RcModule {
         });
       }
       this.logger.info('openSocketWithSelectedAgentId getAgentConfig~~');
-      const agentConfig = await getAgentConfig;
+      const agentConfig = await this.evClient.getAgentConfig();
+      if (!agentConfig) {
+        throw new EvTypeError({
+          type: messageTypes.CONNECT_TIMEOUT,
+        });
+      }
       this.logger.info('openSocketWithSelectedAgentId getAgentConfig done~~');
       const agent = { ...this.agent, agentConfig } as EvAgentData;
       await this.completeLogin(agent);

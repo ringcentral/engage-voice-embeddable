@@ -603,7 +603,12 @@ class EvAgentSession extends RcModule {
    */
   @delegate('server')
   async updateAgentConfigs(): Promise<void> {
+    this.logger.info('updateAgentConfigs~~');
     const agentConfig = await this.evClient.getAgentConfig();
+    if (!agentConfig) {
+      this.logger.error('updateAgentConfigs: getAgentConfig timed out');
+      return;
+    }
     const agent = {
       ...this.evAuth.agent,
       agentConfig,

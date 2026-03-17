@@ -414,9 +414,11 @@ class EvClient extends RcModule {
   }
 
   @delegate('mainClient')
-  async getAgentConfig(): Promise<EvAgentConfig> {
-    return new Promise<EvAgentConfig>((resolve) => {
+  async getAgentConfig(): Promise<EvAgentConfig | null> {
+    return new Promise<EvAgentConfig | null>((resolve) => {
+      const timeoutId = setTimeout(() => resolve(null), 10000);
       this._sdk.getAgentConfig((res: EvAgentConfig) => {
+        clearTimeout(timeoutId);
         resolve(res);
       });
     });
