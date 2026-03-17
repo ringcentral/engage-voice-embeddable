@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { ListItem, ListItemText, IconButton, Button, Tooltip, Avatar } from '@ringcentral/spring-ui';
-import { CallMd, ViewMd, MissedCallMd, ContactsMd } from '@ringcentral/spring-icon';
+import { ListItem, ListItemText, IconButton, Button, Avatar } from '@ringcentral/spring-ui';
+import { CallMd, LinkContactMd, MissedCallMd, ContactsMd } from '@ringcentral/spring-icon';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import type { FunctionComponent } from 'react';
 
@@ -91,7 +91,7 @@ export const LeadItem: FunctionComponent<LeadItemProps> = ({
       )}
       {showViewLeadButton && onViewLead && (
         <IconButton
-          symbol={ViewMd}
+          symbol={LinkContactMd}
           size="medium"
           shape="squircle"
           variant="outlined"

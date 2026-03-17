@@ -253,14 +253,18 @@ class EvLeads extends RcModule {
       });
       return false;
     }
+    let success = false;
     try {
       this.setLoading(true);
       const result = await this.evClient.getPreviewDial();
+      if (!result) {
+        throw new Error('No result returned');
+      }
       this.setLeads(result.leads as Lead[]);
-      return true;
+      success = true;
     } catch (error) {
       this.logger.error('fetchLeads error~~', error);
-      return false;
+      success = false;
     } finally {
       this.setLoading(false);
     }
