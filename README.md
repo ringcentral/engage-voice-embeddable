@@ -2,6 +2,10 @@
 
 [![Build Status](https://github.com/ringcentral/engage-voice-embeddable/actions/workflows/ci.yml/badge.svg?branch=next)](https://github.com/ringcentral/engage-voice-embeddable/actions)
 
+> **This is a beta release.** We welcome your feedback and bug reports — please feel free to [open an issue](https://github.com/ringcentral/engage-voice-embeddable/issues).
+
+> **Looking for the 0.x beta version?** Please visit the [legacy branch](https://github.com/ringcentral/engage-voice-embeddable/tree/master) and its [demo](https://ringcentral.github.io/engage-voice-embeddable/).
+
 ## Introduction
 
 This is an out-of-the-box embeddable web application that help developers to integrate [RingCentral RingCX](https://www.ringcentral.com/ringcx.html) services to their web applications with few code.
