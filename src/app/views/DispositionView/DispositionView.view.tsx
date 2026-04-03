@@ -45,6 +45,7 @@ import type {
 import { CallInfoHeader } from '../../components/CallInfoHeader';
 import { DispositionForm } from '../../components/DispositionForm';
 import { getCallInfos } from '../../utils/getCallInfos';
+import { shouldShowDispositionSubmitStep } from '../../utils/shouldShowDispositionSubmitStep';
 import type {
   DispositionViewProps,
   DispositionViewUIProps,
@@ -204,16 +205,10 @@ class DispositionView extends RcViewModule {
    * Whether to show the submit/disposition step
    */
   get showSubmitStep(): boolean {
-    if (!this.dispositionViewOptions?.hideCallNote) {
-      return true;
-    }
-    if (this.dispositionPickList.length === 0) {
-      return false;
-    }
-    if (this.currentCall?.callType === 'INBOUND') {
-      return true;
-    }
-    return false;
+    return shouldShowDispositionSubmitStep(
+      this.currentCall,
+      this.dispositionViewOptions,
+    );
   }
 
   @computed((that: DispositionView) => [that.currentCall])
@@ -372,6 +367,12 @@ class DispositionView extends RcViewModule {
   async goToPendingDisposition() {
     const callId = this.evWorkingState.pendingDispositionCallId || this.evCall.activityCallId;
     if (!callId) {
+      return;
+    }
+    const call = this.evPresence.callsMapping[callId];
+    if (!call || !shouldShowDispositionSubmitStep(call, this.dispositionViewOptions)) {
+      await this.evWorkingState.setIsPendingDisposition(false);
+      this.router.replace(this.dialerPath);
       return;
     }
     this.router.push(`/activityCallLog/${callId}/disposition`);
