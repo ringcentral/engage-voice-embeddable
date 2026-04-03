@@ -73,6 +73,7 @@ import {
   AnalyticsOptions,
   OAuth as OAuthWithJWT,
   EvTabManagerOptions,
+  EvWorkingStateOptions,
 } from './services';
 
 // Views
@@ -404,6 +405,12 @@ export const getAppConfig = ({
       useValue: {
         showReChooseAccount: true,
       } satisfies SessionConfigViewOptions,
+    },
+    {
+      provide: 'EvWorkingStateOptions',
+      useValue: {
+        hideCallNote,
+      } satisfies EvWorkingStateOptions,
     },
     {
       provide: 'DispositionViewOptions',

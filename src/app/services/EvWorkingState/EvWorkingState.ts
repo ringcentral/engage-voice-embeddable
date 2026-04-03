@@ -32,6 +32,7 @@ import type {
   AgentState,
   WorkingState,
 } from './EvWorkingState.interface';
+import { shouldShowDispositionSubmitStep } from '../../utils/shouldShowDispositionSubmitStep';
 
 const PENDING_DISPOSITION_STATE: AgentState = {
   agentState: 'PENDING-DISPOSITION',
@@ -212,6 +213,11 @@ class EvWorkingState extends RcModule {
         this.evCallDisposition.isDisposed(mainCallId);
       if (isDisposed) {
         this.logger.info('onCallEnded~~ already disposed, skip pending disposition');
+        this.setIsPendingDisposition(false);
+        return;
+      }
+      if (!shouldShowDispositionSubmitStep(call, this.evWorkingStateOptions)) {
+        this.logger.info('onCallEnded~~ no disposition step required, skip pending disposition');
         this.setIsPendingDisposition(false);
         return;
       }

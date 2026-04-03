@@ -2,7 +2,7 @@
  * EvWorkingState options for configuration
  */
 export interface EvWorkingStateOptions {
-  // Optional configuration options
+  hideCallNote?: boolean;
 }
 
 /**

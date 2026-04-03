@@ -20,9 +20,11 @@ import { EvCall } from '../EvCall';
 import { EvCallDisposition } from '../EvCallDisposition';
 import { EvIntegratedSoftphone } from '../EvIntegratedSoftphone';
 import { EvSubscription } from '../EvSubscription';
-import { DispositionView } from '../../views/DispositionView';
 import { DialerView } from '../../views/DialerView';
 import { Adapter } from '../Adapter';
+import { EvWorkingState } from '../EvWorkingState';
+import type { DispositionStepOptions } from '../../utils/shouldShowDispositionSubmitStep';
+import { shouldShowDispositionSubmitStep } from '../../utils/shouldShowDispositionSubmitStep';
 
 /**
  * Redirect service - Handles router redirections based on login status
@@ -46,13 +48,15 @@ class Redirect extends RcModule {
     protected _evCallMonitor: EvCallMonitor,
     protected _evCall: EvCall,
     protected _evCallDisposition: EvCallDisposition,
+    protected _evWorkingState: EvWorkingState,
     protected _evIntegratedSoftphone: EvIntegratedSoftphone,
     protected _evSubscription: EvSubscription,
     protected _adapter: Adapter,
     protected _dialerView: DialerView,
-    protected _dispositionView: DispositionView,
     @optional('RedirectOptions')
     protected _options?: RedirectOptions,
+    @optional('DispositionViewOptions')
+    protected _dispositionViewOptions?: DispositionStepOptions,
   ) {
     super();
     this._loginPath = this._options?.loginPath ?? '/';
@@ -189,20 +193,22 @@ class Redirect extends RcModule {
         return;
       }
       const id = this._evClient.encodeUii(call.session);
-      if (this._evCallDisposition.isDisposed(id)) {
+      const isDisposed = this._evCallDisposition.isDisposed(id);
+      const showDispositionStep = shouldShowDispositionSubmitStep(
+        call,
+        this._dispositionViewOptions,
+      );
+      if (isDisposed || !showDispositionStep) {
+        await this._evWorkingState.setIsPendingDisposition(false);
         this._router.replace(this._dialerPath);
         this._adapter.onEndCall(formatEvCallForConnected(call));
         return;
       }
       this._redirectOnCallEnded();
       this._adapter.onEndCall(formatEvCallForConnected(call));
-      if (!this._dispositionView.showSubmitStep) {
-        this._router.replace(this._dialerPath);
-      } else {
-        const path = `/activityCallLog/${id}/disposition`;
-        if (this._router.currentPath !== path) {
-          this._router.replace(path);
-        }
+      const path = `/activityCallLog/${id}/disposition`;
+      if (this._router.currentPath !== path) {
+        this._router.replace(path);
       }
     });
   }
