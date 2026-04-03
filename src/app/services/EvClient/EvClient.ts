@@ -1073,7 +1073,59 @@ class EvClient extends RcModule {
       reconnect: false, // variable tracks the type of login, on init it's false...once connected it's set to true
       isMultiSocket: false,
     };
+    instance.softphoneSettings.sipInfo = [];
     instance.applicationSettings.isLoggedInIS = false;
+    instance.agentSettings = {
+      accountId: null, // account agent belongs to
+      agentId: 0,
+      agentPassword: '', //agent Password
+      agentType: 'AGENT', // AGENT | SUPERVISOR
+      altDefaultLoginDest: '',
+      availableAgentStatesFromAccount: [],
+      availableAgentStates: [],
+      allAgentStates: [], // Full List of All Agent States
+      callerIds: [],
+      callState: null, // display the current state of the call
+      corporateDirectory: false,
+      consultCall: false, //consult call allow
+      currentState: 'OFFLINE', // Agent system/base state
+      currentStateLabel: '', // Agent aux state label
+      defaultLoginDest: '',
+      dialDest: '', // Destination agent is logged in with for offhook session, set on configure response, if multi values in format "xxxx|,,xxxx"
+      deskphoneNumber: null,
+      email: '',
+      externalAgentId: '',
+      firstName: '',
+      geoTag: '',
+      guid: '', // unique key generated on login, used for accessing spring endpoints
+      isLoggedIn: false, // agent is logged in to the platform
+      isOffhook: false, // track whether or not the agent has an active offhook session
+      isMonitoring: false, // track whether or not the offhook session is for monitoring
+      includeSupervisorStats: false, // set to true in Agent-JS app when user is on any supervisor views, when true, respond to STATS request with SUPERVISOR stat message
+      initLoginState: 'AVAILABLE', // state agent is placed in on successful login
+      initLoginStateLabel: 'Available', // state label for agent on successful login
+      lastName: '',
+      loginDTS: null, // date and time of the final login phase (IQ)
+      loginType: 'NO-SELECTION', // Could be INBOUND | OUTBOUND | BLENDED | NO-SELECTION, set on login response
+      maxBreakTime: -1,
+      maxLunchTime: -1,
+      onCall: false, // true if agent is on an active call
+      onManualOutdial: false, // true if agent is on a manual outdial call
+      outboundManualDefaultRingtime: '30',
+      pendingCallbacks: [],
+      pendingDialGroupChange: 0, // Set to Dial Group Id if we are waiting to change dial groups until agent ends call
+      phoneLoginPin: '',
+      realAgentType: 'AGENT',
+      supervisors: [], // Used for agent chat
+      totalCalls: 0, // Call counter that is incremented every time a new session is received
+      transferNumber: '', // May be pre-populated by an external interface, if so, the transfer functionality uses it
+      updateDGFromAdminUI: false, // if pending Dial Group change came from AdminUI, set to true (only used if request is pending)
+      updateLoginMode: false, // gets set to true when doing an update login (for events control)
+      username: '', // Agent's username
+      wasMonitoring: false, // used to track if the last call was a monitoring call
+      enableCallQuality: false, // Enable/Disable of Report Call Quality Issue
+      reportCallQualityIssueTypes: [],
+    };
   }
 
   @delegate('mainClient')
