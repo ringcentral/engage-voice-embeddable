@@ -157,10 +157,14 @@ class EvAuth extends RcModuleV2<Deps> implements Auth {
 
   @computed((that: EvAuth) => [that.inboundSettings.availableRequeueQueues])
   get availableRequeueQueues() {
-    return sortByName(
+    const list = sortByName(
       [...this.inboundSettings.availableRequeueQueues],
       'groupName',
     );
+    return list.map((queue) => ({
+      ...queue,
+      gates: Array.isArray(queue.gates) ? queue.gates : [],
+    }));
   }
 
   @computed((that: EvAuth) => [that.agentSettings.callerIds])
