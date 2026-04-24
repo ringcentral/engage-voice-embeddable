@@ -295,6 +295,10 @@ class EvCall extends RcModule {
         if (isOnLoginSuccess) {
           this.resetFormGroup();
         }
+        if (this.evAuth.isFreshLogin) {
+          this.resetOutBoundDialSetting();
+        }
+        this.checkQueueId();
       },
     );
     // Subscribe to call ended events
@@ -324,10 +328,28 @@ class EvCall extends RcModule {
     });
   }
 
-  override async onInit() {
-    if (this.evAuth.isFreshLogin) {
-      await this.resetOutBoundDialSetting();
+  async checkQueueId() {
+    if (this.dialoutQueueId !== DEFAULT_OUTBOUND_SETTING.dialoutQueueId) {
+      // Check if queue is exist, if not, reset to default
+      const queueExist = this.evAuth.availableQueues.some(
+        (queue) => queue.gateId === this.dialoutQueueId,
+      );
+      if (!queueExist) {
+        console.log('Queue not exist, reset dialout queue to default');
+        await this.resetDialoutQueue();
+      }
     }
+  }
+
+  @action
+  _resetDialoutQueue() {
+    this.dialoutQueueId = DEFAULT_OUTBOUND_SETTING.dialoutQueueId;
+    this.formGroup.dialoutQueueId = DEFAULT_OUTBOUND_SETTING.dialoutQueueId;
+  }
+
+  @delegate('server')
+  async resetDialoutQueue(): Promise<void> {
+    this._resetDialoutQueue();
   }
 
   /**
@@ -384,6 +406,7 @@ class EvCall extends RcModule {
         return;
       }
     }
+    await this.checkQueueId();
     try {
       const destination = this._checkAndParseNumber(phoneNumber);
       this.logger.info('destination~~', destination);
