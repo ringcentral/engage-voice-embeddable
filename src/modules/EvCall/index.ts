@@ -27,6 +27,28 @@ class EvCall extends BaseEvCall {
     return this.activityCallId && call ? call : null;
   }
 
+  override onInit() {
+    if (this._deps.evAuth.isFreshLogin) {
+      this.resetOutBoundDialSetting();
+    }
+    if (this.dialoutQueueId !== DEFAULT_OUTBOUND_SETTING.dialoutQueueId) {
+      // Check if queue is exist, if not, reset to default
+      const queueExist = this._deps.evAuth.availableQueues.some(
+        (queue) => queue.gateId === this.dialoutQueueId,
+      );
+      if (!queueExist) {
+        console.log('Queue not exist, reset dialout queue to default');
+        this.resetDialoutQueue();
+      }
+    }
+  }
+
+  @action
+  resetDialoutQueue() {
+    this.dialoutQueueId = DEFAULT_OUTBOUND_SETTING.dialoutQueueId;
+    this.formGroup.dialoutQueueId = DEFAULT_OUTBOUND_SETTING.dialoutQueueId;
+  }
+
   @action
   resetOutBoundDialSetting() {
     this.dialoutCallerId = DEFAULT_OUTBOUND_SETTING.dialoutCallerId;

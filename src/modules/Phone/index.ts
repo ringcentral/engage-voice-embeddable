@@ -9,7 +9,6 @@ import { EvActiveCallControl } from '@ringcentral-integration/engage-voice-widge
 import { EvActiveCallListUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvActiveCallListUI';
 import { EvAgentScript } from '@ringcentral-integration/engage-voice-widgets/modules/EvAgentScript';
 // import { EvAuth } from '@ringcentral-integration/engage-voice-widgets/modules/EvAuth';
-import { EvCallDataSource } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallDataSource';
 import { EvCallMonitor } from '@ringcentral-integration/engage-voice-widgets/modules/EvCallMonitor';
 import { EvDialerUI } from '@ringcentral-integration/engage-voice-widgets/modules/EvDialerUI';
 import { EvRequeueCall } from '@ringcentral-integration/engage-voice-widgets/modules/EvRequeueCall';
@@ -76,6 +75,7 @@ import { MainViewUI } from '../MainViewUI';
 import { formatEvCall } from '../../lib/formatEvCall';
 import { GenericPhone } from './interface';
 import { Analytics } from '../Analytics';
+import { EvCallDataSource } from '../EvCallDataSource';
 
 @ModuleFactory({
   providers: [
