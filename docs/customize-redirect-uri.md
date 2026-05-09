@@ -1,12 +1,12 @@
 # Customize Redirect Uri
 
-In authorization flow, it will require a valid redirect uri that developer set in developers account. This app offers a default redirect uri option that you can use, https://ringcentral.github.io/engage-voice-embeddable/redirect.html. And it also supports to config redirect uri.
+In authorization flow, it will require a valid redirect uri that developer set in developers account. This app offers a default redirect uri option that you can use, https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/redirect.html. And it also supports to config redirect uri.
 
 ```js
 <script>
   (function() {
     var rcs = document.createElement("script");
-    rcs.src = "https://ringcentral.github.io/engage-voice-embeddable/adapter.js?redirectUri=your_redirect_uri";
+    rcs.src = "https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/adapter.js?redirectUri=your_redirect_uri";
     var rcs0 = document.getElementsByTagName("script")[0];
     rcs0.parentNode.insertBefore(rcs, rcs0);
   })();
@@ -16,7 +16,7 @@ In authorization flow, it will require a valid redirect uri that developer set i
 Or
 
 ```html
-<iframe width="300" height="500" id="rc-widget" src="https://ringcentral.github.io/engage-voice-embeddable/app.html?redirectUri=your_redirect_uri">
+<iframe width="300" height="500" id="rc-widget" src="https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/app.html?redirectUri=your_redirect_uri">
 </iframe>
 ```
 

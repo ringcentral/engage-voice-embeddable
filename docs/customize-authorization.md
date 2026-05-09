@@ -16,7 +16,7 @@ Developers can login to RingCX Embeddable using the [JWT auth flow](https://deve
 ```js
   (function() {
     var rcs = document.createElement("script");
-    rcs.src = "https://ringcentral.github.io/engage-voice-embeddable/adapter.js?clientId=YOU_OWN_JWT_APP_CLIENT_ID&clientSecret=YOUR_OWN_JWT_APP_CLIENT_SECRET&jwt=JWT_TOKEN&jwtOwnerId=OPTIONAL_OWNER_ID";
+    rcs.src = "https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/adapter.js?clientId=YOU_OWN_JWT_APP_CLIENT_ID&clientSecret=YOUR_OWN_JWT_APP_CLIENT_SECRET&jwt=JWT_TOKEN&jwtOwnerId=OPTIONAL_OWNER_ID";
     var rcs0 = document.getElementsByTagName("script")[0];
     rcs0.parentNode.insertBefore(rcs, rcs0);
   })();
@@ -25,7 +25,7 @@ Developers can login to RingCX Embeddable using the [JWT auth flow](https://deve
 ### Iframe way
 
 ```html
-<iframe width="300" height="500" id="engage-voice-embeddable-adapter-frame" allow="microphone" src="https://ringcentral.github.io/engage-voice-embeddable/app.html?clientId=YOU_OWN_JWT_APP_CLIENT_ID&clientSecret=YOUR_OWN_JWT_APP_CLIENT_SECRET&jwt=JWT_TOKEN&jwtOwnerId=OPTIONAL_OWNER_ID">
+<iframe width="300" height="500" id="engage-voice-embeddable-adapter-frame" allow="microphone" src="https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/app.html?clientId=YOU_OWN_JWT_APP_CLIENT_ID&clientSecret=YOUR_OWN_JWT_APP_CLIENT_SECRET&jwt=JWT_TOKEN&jwtOwnerId=OPTIONAL_OWNER_ID">
 </iframe>
 ```
 
@@ -44,7 +44,7 @@ Firstly, we need to disable popup window in widget:
 Just add `disableLoginPopup=1` in widget adapter JS uri or iframe src
 
 ```
-https://ringcentral.github.io/engage-voice-embeddable/adapter.js?disableLoginPopup=1
+https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/adapter.js?disableLoginPopup=1
 ```
 
 Secondly, listen `loginPopup` event:
