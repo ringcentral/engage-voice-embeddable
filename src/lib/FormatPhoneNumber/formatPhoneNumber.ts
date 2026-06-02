@@ -13,6 +13,9 @@ export const formatPhoneNumber = ({
   countryCode = 'US',
   currentLocale = 'en-US',
 }: FormatPhoneNumberProps) => {
+  if (phoneNumber && phoneNumber.includes('|')) {
+    return phoneNumber;
+  }
   return phoneNumber
     ? format({
         phoneNumber,
