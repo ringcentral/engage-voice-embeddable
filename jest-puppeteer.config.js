@@ -1,6 +1,6 @@
 module.exports = {
   server: {
-    command: 'NODE_ENV=development yarn start', // use development babel setting
+    command: 'NODE_ENV=development npm start', // use development babel setting
     port: 8080,
     launchTimeout: 100000
   },
