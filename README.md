@@ -90,13 +90,13 @@ ENGAGE_VOICE_AUTH_SERVER=https://engage.ringcentral.com
 
 ### Start development server
 
-We assume you have pre-installed node.js >= 10 and yarn. 
+We assume you have pre-installed node.js >= 20 and npm.
 
-**It is recommended to use `yarn` instead of `npm`.** We have `yarn.lock` file in source code to lock dependence version. With `yarn`, we can install dependencies with correct version that work well with this project.
+We have a `package-lock.json` file in source code to lock dependency versions. Use `npm ci` to install dependencies with the exact locked versions that work well with this project.
 
 ```bash
-$ yarn       # use yarn to install dependencies
-$ yarn start # start a webpack dev server
+$ npm ci      # install dependencies with locked versions
+$ npm start   # start a webpack dev server
 ```
 
 Open site: 'http://localhost:8080/' on browser
@@ -109,7 +109,7 @@ If you create pull request to this repository and get merged, CI will deploy it 
 2. Run command to compile code and build release
 
 ```
-$ HOSTING_URL=your_host_url yarn build
+$ HOSTING_URL=your_host_url npm run build
 ```
 
 Please replace `your_host_uri` with your own web host address, such as `https://ringcentral.github.io/engage-voice-embeddable`.

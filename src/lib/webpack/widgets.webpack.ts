@@ -321,6 +321,13 @@ export const getBaseWebpackConfig = ({
               path.resolve(process.cwd(), '../../node_modules'),
             ],
             outputStyle: 'expanded',
+            // Silence Sass deprecation warnings: `quietDeps` mutes warnings
+            // from vendored dependencies (node_modules), while
+            // `silenceDeprecations` mutes the legacy JS API warning (the
+            // legacy API is still required for `includePaths`) and the
+            // `@import` deprecation emitted by first-party styles.
+            quietDeps: true,
+            silenceDeprecations: ['legacy-js-api', 'import'],
           },
         },
       },
@@ -363,6 +370,13 @@ export const getBaseWebpackConfig = ({
               path.resolve(process.cwd(), '../../node_modules'),
             ],
             outputStyle: 'expanded',
+            // Silence Sass deprecation warnings: `quietDeps` mutes warnings
+            // from vendored dependencies (node_modules), while
+            // `silenceDeprecations` mutes the legacy JS API warning (the
+            // legacy API is still required for `includePaths`) and the
+            // `@import` deprecation emitted by first-party styles.
+            quietDeps: true,
+            silenceDeprecations: ['legacy-js-api', 'import'],
           },
         },
       },
@@ -397,6 +411,13 @@ export const getBaseWebpackConfig = ({
               path.resolve(process.cwd(), '../../node_modules'),
             ],
             outputStyle: 'expanded',
+            // Silence Sass deprecation warnings: `quietDeps` mutes warnings
+            // from vendored dependencies (node_modules), while
+            // `silenceDeprecations` mutes the legacy JS API warning (the
+            // legacy API is still required for `includePaths`) and the
+            // `@import` deprecation emitted by first-party styles.
+            quietDeps: true,
+            silenceDeprecations: ['legacy-js-api', 'import'],
           },
         },
       },
