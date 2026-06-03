@@ -55,6 +55,7 @@ class EvAuth extends RcModule {
 
   public canUserLogoutFn: () => Promise<boolean> = async () => true;
   private _connectOrReauthenticatePromise: Promise<void> | null = null;
+  private _refreshEvTokenPromise: Promise<boolean> | null = null;
 
   constructor(
     private evClient: EvClient,
@@ -485,6 +486,18 @@ class EvAuth extends RcModule {
 
   @delegate('server')
   async refreshEvToken(): Promise<boolean> {
+    if (this._refreshEvTokenPromise) {
+      return this._refreshEvTokenPromise;
+    }
+    this._refreshEvTokenPromise = this._refreshEvToken();
+    try {
+      return await this._refreshEvTokenPromise;
+    } finally {
+      this._refreshEvTokenPromise = null;
+    }
+  }
+
+  private async _refreshEvToken(): Promise<boolean> {
     const result = await this.evClient.refreshEvToken();
     if (result) {
       return true;

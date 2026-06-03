@@ -369,12 +369,12 @@ class EvCall extends RcModule {
           break;
         case callErrors.emergencyNumber:
           this.toast.danger({
-            message: callErrors.emergencyNumber,
+            message: t(callErrors.emergencyNumber),
           });
           break;
         default:
           this.toast.danger({
-            message: callErrors.noToNumber,
+            message: t(callErrors.noToNumber),
           });
           break;
       }
@@ -390,7 +390,10 @@ class EvCall extends RcModule {
     { value: that.evAgentSession.loginType },
   ])
   @delegate('server')
-  async dialout(phoneNumber: string): Promise<void> {
+  async dialout(
+    phoneNumber: string,
+    options?: { skipParse?: boolean },
+  ): Promise<void> {
     this.logger.info('dialout~~', phoneNumber);
     this.evPresence.setCurrentCallUii('');
     // Handle integrated softphone
@@ -408,7 +411,9 @@ class EvCall extends RcModule {
     }
     await this.checkQueueId();
     try {
-      const destination = this._checkAndParseNumber(phoneNumber);
+      const destination = options?.skipParse
+        ? phoneNumber
+        : this._checkAndParseNumber(phoneNumber);
       this.logger.info('destination~~', destination);
       await this._manualOutdial({
         destination,

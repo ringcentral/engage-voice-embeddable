@@ -1,4 +1,5 @@
 import { messageTypes } from '../../../../enums';
+import { callErrors } from '../../../../enums/callErrors';
 
 export default {
   // Call alert messages
@@ -9,4 +10,6 @@ export default {
   [messageTypes.INTERCEPT]:
     'The dial result for your manual outbound call was INTERCEPT.',
   [messageTypes.COPY_UII_SUCCESS]: 'Call ID copied',
+  [callErrors.noToNumber]: 'Please enter a valid phone number.',
+  [callErrors.emergencyNumber]: 'Emergency calling is not available.',
 } as const;

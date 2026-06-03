@@ -8,13 +8,21 @@ import {
   StoragePlugin,
   useConnector,
   delegate,
+  watch,
   PortManager,
   RouterPlugin,
 } from '@ringcentral-integration/next-core';
 import type { UIFunctions, UIProps } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
-import { DialTextField, Button, IconButton, Link } from '@ringcentral/spring-ui';
-import { BackspaceMd } from '@ringcentral/spring-icon';
+import {
+  DialTextField,
+  Button,
+  IconButton,
+  Link,
+  ListItem,
+  ListItemText,
+} from '@ringcentral/spring-ui';
+import { BackspaceMd, EnterMd } from '@ringcentral/spring-icon';
 import React, { useRef } from 'react';
 
 import { EvCall } from '../../services/EvCall';
@@ -28,8 +36,14 @@ import type {
   DialerViewProps,
   DialerViewUIProps,
   DialerViewUIFunctions,
+  DirectoryRecord,
+  SearchDirectoryResponse,
 } from './DialerView.interface';
 import i18n from './i18n';
+import type { I18nKey } from './i18n';
+
+const SEARCH_DEBOUNCE_MS = 400;
+const PHONE_NUMBER_PATTERN = /^[+\d][\d\s()\-+*#]*$/;
 
 /**
  * DialerView - Phone dialer view for outbound calls
@@ -70,6 +84,17 @@ class DialerView extends RcViewModule {
   @state
   latestDialoutNumber = '';
 
+  @state
+  directoryRecords: DirectoryRecord[] = [];
+
+  @state
+  directoryMainNumber = '';
+
+  @state
+  isSearchingDirectory = false;
+
+  private _searchDebounceTimer?: ReturnType<typeof setTimeout>;
+
   /**
    * Check if agent has permission to make manual calls
    */
@@ -82,6 +107,14 @@ class DialerView extends RcViewModule {
    */
   get isIdle(): boolean {
     return this.evCall.isIdle;
+  }
+
+  /**
+   * Check if the current input looks like a phone number (no letters)
+   */
+  get isToNumberPhoneNumber(): boolean {
+    const value = this.toNumber.trim();
+    return !!value && PHONE_NUMBER_PATTERN.test(value);
   }
 
   @action
@@ -100,15 +133,95 @@ class DialerView extends RcViewModule {
   }
 
   @action
+  setDirectoryResults(records: DirectoryRecord[], mainNumber: string): void {
+    this.directoryRecords = records;
+    this.directoryMainNumber = mainNumber;
+  }
+
+  @action
+  clearDirectoryResults(): void {
+    this.directoryRecords = [];
+    this.directoryMainNumber = '';
+    this.isSearchingDirectory = false;
+  }
+
+  @action
+  setSearchingDirectory(isSearching: boolean): void {
+    this.isSearchingDirectory = isSearching;
+  }
+
+  @action
   reset(): void {
     this.toNumber = '';
     this.latestDialoutNumber = '';
+    this.directoryRecords = [];
+    this.directoryMainNumber = '';
+    this.isSearchingDirectory = false;
   }
 
   initialize(): void {
     this.evAuth.beforeAgentLogout(() => {
       this.reset();
     });
+    watch(
+      this,
+      () => this.toNumber,
+      () => {
+        this._scheduleDirectorySearch(this.toNumber);
+      },
+    );
+  }
+
+  /**
+   * Debounce directory search on input changes
+   */
+  private _scheduleDirectorySearch(searchString: string): void {
+    if (this._searchDebounceTimer) {
+      clearTimeout(this._searchDebounceTimer);
+    }
+    const trimmed = searchString.trim();
+    if (!trimmed) {
+      this.clearDirectoryResults();
+      return;
+    }
+    this._searchDebounceTimer = setTimeout(() => {
+      this._performDirectorySearch(trimmed);
+    }, SEARCH_DEBOUNCE_MS);
+  }
+
+  /**
+   * Query the corporate directory and store results
+   */
+  private async _performDirectorySearch(searchString: string): Promise<void> {
+    this.setSearchingDirectory(true);
+    try {
+      const authorized = await this.evAuth.refreshEvToken();
+      if (!authorized) {
+        return;
+      }
+      // Ignore stale responses if the input changed while authenticating
+      if (this.toNumber.trim() !== searchString) {
+        return;
+      }
+      const response: SearchDirectoryResponse =
+        await this.evClient.searchDirectory(searchString);
+      // Ignore stale responses if the input changed while searching
+      if (this.toNumber.trim() !== searchString) {
+        return;
+      }
+      this.setDirectoryResults(
+        response?.records ?? [],
+        response?.mainNumber ?? '',
+      );
+    } catch (error) {
+      if (this.toNumber.trim() === searchString) {
+        this.clearDirectoryResults();
+      }
+    } finally {
+      if (this.toNumber.trim() === searchString) {
+        this.setSearchingDirectory(false);
+      }
+    }
   }
 
   /**
@@ -125,6 +238,20 @@ class DialerView extends RcViewModule {
     if (this.toNumber) {
       await this.evCall.dialout(this.toNumber);
     }
+  }
+
+  /**
+   * Dial a corporate directory record using the main_number*extension@RC_EXT format
+   */
+  @delegate('server')
+  async dialDirectoryRecord(record: DirectoryRecord): Promise<void> {
+    const mainNumber =
+      record.account?.mainNumber?.phoneNumber || this.directoryMainNumber;
+    if (!mainNumber || !record.extensionNumber) {
+      return;
+    }
+    const destination = `${mainNumber}*${record.extensionNumber}@RC_EXT`;
+    await this.evCall.dialout(destination, { skipParse: true });
   }
 
   /**
@@ -155,6 +282,9 @@ class DialerView extends RcViewModule {
       isIdle: this.isIdle,
       isOnCall: this.evCallMonitor.isOnCall,
       isPendingDisposition: this.evWorkingState.isPendingDisposition,
+      directoryRecords: this.directoryRecords,
+      isSearchingDirectory: this.isSearchingDirectory,
+      isToNumberPhoneNumber: this.isToNumberPhoneNumber,
     };
   }
 
@@ -178,6 +308,9 @@ class DialerView extends RcViewModule {
       onGoToSettings: () => {
         this.goToManualDialSettings();
       },
+      onDialDirectoryRecord: (record: DirectoryRecord) => {
+        this.dialDirectoryRecord(record);
+      },
     };
   }
 
@@ -191,114 +324,184 @@ class DialerView extends RcViewModule {
       isIdle,
       isOnCall,
       isPendingDisposition,
+      directoryRecords,
+      isSearchingDirectory,
+      isToNumberPhoneNumber,
     } = useConnector(() => this.getUIProps());
 
     if (!hasDialer) {
       return null;
     }
 
-    return (
-      <div className="flex flex-col h-full bg-neutral-base p-4">
-        <div className="flex-1 flex flex-col justify-center items-center">
-          {isPendingDisposition ? (
-            <p
-              className="typography-descriptor text-neutral-b2 text-center"
-              data-sign="callBusyTip"
-            >
-              {t('pendingDispositionTip')}
-            </p>
-          ) : !isIdle || isOnCall ? (
-            <>
+    if (isPendingDisposition || !isIdle || isOnCall) {
+      return (
+        <div className="flex flex-col h-full bg-neutral-base p-4">
+          <div className="flex-1 flex flex-col justify-center items-center">
+            {isPendingDisposition ? (
               <p
                 className="typography-descriptor text-neutral-b2 text-center"
                 data-sign="callBusyTip"
               >
-                {t('callInProgressTip')}
+                {t('pendingDispositionTip')}
               </p>
-              <div className="flex justify-center mt-4">
-                <Button
-                  size="large"
-                  onClick={uiFunctions.onHangup}
-                  data-sign="hangupButton"
-                  color="danger"
+            ) : (
+              <>
+                <p
+                  className="typography-descriptor text-neutral-b2 text-center"
+                  data-sign="callBusyTip"
                 >
-                  {t('hangupButton')}
-                </Button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="w-full mb-4 [&_input]:text-center flex justify-center">
-                <DialTextField
-                  value={toNumber}
-                  onChange={uiFunctions.onInputChange}
-                  placeholder={t('enterNumber')}
-                  inputProps={{
-                    'data-sign': 'dialerInput',
-                  }}
-                  startAdornment={
-                    toNumber && (
-                      <IconButton
-                        symbol={BackspaceMd}
-                        size="large"
-                        variant="icon"
-                        className="invisible pointer-events-none"
-                      />
-                    )
-                  }
-                  endAdornment={
-                    toNumber && (
-                      <IconButton
-                        symbol={BackspaceMd}
-                        size="large"
-                        variant="icon"
-                        onClick={uiFunctions.onBackspace}
-                        data-sign="backspaceButton"
-                      />
-                    )
-                  }
-                />
-              </div>
-              {!toNumber && (
-                <div className="text-center">
-                  <p
-                    className="typography-descriptor text-neutral-b2"
-                    data-sign="callButtonTip"
-                  >
-                    {t('callButtonTip')}
-                  </p>
-                  <p
-                    className="typography-descriptor text-neutral-b2 mt-2"
-                    data-sign="callButtonEmergencyTip"
-                  >
-                    {t('callButtonEmergencyTip')}
-                  </p>
-                </div>
-              )}
-              {toNumber && (
-                <div className="flex justify-center">
+                  {t('callInProgressTip')}
+                </p>
+                <div className="flex justify-center mt-4">
                   <Button
                     size="large"
-                    onClick={uiFunctions.onDial}
-                    disabled={!toNumber.trim()}
-                    data-sign="callButton"
+                    onClick={uiFunctions.onHangup}
+                    data-sign="hangupButton"
+                    color="danger"
                   >
-                    {t('callButton')}
+                    {t('hangupButton')}
                   </Button>
                 </div>
-              )}
-            </>
-          )}
+              </>
+            )}
+          </div>
+          {this._renderSettingsLink(t, uiFunctions)}
         </div>
-        <div className="text-center pb-2">
-          <Link
-            onClick={uiFunctions.onGoToSettings}
-            data-sign="manualDialSettings"
-            className="typography-descriptor"
-          >
-            {t('manualDialSettings')}
-          </Link>
+      );
+    }
+
+    const hasInput = !!toNumber;
+
+    return (
+      <div className="flex flex-col h-full bg-neutral-base">
+        <div className="px-4 pt-4 [&_input]:text-center flex justify-center">
+          <DialTextField
+            value={toNumber}
+            onChange={uiFunctions.onInputChange}
+            placeholder={t('enterNumber')}
+            inputProps={{
+              'data-sign': 'dialerInput',
+            }}
+            startAdornment={
+              hasInput && (
+                <IconButton
+                  symbol={BackspaceMd}
+                  size="large"
+                  variant="icon"
+                  className="invisible pointer-events-none"
+                />
+              )
+            }
+            endAdornment={
+              hasInput && (
+                <IconButton
+                  symbol={BackspaceMd}
+                  size="large"
+                  variant="icon"
+                  onClick={uiFunctions.onBackspace}
+                  data-sign="backspaceButton"
+                />
+              )
+            }
+          />
         </div>
+        {!hasInput ? (
+          <>
+            <div className="px-4 mt-3 text-center">
+              <p
+                className="typography-descriptor text-neutral-b2"
+                data-sign="callButtonTip"
+              >
+                {t('callButtonTip')}
+              </p>
+              <p
+                className="typography-descriptor text-neutral-b2 mt-2"
+                data-sign="callButtonEmergencyTip"
+              >
+                {t('callButtonEmergencyTip')}
+              </p>
+            </div>
+            <div className="flex-1" />
+          </>
+        ) : (
+          <div className="flex-1 overflow-y-auto mt-2">
+            {isToNumberPhoneNumber && (
+              <ListItem
+                size="large"
+                onClick={uiFunctions.onDial}
+                data-sign="requestACall"
+                hoverActions={<IconButton symbol={EnterMd} variant="icon" />}
+                alwaysShowHoverActions
+              >
+                <ListItemText
+                  primary={t('requestACall')}
+                  secondary={toNumber}
+                />
+              </ListItem>
+            )}
+            {directoryRecords.length > 0 && (
+              <div
+                className="typography-label uppercase text-neutral-b3 px-4 pt-3 pb-1"
+                data-sign="corporateDirectoryHeader"
+              >
+                {t('corporateDirectory')}
+              </div>
+            )}
+            {directoryRecords.map((record) => (
+              <ListItem
+                key={record.id}
+                size="large"
+                onClick={() => uiFunctions.onDialDirectoryRecord(record)}
+                data-sign="directoryRecord"
+              >
+                <ListItemText
+                  primary={this._formatRecordName(record)}
+                  secondary={`Ext. ${record.extensionNumber}`}
+                />
+              </ListItem>
+            ))}
+            {directoryRecords.length === 0 && isSearchingDirectory && (
+              <div
+                className="typography-descriptor text-neutral-b2 text-center px-4 py-3"
+                data-sign="directoryStatus"
+              >
+                {t('searchingDirectory')}
+              </div>
+            )}
+          </div>
+        )}
+        {this._renderSettingsLink(t, uiFunctions)}
+      </div>
+    );
+  }
+
+  /**
+   * Build a display name for a directory record
+   */
+  private _formatRecordName(record: DirectoryRecord): string {
+    const fullName = [record.firstName, record.lastName]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    return fullName || record.name || record.extensionNumber;
+  }
+
+  /**
+   * Render the bottom manual dial settings link
+   */
+  private _renderSettingsLink(
+    t: (key: I18nKey) => string,
+    uiFunctions: UIFunctions<DialerViewUIFunctions>,
+  ) {
+    return (
+      <div className="text-center pb-2 pt-2">
+        <Link
+          onClick={uiFunctions.onGoToSettings}
+          data-sign="manualDialSettings"
+          className="typography-descriptor"
+        >
+          {t('manualDialSettings')}
+        </Link>
       </div>
     );
   }

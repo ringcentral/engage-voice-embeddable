@@ -1171,6 +1171,63 @@ class EvClient extends RcModule {
       throw error;
     }
   }
+
+  @delegate('mainClient')
+  async searchDirectory(searchString: string) {
+    const fullUserDetails = this.getFullUserDetails();
+    const rcAccountId = fullUserDetails.rcAccountId;
+    if (!rcAccountId) {
+      return;
+    }
+    const rcxSubAccountId = this._sdk.getAgentSettings().accountId;
+    const authenticateRequest = this._sdk.getAuthenticateRequest();
+    const engageAccessToken = `Bearer ${authenticateRequest.engageAccessToken}`;
+    const searchParams = new URLSearchParams();
+    searchParams.set('searchString', searchString);
+    try {
+      const getResponse = await fetch(`${this._options.authHost}/api/v3/accounts/${rcAccountId}/sub-accounts/${rcxSubAccountId}/rc-directory/rc-corporate-directory?${searchParams.toString()}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: engageAccessToken,
+        },
+      });
+      if (!getResponse.ok) {
+        throw new Error('Failed to search directory');
+      }
+      // return example
+      // {
+      //   "rcAccountId": "37233xxxx",
+      //   "pbxDirectoryEnable": true,
+      //   "mainNumber": "+165043xxxx",
+      //   "records": [
+      //       {``
+      //           "id": "265162xxxxx",
+      //           "status": "Enabled",
+      //           "firstName": "TestName",
+      //           "lastName": "Test",
+      //           "extensionNumber": "1111",
+      //           "presenceStatus": "Offline",
+      //           "phoneNumbers": null,
+      //           "type": "User",
+      //           "name": null,
+      //           "account": {
+      //               "id": "372332xxxx",
+      //               "mainNumber": {
+      //                   "formattedPhoneNumber": "+1 (650) 436xxxx",
+      //                   "phoneNumber": "+165043xxxx",
+      //                   "type": null,
+      //                   "label": null
+      //               }
+      //           }
+      //       }
+      //   ]
+      // }
+      return getResponse.json();
+    } catch (error) {
+      this.logger.error('searchDirectory fail', error);
+      throw error;
+    }
+  }
 }
 
 export { EvClient };
