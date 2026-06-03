@@ -17,7 +17,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm ci --legacy-peer-deps
+      - run: npm ci
       - run: npm test
         env:
           RINGCENTRAL_CLIENT_ID: ${{ secrets.RINGCENTRAL_CLIENT_ID }}
@@ -38,7 +38,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: 20.x
-      - run: npm ci --legacy-peer-deps
+      - run: npm ci
       - run: npm run build -- --hosting-url $HOSTING_URL
         env:
           HOSTING_URL: ${{ secrets.HOSTING_URL }}

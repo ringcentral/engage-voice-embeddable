@@ -141,6 +141,7 @@
     "styled-components": "^5.3.3"
   },
   "resolutions": {
+    "jest-environment-puppeteer/jest-environment-node": "^30.0.0",
     "fsevents": "^2.3.3",
     "sip.js": "0.13.5",
     "@rc-ex/core": "1.7.4",
@@ -167,6 +168,9 @@
     "@ringcentral-integration/micro-next-commons": "0.0.1"
   },
   "overrides": {
+    "jest-environment-puppeteer": {
+      "jest-environment-node": "^30.0.0"
+    },
     "fsevents": "^2.3.3",
     "sip.js": "0.13.5",
     "@rc-ex/core": "1.7.4",
