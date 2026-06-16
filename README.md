@@ -6,6 +6,8 @@
 
 > **Looking for the 0.x beta version?** Please visit the [legacy branch](https://github.com/ringcentral/engage-voice-embeddable/tree/master) and its [demo](https://ringcentral.github.io/engage-voice-embeddable/).
 
+> **Upgrading from 0.x?** See the [migration guide](docs/migration-from-0.x.md).
+
 ## Introduction
 
 This is an out-of-the-box embeddable web application that help developers to integrate [RingCentral RingCX](https://www.ringcentral.com/ringcx.html) services to their web applications with few code.
@@ -31,6 +33,7 @@ Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/index.h
 
 ## Documents
 
+* [Migrating from 0.x (Legacy) to 1.0 (Beta)](docs/migration-from-0.x.md)
 * [Get Started](docs/get-started.md)
 * [Customize Client ID and environment](docs/customize-client-id.md)
 * [Customize Redirect Uri](docs/customize-redirect-uri.md)
@@ -48,6 +51,7 @@ Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/index.h
   - Manual
   - Predictive dial mode
   - Preview dial mode
+* Corporate directory search for dialing
 * Call disposition
   - Notes
   - Disposition
