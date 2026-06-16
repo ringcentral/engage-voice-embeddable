@@ -4,6 +4,7 @@ This is an out-of-the-box embeddable web application that help developers to int
 
 ## Table of Contents
 
+* [Migrating from 0.x (Legacy) to 1.0 (Beta)](migration-from-0.x.md)
 * [Get Started](get-started.md)
 * [Customize Client ID and environment](customize-client-id.md)
 * [Customize Redirect Uri](customize-redirect-uri.md)
