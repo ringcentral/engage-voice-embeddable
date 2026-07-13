@@ -12,6 +12,7 @@ import { EventEmitter } from 'events';
 import dayjs from 'dayjs';
 
 import { callStatus } from '../../../enums';
+import { getEvServerTimestamp } from '../../../lib/getEvServerTimestamp';
 import type {
   EvAddSessionNotification,
   EvBaseCall,
@@ -27,15 +28,6 @@ import type {
   EvRequeueCallGate,
   CallDataState,
 } from './EvCallDataSource.interface';
-
-/**
- * Get timestamp from date string
- * @param dateStr - Date string in format 'YYYY-MM-DD HH:mm:ss'
- * @param timezone - Timezone (default: America/New_York)
- */
-function getTimeStamp(dateStr: string, timezone = 'America/New_York'): number {
-  return dayjs(dateStr).valueOf();
-}
 
 const DEFAULT_DATA: CallDataState = {
   callIds: [],
@@ -124,9 +116,8 @@ class EvCallDataSource extends RcModule {
     // Note: rawCallsMapping index is raw call uii
     this.data.rawCallsMapping[call.uii] = {
       ...call,
-      // Input timezone in second arg if EV response has timezone property
-      // Default timezone is 'America/New_York'
-      timestamp: getTimeStamp(call.queueDts),
+      // EV queueDts is an America/New_York wall-clock timestamp.
+      timestamp: getEvServerTimestamp(call.queueDts),
       gate: this._getCurrentGateData(call),
       agentRecording: rawAgentRecording,
     } as EvCallData;
@@ -252,7 +243,8 @@ class EvCallDataSource extends RcModule {
       (acc, id) => {
         if (
           fullCallLogsIds.includes(id) &&
-          getTimeStamp(this.rawCallsMapping[id].queueDts) >= lastWeekDayTimestamp
+          getEvServerTimestamp(this.rawCallsMapping[id].queueDts) >=
+            lastWeekDayTimestamp
         ) {
           acc[id] = this.rawCallsMapping[id];
         }
@@ -266,7 +258,8 @@ class EvCallDataSource extends RcModule {
       (acc, id) => {
         if (
           fullCallLogsIds.includes(id.substring(0, id.length - 2)) &&
-          getTimeStamp(this.callsMapping[id].queueDts) >= lastWeekDayTimestamp
+          getEvServerTimestamp(this.callsMapping[id].queueDts) >=
+            lastWeekDayTimestamp
         ) {
           acc[id] = this.callsMapping[id];
           if (!id.endsWith('$1')) {

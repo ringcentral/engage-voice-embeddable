@@ -1,5 +1,13 @@
-import type { EvBaseCall } from '../app/services/EvClient/interfaces';
+import type {
+  EvBaseCall,
+  EvEndedCall,
+} from '../app/services/EvClient/interfaces';
 import type { EvCallData } from '../app/services/EvCallMonitor/EvCallMonitor.interface';
+import { getEvServerTimestamp } from './getEvServerTimestamp';
+
+function getStartTime(queueDts?: string): number | undefined {
+  return queueDts ? getEvServerTimestamp(queueDts) : undefined;
+}
 
 export interface FormattedEvCall {
   id: string;
@@ -17,11 +25,13 @@ export interface FormattedEvCall {
   telephonySessionId: string;
   partyId: string;
   startTime: number | undefined;
+  duration?: number;
   offset: number;
   fromMatches: any[];
   toMatches: any[];
   activityMatches: any[];
   recordingUrl?: string;
+  segmentId?: string;
 }
 
 /**
@@ -45,7 +55,7 @@ export function formatEvCallForRing(call: EvBaseCall): FormattedEvCall {
     sessionId: call.session?.sessionId,
     telephonySessionId: call.uii,
     partyId: call.agentId,
-    startTime: call.queueDts ? new Date(call.queueDts).getTime() : undefined,
+    startTime: getStartTime(call.queueDts),
     offset: 0,
     fromMatches: [],
     toMatches: [],
@@ -63,6 +73,7 @@ export function formatEvCallForConnected(call: EvCallData): FormattedEvCall {
   const name = contactMatches[0]?.name;
   const fromNumber = isOutbound ? call.dnis : call.ani;
   const toNumber = isOutbound ? call.ani : call.dnis;
+  const endedCall = call.endedCall as unknown as EvEndedCall | undefined;
   return {
     id: call.uii,
     direction: call.callType,
@@ -78,11 +89,13 @@ export function formatEvCallForConnected(call: EvCallData): FormattedEvCall {
     sessionId: call.session?.sessionId,
     telephonySessionId: call.uii,
     partyId: call.agentId,
-    startTime: call.queueDts ? new Date(call.queueDts).getTime() : undefined,
+    startTime: getStartTime(call.queueDts ?? endedCall?.callDts),
+    duration: endedCall?.duration ? Number.parseInt(endedCall.duration, 10) : undefined,
     offset: 0,
     fromMatches: [],
     toMatches: [],
     activityMatches: [],
-    recordingUrl: call.session?.recordingUrl,
+    recordingUrl: endedCall?.recordingUrl ?? call.session?.recordingUrl,
+    segmentId: call.session?.segmentId ?? call.segmentContext?.segmentId,
   };
 }
