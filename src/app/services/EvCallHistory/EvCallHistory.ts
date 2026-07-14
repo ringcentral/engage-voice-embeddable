@@ -14,6 +14,7 @@ import {
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber';
 import { contactMatchIdentifyEncode } from '../../../lib/contactMatchIdentify';
 import { makeCallsUniqueIdentifies } from '../../../lib/callUniqueIdentifies';
+import { getEvServerTimestamp } from '../../../lib/getEvServerTimestamp';
 import { directTransferNotificationTypes } from '../../../enums/directTransferNotificationTypes';
 import { EvCallbackTypes } from '../EvClient/enums/callbackTypes';
 import { EvPresence } from '../EvPresence';
@@ -175,7 +176,9 @@ class EvCallHistory extends RcModule {
         fromMatches: contactMatches,
         toMatches: contactMatches,
         activityMatches,
-        startTime: call.timestamp,
+        startTime: call.queueDts
+          ? getEvServerTimestamp(call.queueDts)
+          : call.timestamp,
         isDisposed,
         isLogged: isDisposed,
         result: call.result || undefined,

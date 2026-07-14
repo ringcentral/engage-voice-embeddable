@@ -34,7 +34,7 @@ import { EvCallDataSource } from '../EvCallDataSource';
 import type { EvPresenceOptions, EvAgentRecording } from './EvPresence.interface';
 import { track } from '../Analytics/track';
 import { trackEvents } from '../../../lib/trackEvents';
-import type { EvAgentSession } from '../EvAgentSession';
+import { EvAgentSession } from '../EvAgentSession';
 
 /**
  * EvPresence module - Call presence and offhook state management
@@ -236,7 +236,7 @@ class EvPresence extends RcModule {
       : trackEvents.outboundCallConnected,
     {
       recordingSetting: that.getRecordingSettings(call.agentRecording as unknown as EvAgentRecording),
-      voiceConnection: that.moduleRef.get<EvAgentSession>('EvAgentSession')?.loginType,
+      voiceConnection: that.moduleRef.get(EvAgentSession)?.loginType,
       isOffhook: that.isOffhook,
       isOffhooking: that.isOffhooking,
     },
@@ -410,7 +410,7 @@ class EvPresence extends RcModule {
           this.evClient.offhookTerm();
         }
         await this.removeEndedCall(data);
-        await this._checkCallStateChange();
+        await this._checkCallStateChange(this.callsMapping[id]);
       });
   }
 
@@ -492,7 +492,7 @@ class EvPresence extends RcModule {
   /**
    * Check and emit call state change events (ANSWERED / ENDED)
    */
-  private async _checkCallStateChange(): Promise<void> {
+  private async _checkCallStateChange(endedCall?: EvBaseCall): Promise<void> {
     const currentCalls = this.calls;
     if (currentCalls.length > this._oldCalls.length) {
       const currentCall = currentCalls[0];
@@ -505,7 +505,7 @@ class EvPresence extends RcModule {
         await this.clearCalls();
       }
     } else if (currentCalls.length < this._oldCalls.length) {
-      const call = this._oldCalls[0];
+      const call = endedCall ?? this._oldCalls[0];
       this._oldCalls = currentCalls;
       this.evPresenceEvents.emit(callStatus.ENDED, call);
     }
