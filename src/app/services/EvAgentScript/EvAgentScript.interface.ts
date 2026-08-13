@@ -1,23 +1,66 @@
-import type { EvAgentScriptResult } from '../EvClient/interfaces';
-
-/**
- * EvAgentScript module interfaces
- */
+import type {
+  EvAgentScriptData,
+  EvAgentScriptResult,
+  EvBaseCall,
+  EvCallDispositionItem,
+} from '../EvClient/interfaces';
 
 export interface EvAgentScriptOptions {
-  // Options for EvAgentScript module
+  /** Keep the compatibility renderer disabled without removing call metadata. */
+  disabled?: boolean;
 }
 
-export interface EvCallScriptResultMapping {
-  [callId: string]: EvAgentScriptResult;
+export type EvCallScriptMapping = Record<string, EvAgentScriptData>;
+
+export type EvCallScriptLoadingMapping = Record<string, boolean>;
+
+export type EvCallScriptErrorMapping = Record<string, string | null>;
+
+export type EvCallScriptResultMapping = Record<string, EvAgentScriptResult>;
+
+export interface EvAgentScriptInitializePayload {
+  callId: string;
+  config: EvAgentScriptData;
+  call: EvBaseCall;
 }
 
-export interface EvAgentScriptData {
-  scriptId: string;
-  data: any;
-}
+export type AgentScriptHostMessage =
+  | {
+      type: 'initialize';
+      payload: EvAgentScriptInitializePayload;
+    }
+  | {
+      type: 'reset';
+      callId: string;
+    }
+  | {
+      type: 'knowledgeBaseResult';
+      requestId: string;
+      value: unknown;
+      error?: string;
+    };
 
-export interface EvCallDispositionItem {
-  dispositionId: string;
-  notes: string;
-}
+export type AgentScriptRendererMessage =
+  | { type: 'ready' }
+  | {
+      type: 'scriptResult';
+      callId: string;
+      value: EvAgentScriptResult;
+    }
+  | {
+      type: 'updateDisposition';
+      callId: string;
+      value: EvCallDispositionItem;
+    }
+  | {
+      type: 'getKnowledgeBaseArticles';
+      callId: string;
+      requestId: string;
+      groupIds: number[];
+    };
+
+export type {
+  EvAgentScriptData,
+  EvAgentScriptResult,
+  EvCallDispositionItem,
+};

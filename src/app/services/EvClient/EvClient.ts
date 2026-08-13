@@ -877,11 +877,13 @@ class EvClient extends RcModule {
    */
   @delegate('mainClient')
   getScript(scriptId: string, version: string): Promise<EvScriptResponse> {
-    return new Promise<EvScriptResponse>((resolve) => {
+    return new Promise<EvScriptResponse>((resolve, reject) => {
       this._sdk.getScript(scriptId, version, (res: EvScriptResponse) => {
         if (res.status) {
           resolve(res);
+          return;
         }
+        reject(new Error(res.detail || 'Unable to load Agent Script'));
       });
     });
   }

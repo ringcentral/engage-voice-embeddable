@@ -49,6 +49,8 @@ export interface AdapterPosition {
   minTranslateY: number | null;
 }
 
+export const AGENT_SCRIPT_WIDGET_WIDTH = 660;
+
 /**
  * Lead properties for dialLead lookup
  */
@@ -86,7 +88,10 @@ class Adapter extends RcModule {
 
   private _lastClosed: boolean = false;
   private _lastMinimized: boolean = false;
+  private _lastSize: Partial<AdapterSize> = {};
   private _lastPosition: any = {};
+  private _sizeBeforeAgentScript: AdapterSize | null = null;
+  private _isAgentScriptExpanded = false;
 
   constructor(
     private evAuth: EvAuth,
@@ -195,7 +200,44 @@ class Adapter extends RcModule {
 
   @delegate('server')
   async setSize(size: AdapterSize): Promise<void> {
-    this._setSize(size);
+    this._setSize(
+      this._isAgentScriptExpanded && size.width < AGENT_SCRIPT_WIDGET_WIDTH
+        ? {
+            ...size,
+            width: AGENT_SCRIPT_WIDGET_WIDTH,
+          }
+        : size,
+    );
+  }
+
+  @delegate('server')
+  async setAgentScriptExpanded(expanded: boolean): Promise<void> {
+    if (expanded) {
+      if (!this._isAgentScriptExpanded) {
+        this._sizeBeforeAgentScript = { ...this.size };
+        this._isAgentScriptExpanded = true;
+      }
+
+      // Size sync messages can arrive after the Agent Script view mounts. Do
+      // not let a late 300px host size collapse the second column, and make an
+      // idempotent expansion call repair the width if it was changed outside
+      // this module.
+      if (this.size.width < AGENT_SCRIPT_WIDGET_WIDTH) {
+        this._setSize({
+          ...this.size,
+          width: AGENT_SCRIPT_WIDGET_WIDTH,
+        });
+      }
+      return;
+    }
+
+    if (!this._isAgentScriptExpanded) return;
+
+    this._isAgentScriptExpanded = false;
+    if (this._sizeBeforeAgentScript) {
+      this._setSize(this._sizeBeforeAgentScript);
+    }
+    this._sizeBeforeAgentScript = null;
   }
 
   @action
@@ -214,8 +256,21 @@ class Adapter extends RcModule {
   private _setupStateWatcher(): void {
     watch(
       this,
-      () => [this.closed, this.minimized, this.position] as const,
+      () => [this.closed, this.minimized, this.size, this.position] as const,
       () => {
+        // Storage hydration and shared-module state replication can update the
+        // observable directly instead of going through setSize(). Keep the
+        // expanded layout invariant at the state boundary too.
+        if (
+          this._isAgentScriptExpanded &&
+          this.size.width < AGENT_SCRIPT_WIDGET_WIDTH
+        ) {
+          this._setSize({
+            ...this.size,
+            width: AGENT_SCRIPT_WIDGET_WIDTH,
+          });
+          return;
+        }
         this._pushAdapterState();
       },
       { multiple: true },
@@ -415,6 +470,8 @@ class Adapter extends RcModule {
     if (
       this._lastClosed !== this.closed ||
       this._lastMinimized !== this.minimized ||
+      this._lastSize.width !== this.size.width ||
+      this._lastSize.height !== this.size.height ||
       this._lastPosition.translateX !== this.position.translateX ||
       this._lastPosition.translateY !== this.position.translateY ||
       this._lastPosition.minTranslateX !== this.position.minTranslateX ||
@@ -422,6 +479,7 @@ class Adapter extends RcModule {
     ) {
       this._lastClosed = this.closed;
       this._lastMinimized = this.minimized;
+      this._lastSize = { ...this.size };
       this._lastPosition = this.position;
       this._postMessage({
         type: this.messageTypes.pushAdapterState,

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" ng-app="render" data-sign="agentScript">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Engage Voice Agent Script</title>
+    <link href="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/assets/css/cf-icon.css" rel="stylesheet" />
+    <link href="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/assets/css/engage-icons.css" rel="stylesheet" />
+    <link href="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/assets/css/font-awesome.css" rel="stylesheet" />
+    <link href="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/assets/css/stylesheet.css" rel="stylesheet" />
+    <link href="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/dist/scripting_studio.css" rel="stylesheet" />
+    <link href="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/dist/app.css" rel="stylesheet" />
+
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/moment.min.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/moment-timezone.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/jquery.min.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/jquery-ui.min.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/lodash.min.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular.min.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular-resource.min.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular-translate.min.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/select.min.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular-sanitize.min.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular-aria.min.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular-animate.min.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular-material.min.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/dist/localeLoader.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/dist/vendor.js"></script>
+    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/dist/render.js"></script>
+    <script defer src="agentScript.js"></script>
+    <script defer src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/dist/agentScript.angular.js"></script>
+    <style>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        min-width: 0;
+        margin: 0;
+        overflow: auto;
+      }
+
+      body,
+      script-render,
+      #renderMain,
+      .render-router-view,
+      .render-form,
+      .render-stack {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+      }
+
+      script-render,
+      #renderMain,
+      .render-router-view,
+      .render-form {
+        display: block;
+      }
+    </style>
+  </head>
+  <body ng-controller="RenderCtrl" ng-cloak>
+    <script-render
+      ng-if="config"
+      data-uii="{{uii}}"
+      data-config="config"
+      data-callbacks="callbacks"
+    ></script-render>
+    <div ng-if="!config">{{showMessage}}</div>
+  </body>
+</html>

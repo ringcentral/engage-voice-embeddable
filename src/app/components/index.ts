@@ -21,6 +21,7 @@ export * from './SessionConfig';
 export * from './ManualPassModal';
 export * from './IvrAlertPanel';
 export * from './DialpadPanel';
+export * from './AgentScriptPanel';
 export * from './DispositionForm';
 export * from './RecordCountdown';
 export * from './CallHistoryDetailPanel';

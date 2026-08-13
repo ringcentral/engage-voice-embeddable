@@ -1,300 +1,253 @@
 import {
   action,
+  delegate,
   injectable,
   optional,
+  PortManager,
   RcModule,
   state,
-  storage,
-  StoragePlugin,
-  PortManager,
-  watch,
 } from '@ringcentral-integration/next-core';
-import { debounce } from '@ringcentral-integration/commons/lib/debounce-throttle';
-import { EventEmitter } from 'events';
-import { clone, reduce } from 'ramda';
-
-import {
-  agentScriptEvents,
-  EV_AGENT_SCRIPT_BROADCAST_KEY,
-  EV_AGENT_SCRIPT_PAGE_KEY,
-  EV_APP_PAGE_KEY,
-} from '../../../enums';
 import type {
   EvAgentScriptResult,
-  EvAgentScriptResultModel,
   EvBaseCall,
 } from '../EvClient/interfaces';
 import { EvClient } from '../EvClient';
 import { EvAuth } from '../EvAuth';
 import { EvCall } from '../EvCall';
+import { EvCallDisposition } from '../EvCallDisposition';
 import { EvPresence } from '../EvPresence';
-import { TabManager } from '../EvTabManager';
 import type {
-  EvAgentScriptOptions,
-  EvCallScriptResultMapping,
   EvAgentScriptData,
+  EvAgentScriptOptions,
   EvCallDispositionItem,
+  EvCallScriptErrorMapping,
+  EvCallScriptLoadingMapping,
+  EvCallScriptMapping,
+  EvCallScriptResultMapping,
 } from './EvAgentScript.interface';
+import { formatAgentScriptResult } from './formatAgentScriptResult';
 
 /**
- * EvAgentScript module - Agent scripting support
- * Handles agent scripts, script results, and broadcast channel communication
+ * Server-authoritative Agent Script lifecycle.
+ *
+ * UI clients consume the shared script state and invoke the delegated commands.
+ * Browser-only Engage SDK calls are delegated by EvClient to the main client.
  */
 @injectable({
   name: 'EvAgentScript',
 })
 class EvAgentScript extends RcModule {
-  protected _eventEmitter = new EventEmitter();
-  private _channel: BroadcastChannel | null = null;
-  private _hadResponse = false;
+  private _callScriptResultMapping: EvCallScriptResultMapping = {};
 
   constructor(
     private evClient: EvClient,
     private evAuth: EvAuth,
     private evCall: EvCall,
     private evPresence: EvPresence,
-    private storagePlugin: StoragePlugin,
+    private evCallDisposition: EvCallDisposition,
     private portManager: PortManager,
-    @optional() private tabManager?: TabManager,
     @optional('EvAgentScriptOptions')
     private evAgentScriptOptions?: EvAgentScriptOptions,
   ) {
     super();
-    this.storagePlugin.enable(this);
-    if (this.portManager?.shared) {
-      this.portManager.onClient(() => {
-        this.initialize();
-      });
+    if (this.portManager.shared) {
+      this.portManager.onServer(() => this.initialize());
     } else {
       this.initialize();
     }
   }
 
-  @storage
   @state
-  currentCallScript: EvAgentScriptData | null = null;
+  callScriptMapping: EvCallScriptMapping = {};
 
-  @storage
+  @state
+  callScriptLoadingMapping: EvCallScriptLoadingMapping = {};
+
+  @state
+  callScriptErrorMapping: EvCallScriptErrorMapping = {};
+
   @state
   isDisplayAgentScript = true;
 
-  @storage
-  @state
-  callScriptResultMapping: EvCallScriptResultMapping = {};
-
-  @action
-  setIsDisplayAgentScript(state: boolean) {
-    this.isDisplayAgentScript = state;
+  get currentCallScript(): EvAgentScriptData | null {
+    return this.getScriptForCall(this.evCall.activityCallId);
   }
 
   @action
-  setCurrentCallScript(script: EvAgentScriptData | null) {
-    this.currentCallScript = script;
+  private _setIsDisplayAgentScript(value: boolean) {
+    this.isDisplayAgentScript = value;
+  }
+
+  @delegate('server')
+  async setIsDisplayAgentScript(value: boolean): Promise<void> {
+    this._setIsDisplayAgentScript(value);
   }
 
   @action
-  setCallScriptResult(id: string, data: EvAgentScriptResult) {
-    this.callScriptResultMapping[id] = data;
-    this._eventEmitter.emit(agentScriptEvents.SET_SCRIPT_RESULT, id, data);
+  private _setCallScript(callId: string, script: EvAgentScriptData) {
+    this.callScriptMapping[callId] = script;
+    this.callScriptLoadingMapping[callId] = false;
+    this.callScriptErrorMapping[callId] = null;
   }
 
-  debouncedSetCallScriptResult = debounce({ fn: this.setCallScriptResult.bind(this) });
-
-  /**
-   * Reset script state
-   */
-  reset(): void {
-    this.logger.info('EvAgentScript reset');
+  @action
+  private _setCallScriptLoading(callId: string, loading: boolean) {
+    this.callScriptLoadingMapping[callId] = loading;
+    if (loading) {
+      this.callScriptErrorMapping[callId] = null;
+    }
   }
 
-  /**
-   * Register callback for script result set events
-   */
-  onSetScriptResult(cb: (id: string, data: EvAgentScriptResult) => void): void {
-    this._eventEmitter.on(agentScriptEvents.SET_SCRIPT_RESULT, cb);
+  @action
+  private _setCallScriptError(callId: string, error: string) {
+    this.callScriptLoadingMapping[callId] = false;
+    this.callScriptErrorMapping[callId] = error;
   }
 
-  /**
-   * Register callback for disposition update events
-   */
-  onUpdateDisposition(cb: (id: string, data: EvCallDispositionItem) => void): void {
-    this._eventEmitter.on(agentScriptEvents.UPDATE_DISPOSITION, cb);
+  @action
+  private _removeCallScript(callId: string) {
+    delete this.callScriptMapping[callId];
+    delete this.callScriptLoadingMapping[callId];
+    delete this.callScriptErrorMapping[callId];
   }
 
-  initialize(): void {
-    this._bindChannel();
+  @action
+  private _clearCallScripts() {
+    this.callScriptMapping = {};
+    this.callScriptLoadingMapping = {};
+    this.callScriptErrorMapping = {};
+  }
 
-    // When script changes, emit the response
-    watch(
-      this,
-      () => this.currentCallScript,
-      () => {
-        this._responseInitScript();
-      },
-    );
-
-    // When a call is answered, fetch the script if available
-    this.evPresence.onCallAnswered(async (call) => {
-      if (this.getIsAgentScript(call)) {
-        await this.getScript(call.scriptId, call.scriptVersion, 'CALL', call.uii);
-      }
+  private initialize(): void {
+    this.evPresence.onCallAnswered((call) => {
+      if (!this.getIsAgentScript(call)) return;
+      const callId = this.getCallId(call);
+      if (!callId) return;
+      void this.loadScript(callId, call!.scriptId, call!.scriptVersion);
     });
 
     this.evAuth.beforeAgentLogout(() => {
-      this.reset();
+      this._callScriptResultMapping = {};
+      this._clearCallScripts();
     });
   }
 
-  override onInit(): void {
-    this.logger.info('EvAgentScript init');
-    this.setIsDisplayAgentScript(true);
+  getCallId(call?: EvBaseCall | null): string {
+    if (!call?.uii || !call.session?.sessionId) return '';
+    return this.evClient.encodeUii({
+      uii: call.uii,
+      sessionId: call.session.sessionId,
+    });
   }
 
-  /**
-   * Check if the call has an agent script
-   */
-  getIsAgentScript(call: EvBaseCall | undefined): boolean {
-    return !!(this.isDisplayAgentScript && call?.scriptId);
+  getIsAgentScript(call?: EvBaseCall | null): boolean {
+    return !!(
+      !this.evAgentScriptOptions?.disabled &&
+      this.isDisplayAgentScript &&
+      call?.scriptId
+    );
   }
 
-  /**
-   * Fetch a script by ID and version
-   */
-  async getScript(
+  getScriptForCall(callId: string): EvAgentScriptData | null {
+    return this.callScriptMapping[callId] ?? null;
+  }
+
+  getScriptLoading(callId: string): boolean {
+    return this.callScriptLoadingMapping[callId] ?? false;
+  }
+
+  getScriptError(callId: string): string | null {
+    return this.callScriptErrorMapping[callId] ?? null;
+  }
+
+  @delegate('server')
+  async loadScript(
+    callId: string,
     scriptId: string,
     version: string | null = null,
-    type = 'CALL',
-    uii: string | null = null,
-  ): Promise<EvAgentScriptData> {
-    const response = await this.evClient.getScript(scriptId, version);
-    const result: EvAgentScriptData = {
-      scriptId: response.scriptId,
-      data: JSON.parse(response.json),
-    };
-
-    switch (type) {
-      case 'CALL':
-        this.setCurrentCallScript(result);
-        break;
-      default:
-        break;
+  ): Promise<EvAgentScriptData | null> {
+    if (!callId || !scriptId) return null;
+    if (this.callScriptMapping[callId]?.scriptId === scriptId) {
+      return this.callScriptMapping[callId];
     }
 
-    return result;
-  }
-
-  /**
-   * Save the script result for a call
-   */
-  saveScriptResult(call: any): void {
-    const scriptResult =
-      this.callScriptResultMapping[
-        this.evClient.encodeUii({
-          uii: call.uii,
-          sessionId: call.session?.sessionId,
-        })
-      ];
-
-    if (scriptResult) {
-      const result = this._formatScriptResult(scriptResult);
-      this.evClient.saveScriptResult(call.uii, call.scriptId, result);
+    this._setCallScriptLoading(callId, true);
+    try {
+      const response = await this.evClient.getScript(scriptId, version);
+      const result: EvAgentScriptData = {
+        scriptId: response.scriptId,
+        groupId: '',
+        accountId: '',
+        name: response.scriptName ?? '',
+        description: '',
+        created: '',
+        updated: '',
+        isActive: true,
+        data: JSON.parse(response.json),
+      };
+      this._setCallScript(callId, result);
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Unable to load Agent Script';
+      this._setCallScriptError(callId, message);
+      this.logger.error('Failed to load Agent Script', error);
+      return null;
     }
   }
 
-  private _bindChannel(): void {
-    if (typeof BroadcastChannel === 'undefined') {
+  @delegate('server')
+  async updateScriptResult(
+    callId: string,
+    data: EvAgentScriptResult,
+  ): Promise<void> {
+    if (!callId || !this.callScriptMapping[callId]) return;
+    this._callScriptResultMapping[callId] = data;
+  }
+
+  @delegate('server')
+  async updateDisposition(
+    callId: string,
+    data: EvCallDispositionItem,
+  ): Promise<void> {
+    if (!callId) return;
+    const current = this.evCallDisposition.getDisposition(callId);
+    this.evCallDisposition.setDisposition(callId, {
+      dispositionId: data.dispositionId,
+      notes: data.notes ?? current?.notes ?? '',
+      summary: current?.summary ?? '',
+    });
+  }
+
+  @delegate('server')
+  async getKnowledgeBaseArticles(
+    callId: string,
+    knowledgeBaseGroupIds: number[],
+  ): Promise<unknown> {
+    if (!callId || !this.callScriptMapping[callId]) return null;
+    const authorized = await this.evAuth.refreshEvToken();
+    if (!authorized) throw new Error('Unable to refresh Engage access token');
+    return this.evClient.getKnowledgeBaseGroups(knowledgeBaseGroupIds);
+  }
+
+  @delegate('server')
+  async saveScriptResult(call: EvBaseCall): Promise<void> {
+    const callId = this.getCallId(call);
+    const scriptResult = this._callScriptResultMapping[callId];
+    if (!callId) return;
+    if (!scriptResult || !call.scriptId) {
+      this._removeCallScript(callId);
       return;
     }
 
-    if (this.tabManager && !sessionStorage.getItem(EV_AGENT_SCRIPT_BROADCAST_KEY)) {
-      sessionStorage.setItem(EV_AGENT_SCRIPT_BROADCAST_KEY, this.tabManager.id || '');
-    }
-
-    this._channel = new BroadcastChannel(EV_AGENT_SCRIPT_BROADCAST_KEY);
-
-    this._channel.onmessage = ({ data }) => {
-      const { key, value } = data;
-      const { activityCallId, currentCall } = this.evCall;
-
-      if (this.isDisplayAgentScript && activityCallId && currentCall?.scriptId) {
-        switch (key) {
-          case agentScriptEvents.INIT:
-            this._responseInitScript();
-            break;
-          case agentScriptEvents.SET_SCRIPT_RESULT:
-            this.debouncedSetCallScriptResult(activityCallId, value);
-            break;
-          case agentScriptEvents.GET_KNOWLEDGE_BASE_ARTICLES:
-            this._getKnowledgeBaseGroups(value);
-            break;
-          case agentScriptEvents.UPDATE_DISPOSITION:
-            this._eventEmitter.emit(
-              agentScriptEvents.UPDATE_DISPOSITION,
-              activityCallId,
-              value,
-            );
-            break;
-          default:
-            break;
-        }
-      }
-    };
-
-    // If agent script page loads faster than CTI app, emit when app init
-    setTimeout(() => {
-      if (this.currentCallScript && !this._hadResponse) {
-        this._responseInitScript();
-      }
-    }, 1000);
+    const result = formatAgentScriptResult(scriptResult);
+    await this.evClient.saveScriptResult(call.uii, call.scriptId, result);
+    delete this._callScriptResultMapping[callId];
+    this._removeCallScript(callId);
   }
 
-  private async _getKnowledgeBaseGroups(knowledgeBaseGroupIds: number[]): Promise<void> {
-    await this.evAuth.refreshEvToken();
-    const value = await this.evClient.getKnowledgeBaseGroups(knowledgeBaseGroupIds);
-    this._sendChannel({
-      key: agentScriptEvents.GET_KNOWLEDGE_BASE_ARTICLES,
-      value,
-    });
-  }
-
-  private _responseInitScript(): void {
-    this._sendChannel({
-      key: agentScriptEvents.INIT,
-      value: {
-        config: this.currentCallScript,
-        call: this.evCall.currentCall,
-      },
-    });
-    this._hadResponse = true;
-  }
-
-  private _sendChannel(data: { key: string; value: any }): void {
-    if (this._channel) {
-      this._channel.postMessage(data);
-    }
-  }
-
-  private _formatScriptResult(scriptResult: EvAgentScriptResult): EvAgentScriptResult {
-    const resultCopy = clone(scriptResult);
-
-    resultCopy.model = reduce(
-      (output, [key, value]) => {
-        let result = value;
-        if (result.value !== undefined) {
-          result = result.value;
-        }
-
-        output[key] = {
-          value: result,
-          leadField: value.leadField ?? '',
-        };
-        return output;
-      },
-      {} as EvAgentScriptResultModel,
-      Object.entries<any>(resultCopy.model),
-    );
-
-    return resultCopy;
+  formatScriptResult(scriptResult: EvAgentScriptResult): EvAgentScriptResult {
+    return formatAgentScriptResult(scriptResult);
   }
 }
 

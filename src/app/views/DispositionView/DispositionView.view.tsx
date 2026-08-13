@@ -450,21 +450,19 @@ class DispositionView extends RcViewModule {
         p => p.dispositionId === dispositionId
       );
       const authorized = await this.evAuth.refreshEvToken();
-      if (!authorized) {
-        return;
+      if (authorized) {
+        await this.evClient.updateActivityDisposition({
+          dialogId,
+          params: {
+            dispositionName: dispositionItem?.label || '',
+            agentSummary: this.summary,
+            agentNotes: disposition?.notes || '',
+          },
+        });
       }
-      await this.evClient.updateActivityDisposition({
-        dialogId,
-        params: {
-          dispositionName: dispositionItem?.label || '',
-          agentSummary: this.summary,
-          agentNotes: disposition?.notes || '',
-        },
-      });
     }
     if (call?.scriptId) {
-      this.evAgentScript.setCurrentCallScript(null);
-      this.evAgentScript.saveScriptResult(call);
+      await this.evAgentScript.saveScriptResult(call);
     }
   }
 
