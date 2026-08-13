@@ -14,6 +14,7 @@ const gridColumns = 12;
 const gridCellHeight = 5;
 const gridVerticalMargin = 5;
 const gridRowHeight = gridCellHeight + gridVerticalMargin;
+const initDebounceTime = 1000;
 
 /**
  * The bundled GridStack stylesheet switches to a one-column document flow at
@@ -77,18 +78,21 @@ const scheduleGridStackLayout = () => {
   });
 };
 
-new MutationObserver(scheduleGridStackLayout).observe(document.documentElement, {
-  childList: true,
-  subtree: true,
-  attributes: true,
-  attributeFilter: [
-    'data-gs-current-height',
-    'data-gs-x',
-    'data-gs-y',
-    'data-gs-width',
-    'data-gs-height',
-  ],
-});
+new MutationObserver(scheduleGridStackLayout).observe(
+  document.documentElement,
+  {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: [
+      'data-gs-current-height',
+      'data-gs-x',
+      'data-gs-y',
+      'data-gs-width',
+      'data-gs-height',
+    ],
+  },
+);
 scheduleGridStackLayout();
 
 const eventKeys = {
@@ -114,13 +118,16 @@ class AgentScriptFrameApp {
   constructor() {
     window.addEventListener('message', this.handleConnectMessage);
 
-    this.eventEmitter.on(fromAngularKey + eventKeys.setScriptResult, (value) => {
-      this.send({
-        type: 'scriptResult',
-        callId: this.callId,
-        value,
-      });
-    });
+    this.eventEmitter.on(
+      fromAngularKey + eventKeys.setScriptResult,
+      (value) => {
+        this.send({
+          type: 'scriptResult',
+          callId: this.callId,
+          value,
+        });
+      },
+    );
 
     this.eventEmitter.on(
       fromAngularKey + eventKeys.updateDisposition,
@@ -213,10 +220,210 @@ class AgentScriptFrameApp {
   }
 }
 
+function registerAngularRenderer(app: AgentScriptFrameApp): void {
+  window.angular
+    .module('agent_ui.factories.localeLoader', [])
+    .factory('localeLoader', [
+      '$q',
+      '$http',
+      ($q, $http) => {
+        let deferred: any;
+
+        return (options: { key: string }) => {
+          if (!deferred) {
+            deferred = $q.defer();
+            const localeUrl = `${
+              window.__settings.assetsUrl
+            }assets/languages/locale-${options.key}.json?v=${Date.now()}`;
+
+            $http.get(localeUrl).success((data: unknown) => {
+              deferred.resolve(data);
+            });
+          }
+
+          return deferred.promise;
+        };
+      },
+    ]);
+
+  const angularApp = window.angular.module('render', [
+    'ui.select',
+    'ngSanitize',
+    'angular-growl',
+    'pascalprecht.translate',
+    'formly',
+    'formlyBootstrap',
+    'gridstack-angular',
+    'ngAnimate',
+    'ngMaterial',
+    'scriptingStudio.render',
+    'agent_ui.factories.localeLoader',
+  ]);
+
+  angularApp.config([
+    '$mdThemingProvider',
+    '$translateProvider',
+    '$provide',
+    ($mdThemingProvider, $translateProvider, $provide) => {
+      // The compatibility renderer compiles rich text into a jQuery collection
+      // and passes that collection to `.html()`. Newer jQuery versions stringify
+      // the nodes as "[object HTMLParagraphElement]". Keep the renderer's
+      // compilation behavior, but insert the compiled nodes with `.append()`.
+      $provide.decorator('bindHtmlUnsafeDirective', [
+        '$delegate',
+        '$injector',
+        ($delegate, $injector) => {
+          $delegate.forEach((directive: any) => {
+            const link = (scope: any, element: any, attrs: any) => {
+              const htmlExpression = attrs.bindHtmlUnsafe;
+
+              scope.nameWatcher = scope.$watch(
+                htmlExpression,
+                (html: unknown) => {
+                  element.empty();
+                  if (!html) return;
+
+                  const $compile = $injector.get('$compile');
+                  element.append($compile(html)(scope));
+                },
+              );
+            };
+
+            // Angular normalizes a directive's `link` property into `compile`
+            // before decorators run, so replace both hooks.
+            directive.link = link;
+            directive.compile = () => link;
+          });
+
+          return $delegate;
+        },
+      ]);
+
+      $mdThemingProvider
+        .theme('default')
+        .primaryPalette('blue-grey')
+        .accentPalette('blue');
+
+      $translateProvider.useSanitizeValueStrategy('sanitize');
+      $translateProvider.preferredLanguage('us');
+      $translateProvider.fallbackLanguage('us');
+      $translateProvider.useLoader('localeLoader');
+    },
+  ]);
+
+  angularApp.provider('$stateParams', function StateParams() {
+    this.$get = () => ({ uii: '1' });
+  });
+
+  angularApp.controller('AgentScriptHostCtrl', [
+    '$scope',
+    '$q',
+    ($scope, $q) => {
+      let recordingState = false;
+      let holdState = false;
+
+      const sendToHost = (key: string, value?: unknown) => {
+        app.eventEmitter.emit(app.fromAngularKey + key, value);
+      };
+
+      const resolvedPromise = (value: unknown) => {
+        const deferred = $q.defer();
+        deferred.resolve(value);
+        return deferred.promise;
+      };
+
+      const updateScript = (data: { config: unknown; call: unknown }) => {
+        $scope.$apply(() => {
+          $scope.config = data.config;
+          $scope.call = data.call;
+          recordingState = Boolean(
+            (data.call as any)?.agentRecording?.agentRecording,
+          );
+          holdState = Boolean((data.call as any)?.hold);
+        });
+      };
+
+      const requestKnowledgeBaseArticles = (groupIds: number[]) =>
+        $q((resolve) => {
+          sendToHost(eventKeys.getKnowledgeBaseArticles, groupIds);
+          app.eventEmitter.once(
+            app.toAngularKey + eventKeys.getKnowledgeBaseArticles,
+            resolve,
+          );
+        });
+
+      app.eventEmitter.on(
+        app.toAngularKey + eventKeys.updateScript,
+        updateScript,
+      );
+      app.init();
+
+      window.setTimeout(() => {
+        if (!$scope.config) {
+          $scope.$apply(() => {
+            $scope.showMessage = 'No Engage Script';
+          });
+        }
+      }, initDebounceTime);
+
+      $scope.uii = 1;
+      $scope.callbacks = {
+        setScriptResult: (value: unknown) => {
+          sendToHost(eventKeys.setScriptResult, value);
+          return true;
+        },
+        isRecording: () => recordingState,
+        isOnHold: () => holdState,
+        setRecordingState: (value: boolean) => {
+          recordingState = Boolean(value);
+          return resolvedPromise(recordingState);
+        },
+        setHoldState: (value: boolean) => {
+          holdState = Boolean(value);
+          return resolvedPromise(holdState);
+        },
+        requestColdRequeue: () => resolvedPromise(true),
+        requestWarmRequeue: () => resolvedPromise(true),
+        requestHangup: () => resolvedPromise(true),
+        getScriptData: () =>
+          resolvedPromise({
+            model: {},
+            lead: {},
+            call: {
+              uii: $scope.uii,
+              dispositions:
+                $scope.call?.outdialDispositions?.dispositions || [],
+            },
+          }),
+        requestColdTransfer: () => resolvedPromise(true),
+        requestWarmTransfer: () => resolvedPromise(true),
+        requestDisposition: (
+          _uii: unknown,
+          disposition: { dispositionId: string },
+          notes: string,
+        ) => {
+          sendToHost(eventKeys.updateDisposition, {
+            dispositionId: disposition.dispositionId,
+            notes,
+          });
+          return resolvedPromise(true);
+        },
+        changeScript: () => undefined,
+        allowSendKbArticle: () => undefined,
+        sendKbArticle: () => undefined,
+        getKnowledgeBaseArticles: requestKnowledgeBaseArticles,
+      };
+    },
+  ]);
+}
+
 declare global {
   interface Window {
     app: AgentScriptFrameApp;
     __settings: { assetsUrl: string };
+    angular: {
+      module: (name: string, dependencies: string[]) => any;
+    };
   }
 }
 
@@ -224,3 +431,4 @@ window.__settings = {
   assetsUrl: agentScriptAssetsUrl,
 };
 window.app = new AgentScriptFrameApp();
+registerAngularRenderer(window.app);

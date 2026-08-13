@@ -1,0 +1,99 @@
+/*!
+  * Bootstrap Datetime Picker v4.17.49
+  * Copyright 2015-2020 Jonathan Peterson
+  * Licensed under MIT (https://github.com/Eonasdan/bootstrap-datetimepicker/blob/master/LICENSE)
+  */
+
+/*!
+  * Bootstrap v5.3.8 (https://getbootstrap.com/)
+  * Copyright 2011-2025 The Bootstrap Authors (https://github.com/twbs/bootstrap/graphs/contributors)
+  * Licensed under MIT (https://github.com/twbs/bootstrap/blob/main/LICENSE)
+  */
+
+/*!
+ * jQuery JavaScript Library v3.7.1
+ * https://jquery.com/
+ *
+ * Copyright OpenJS Foundation and other contributors
+ * Released under the MIT license
+ * https://jquery.org/license
+ *
+ * Date: 2023-08-28T13:37Z
+ */
+
+/*!
+* angular-formly JavaScript Library v8.4.1
+*
+* @license MIT (http://license.angular-formly.com)
+*
+* built with ♥ by Astrism <astrisms@gmail.com>, Kent C. Dodds <kent@doddsfamily.us>
+* (ó ì_í)=óò=(ì_í ò)
+*/
+
+/*! DataTables 1.12.1
+ * ©2008-2022 SpryMedia Ltd - datatables.net/license
+ */
+
+/*! DataTables Bootstrap 3 integration
+ * ©2011-2015 SpryMedia Ltd - datatables.net/license
+ */
+
+/*! Quill Editor v0.20.1
+ *  https://quilljs.com/
+ *  Copyright (c) 2014, Jason Chen
+ *  Copyright (c) 2013, salesforce.com
+ */
+
+/*! Select for DataTables 1.7.0
+ * © SpryMedia Ltd - datatables.net/license/mit
+ */
+
+/*! jQuery UI - v1.13.2 - 2022-07-14
+* http://jqueryui.com
+* Includes: widget.js, position.js, data.js, disable-selection.js, effect.js, effects/effect-blind.js, effects/effect-bounce.js, effects/effect-clip.js, effects/effect-drop.js, effects/effect-explode.js, effects/effect-fade.js, effects/effect-fold.js, effects/effect-highlight.js, effects/effect-puff.js, effects/effect-pulsate.js, effects/effect-scale.js, effects/effect-shake.js, effects/effect-size.js, effects/effect-slide.js, effects/effect-transfer.js, focusable.js, form-reset-mixin.js, jquery-patch.js, keycode.js, labels.js, scroll-parent.js, tabbable.js, unique-id.js, widgets/accordion.js, widgets/autocomplete.js, widgets/button.js, widgets/checkboxradio.js, widgets/controlgroup.js, widgets/datepicker.js, widgets/dialog.js, widgets/draggable.js, widgets/droppable.js, widgets/menu.js, widgets/mouse.js, widgets/progressbar.js, widgets/resizable.js, widgets/selectable.js, widgets/selectmenu.js, widgets/slider.js, widgets/sortable.js, widgets/spinner.js, widgets/tabs.js, widgets/tooltip.js
+* Copyright jQuery Foundation and other contributors; Licensed MIT */
+
+/*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */
+
+/**
+ * @license
+ * Lodash <https://lodash.com/>
+ * Copyright OpenJS Foundation and other contributors <https://openjsf.org/>
+ * Released under MIT license <https://lodash.com/license>
+ * Based on Underscore.js 1.8.3 <http://underscorejs.org/LICENSE>
+ * Copyright Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
+ */
+
+/**
+ * @license AngularJS v1.4.8
+ * (c) 2010-2015 Google, Inc. http://angularjs.org
+ * License: MIT
+ */
+
+/**
+ * gridstack.js 0.5.5
+ * https://gridstackjs.com/
+ * (c) 2014-2019 Dylan Weiss, Alain Dumesny, Pavel Reznikov
+ * gridstack.js may be freely distributed under the MIT license.
+ * @preserve
+*/
+
+/** gridstack.js 0.5.5 - IE and older browsers Polyfills for this library @preserve*/
+
+//! Copyright (c) JS Foundation and other contributors
+
+//! angular-formly-templates-bootstrap version 6.5.1 built with ♥ by Astrism <astrisms@gmail.com>, Kent C. Dodds <kent@doddsfamily.us> (ó ì_í)=óò=(ì_í ò)
+
+//! api-check version 7.5.5 built with ♥ by Kent C. Dodds <kent@doddsfamily.us> (http://kent.doddsfamily.us) (ó ì_í)=óò=(ì_í ò)
+
+//! github.com/moment/moment-timezone
+
+//! license : MIT
+
+//! moment-timezone.js
+
+//! moment.js
+
+//! moment.js locale configuration
+
+//! version : 0.5.48

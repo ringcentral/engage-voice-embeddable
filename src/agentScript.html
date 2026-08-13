@@ -11,24 +11,14 @@
     <link href="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/dist/scripting_studio.css" rel="stylesheet" />
     <link href="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/dist/app.css" rel="stylesheet" />
 
-    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/moment.min.js"></script>
-    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/moment-timezone.js"></script>
-    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/jquery.min.js"></script>
-    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/jquery-ui.min.js"></script>
-    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/lodash.min.js"></script>
-    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular.min.js"></script>
-    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular-resource.min.js"></script>
+    <script src="scriptingRender.js"></script>
     <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular-translate.min.js"></script>
     <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/select.min.js"></script>
     <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular-sanitize.min.js"></script>
     <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular-aria.min.js"></script>
     <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular-animate.min.js"></script>
     <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/source/angular-material.min.js"></script>
-    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/dist/localeLoader.js"></script>
-    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/dist/vendor.js"></script>
-    <script src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/dist/render.js"></script>
     <script defer src="agentScript.js"></script>
-    <script defer src="https://cdn.labs.ringcentral.com/ringcx-embeddable/agent-script/0.0.1/dist/agentScript.angular.js"></script>
     <style>
       html,
       body {
@@ -58,13 +48,8 @@
       }
     </style>
   </head>
-  <body ng-controller="RenderCtrl" ng-cloak>
-    <script-render
-      ng-if="config"
-      data-uii="{{uii}}"
-      data-config="config"
-      data-callbacks="callbacks"
-    ></script-render>
+  <body ng-controller="AgentScriptHostCtrl" ng-cloak>
+    <script-render ng-if="config" data-uii="{{uii}}" data-config="config" data-callbacks="callbacks"></script-render>
     <div ng-if="!config">{{showMessage}}</div>
   </body>
 </html>

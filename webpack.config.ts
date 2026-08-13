@@ -33,8 +33,18 @@ const getCustomRules = (): RuleSetRule[] => [
 ];
 
 export const getWebpackConfig = (options: WebpackConfigOptions<AppConfig>) => {
-  const baseWebpackConfig = getBaseWebpackConfig(options);
   const { projectConfig } = options;
+  const scriptingRenderAsset = projectConfig.assetsEntries?.find(
+    ({ to }) => to === 'scriptingRender.js',
+  );
+
+  // The renderer is a prebuilt bundle loaded directly by agentScript.html.
+  // Mark it as minimized so Webpack copies it without processing it again.
+  if (scriptingRenderAsset) {
+    Object.assign(scriptingRenderAsset, { info: { minimized: true } });
+  }
+
+  const baseWebpackConfig = getBaseWebpackConfig(options);
 
   return merge(baseWebpackConfig, {
     module: {
