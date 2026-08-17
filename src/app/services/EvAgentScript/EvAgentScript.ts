@@ -6,6 +6,7 @@ import {
   PortManager,
   RcModule,
   state,
+  watch,
 } from '@ringcentral-integration/next-core';
 import type {
   EvAgentScriptResult,
@@ -16,6 +17,7 @@ import { EvAuth } from '../EvAuth';
 import { EvCall } from '../EvCall';
 import { EvCallDisposition } from '../EvCallDisposition';
 import { EvPresence } from '../EvPresence';
+import { SideWidget, SIDE_WIDGET_IDS } from '../SideWidget';
 import type {
   EvAgentScriptData,
   EvAgentScriptOptions,
@@ -45,6 +47,7 @@ class EvAgentScript extends RcModule {
     private evCall: EvCall,
     private evPresence: EvPresence,
     private evCallDisposition: EvCallDisposition,
+    private sideWidget: SideWidget,
     private portManager: PortManager,
     @optional('EvAgentScriptOptions')
     private evAgentScriptOptions?: EvAgentScriptOptions,
@@ -71,6 +74,20 @@ class EvAgentScript extends RcModule {
 
   get currentCallScript(): EvAgentScriptData | null {
     return this.getScriptForCall(this.evCall.activityCallId);
+  }
+
+  /**
+   * Whether the Agent Script side widget should be on screen: there is a script,
+   * a load in flight, or a load error for the call being worked on.
+   */
+  get hasVisibleScript(): boolean {
+    const callId = this.evCall.activityCallId;
+    if (!callId) return false;
+    return !!(
+      this.callScriptMapping[callId] ||
+      this.callScriptLoadingMapping[callId] ||
+      this.callScriptErrorMapping[callId]
+    );
   }
 
   @action
@@ -130,6 +147,23 @@ class EvAgentScript extends RcModule {
       this._callScriptResultMapping = {};
       this._clearCallScripts();
     });
+
+    // Keep the side widget a pure function of the script state, so load, error,
+    // disposition-save and logout teardown are all covered by one rule.
+    watch(
+      this,
+      () => this.hasVisibleScript,
+      (visible) => {
+        if (visible) {
+          void this.sideWidget.openWidget({
+            id: SIDE_WIDGET_IDS.agentScript,
+            nameKey: 'agentScript',
+          });
+        } else {
+          void this.sideWidget.closeWidget(SIDE_WIDGET_IDS.agentScript);
+        }
+      },
+    );
   }
 
   getCallId(call?: EvBaseCall | null): string {

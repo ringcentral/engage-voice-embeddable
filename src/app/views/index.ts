@@ -21,6 +21,7 @@ export * from './CallHistoryDetailView';
 // Layout views
 export * from './HeaderNavViewSpring';
 export * from './HeaderView';
+export * from './SideWidgetView';
 
 // Working state views
 export * from './WorkingStateSelectView';

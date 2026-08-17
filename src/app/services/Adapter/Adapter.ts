@@ -49,7 +49,11 @@ export interface AdapterPosition {
   minTranslateY: number | null;
 }
 
-export const AGENT_SCRIPT_WIDGET_WIDTH = 660;
+/**
+ * Frame width used while a side widget is open: the 300px main column plus the
+ * 360px expanded area.
+ */
+export const EXPANDED_APP_WIDTH = 660;
 
 /**
  * Lead properties for dialLead lookup
@@ -90,8 +94,8 @@ class Adapter extends RcModule {
   private _lastMinimized: boolean = false;
   private _lastSize: Partial<AdapterSize> = {};
   private _lastPosition: any = {};
-  private _sizeBeforeAgentScript: AdapterSize | null = null;
-  private _isAgentScriptExpanded = false;
+  private _sizeBeforeExpanded: AdapterSize | null = null;
+  private _isExpanded = false;
 
   constructor(
     private evAuth: EvAuth,
@@ -201,43 +205,47 @@ class Adapter extends RcModule {
   @delegate('server')
   async setSize(size: AdapterSize): Promise<void> {
     this._setSize(
-      this._isAgentScriptExpanded && size.width < AGENT_SCRIPT_WIDGET_WIDTH
+      this._isExpanded && size.width < EXPANDED_APP_WIDTH
         ? {
             ...size,
-            width: AGENT_SCRIPT_WIDGET_WIDTH,
+            width: EXPANDED_APP_WIDTH,
           }
         : size,
     );
   }
 
+  /**
+   * Widen the host frame while a side widget is open, and restore the previous
+   * size when the last one closes. Driven by `SideWidget`.
+   */
   @delegate('server')
-  async setAgentScriptExpanded(expanded: boolean): Promise<void> {
+  async setExpanded(expanded: boolean): Promise<void> {
     if (expanded) {
-      if (!this._isAgentScriptExpanded) {
-        this._sizeBeforeAgentScript = { ...this.size };
-        this._isAgentScriptExpanded = true;
+      if (!this._isExpanded) {
+        this._sizeBeforeExpanded = { ...this.size };
+        this._isExpanded = true;
       }
 
-      // Size sync messages can arrive after the Agent Script view mounts. Do
-      // not let a late 300px host size collapse the second column, and make an
+      // Size sync messages can arrive after the side widget mounts. Do not let
+      // a late 300px host size collapse the expanded area, and make an
       // idempotent expansion call repair the width if it was changed outside
       // this module.
-      if (this.size.width < AGENT_SCRIPT_WIDGET_WIDTH) {
+      if (this.size.width < EXPANDED_APP_WIDTH) {
         this._setSize({
           ...this.size,
-          width: AGENT_SCRIPT_WIDGET_WIDTH,
+          width: EXPANDED_APP_WIDTH,
         });
       }
       return;
     }
 
-    if (!this._isAgentScriptExpanded) return;
+    if (!this._isExpanded) return;
 
-    this._isAgentScriptExpanded = false;
-    if (this._sizeBeforeAgentScript) {
-      this._setSize(this._sizeBeforeAgentScript);
+    this._isExpanded = false;
+    if (this._sizeBeforeExpanded) {
+      this._setSize(this._sizeBeforeExpanded);
     }
-    this._sizeBeforeAgentScript = null;
+    this._sizeBeforeExpanded = null;
   }
 
   @action
@@ -261,13 +269,10 @@ class Adapter extends RcModule {
         // Storage hydration and shared-module state replication can update the
         // observable directly instead of going through setSize(). Keep the
         // expanded layout invariant at the state boundary too.
-        if (
-          this._isAgentScriptExpanded &&
-          this.size.width < AGENT_SCRIPT_WIDGET_WIDTH
-        ) {
+        if (this._isExpanded && this.size.width < EXPANDED_APP_WIDTH) {
           this._setSize({
             ...this.size,
-            width: AGENT_SCRIPT_WIDGET_WIDTH,
+            width: EXPANDED_APP_WIDTH,
           });
           return;
         }

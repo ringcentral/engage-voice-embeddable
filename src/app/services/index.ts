@@ -19,6 +19,7 @@ export * from './EvTabManager';
 export * from './EvActiveCallControl';
 export * from './EvRequeueCall';
 export * from './EvAgentScript';
+export * from './SideWidget';
 export * from './EvCallDataSource';
 export * from './EvCallMonitor';
 export * from './Auth';

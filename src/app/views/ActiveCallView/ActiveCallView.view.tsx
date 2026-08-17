@@ -46,8 +46,6 @@ import { EvActiveCallControl } from '../../services/EvActiveCallControl';
 import { EvAgentSession } from '../../services/EvAgentSession';
 import { EvTransferCall } from '../../services/EvTransferCall';
 import { EvRequeueCall } from '../../services/EvRequeueCall';
-import { EvAgentScript } from '../../services/EvAgentScript';
-import { Adapter } from '../../services/Adapter';
 import { EvAuth } from '../../services/EvAuth';
 import { dialoutStatuses } from '../../../enums';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
@@ -58,7 +56,6 @@ import { CallControlGrid } from '../../components/CallControlGrid';
 import type { CallControlAction } from '../../components/CallControlGrid';
 import { IvrAlertPanel } from '../../components/IvrAlertPanel';
 import { DialpadPanel } from '../../components/DialpadPanel';
-import { AgentScriptPanel } from '../../components/AgentScriptPanel';
 import type {
   ActiveCallViewProps,
   ActiveCallViewUIProps,
@@ -92,8 +89,6 @@ class ActiveCallView extends RcViewModule {
     private evAgentSession: EvAgentSession,
     private evTransferCall: EvTransferCall,
     private evRequeueCall: EvRequeueCall,
-    private evAgentScript: EvAgentScript,
-    private adapter: Adapter,
     private evAuth: EvAuth,
     private router: RouterPlugin,
     private toast: Toast,
@@ -596,10 +591,6 @@ class ActiveCallView extends RcViewModule {
       isDefaultRecord: this.isDefaultRecord,
       isInbound: this.isInbound,
       notes: dispositionData?.notes || '',
-      hasAgentScript: this.evAgentScript.getIsAgentScript(call),
-      agentScript: this.evAgentScript.getScriptForCall(callId),
-      agentScriptLoading: this.evAgentScript.getScriptLoading(callId),
-      agentScriptError: this.evAgentScript.getScriptError(callId),
     };
   }
 
@@ -625,14 +616,6 @@ class ActiveCallView extends RcViewModule {
       handleKeypadChange: (value) => this.handleKeypadChange(value),
       handleKeypadKeyPress: (digit) => this.handleKeypadKeyPress(digit),
       onUpdateNotes: (value) => this.onUpdateNotes(value),
-      setAgentScriptExpanded: (expanded) =>
-        this.adapter.setAgentScriptExpanded(expanded),
-      onAgentScriptResult: (callId, result) =>
-        this.evAgentScript.updateScriptResult(callId, result),
-      onAgentScriptDisposition: (callId, disposition) =>
-        this.evAgentScript.updateDisposition(callId, disposition),
-      getKnowledgeBaseArticles: (callId, groupIds) =>
-        this.evAgentScript.getKnowledgeBaseArticles(callId, groupIds),
     };
   }
 
@@ -723,10 +706,6 @@ class ActiveCallView extends RcViewModule {
       isDefaultRecord,
       isInbound,
       notes,
-      hasAgentScript,
-      agentScript,
-      agentScriptLoading,
-      agentScriptError,
     } = uiProps;
 
     useEffect(() => {
@@ -746,15 +725,6 @@ class ActiveCallView extends RcViewModule {
         this.reset();
       }
     }, [activityCallId]);
-
-    useEffect(() => {
-      void uiFunctions.setAgentScriptExpanded(hasAgentScript);
-      return () => {
-        if (hasAgentScript) {
-          void uiFunctions.setAgentScriptExpanded(false);
-        }
-      };
-    }, [hasAgentScript]);
 
     const handleHoldToggle = useCallback(() => {
       if (isOnHold) {
@@ -883,141 +853,102 @@ class ActiveCallView extends RcViewModule {
 
     return (
       <div className="flex flex-col h-full bg-neutral-base overflow-hidden">
+        <AppHeaderNav override resetImmediately>
+          <PageHeader onBackClick={uiFunctions.onBack}>
+            {t('activeCall')}
+          </PageHeader>
+        </AppHeaderNav>
+
+        {ivrAlertData.length > 0 && (
+          <IvrAlertPanel
+            ivrAlertData={ivrAlertData}
+            isCallEnd={false}
+          />
+        )}
+
         <div
-          className={
-            hasAgentScript
-              ? 'grid min-h-0 flex-1 grid-cols-1 min-[660px]:grid-cols-[300px_minmax(0,1fr)]'
-              : 'flex min-h-0 flex-1'
-          }
+          data-sign="callInformation"
+          className="w-full py-2 pl-2 pr-4 flex items-center"
         >
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden min-[660px]:border-r min-[660px]:border-neutral-b4">
-            {hasAgentScript ? (
-              <PageHeader onBackClick={uiFunctions.onBack}>
-                {t('activeCall')}
-              </PageHeader>
-            ) : (
-              <AppHeaderNav override resetImmediately>
-                <PageHeader onBackClick={uiFunctions.onBack}>
-                  {t('activeCall')}
-                </PageHeader>
-              </AppHeaderNav>
-            )}
-
-            {hasAgentScript && (
-              <AppHeaderNav override resetImmediately>
-                {null}
-              </AppHeaderNav>
-            )}
-
-            {ivrAlertData.length > 0 && (
-              <IvrAlertPanel
-                ivrAlertData={ivrAlertData}
-                isCallEnd={false}
-              />
-            )}
-
-            <div
-              data-sign="callInformation"
-              className="flex w-full items-center py-2 pl-2 pr-4"
+          <ContactAvatar
+            size="large"
+            contactName={basicInfo?.contactName}
+            phoneNumber={basicInfo?.phoneNumber}
+            url={basicInfo?.avatarUrl}
+          />
+          <div className="flex-auto ml-2 min-w-0">
+            <h3
+              className="typography-title text-neutral-b0 truncate"
+              data-sign="contactName"
             >
-              <ContactAvatar
-                size="large"
-                contactName={basicInfo?.contactName}
-                phoneNumber={basicInfo?.phoneNumber}
-                url={basicInfo?.avatarUrl}
-              />
-              <div className="ml-2 min-w-0 flex-auto">
-                <h3
-                  className="typography-title truncate text-neutral-b0"
-                  data-sign="contactName"
-                >
-                  {basicInfo?.subject}
-                </h3>
-                {basicInfo?.followInfos?.filter(Boolean).map((info, idx) => (
-                  <p
-                    key={idx}
-                    className="typography-descriptorMini truncate text-neutral-b2"
-                    data-sign="followInfo"
-                  >
-                    {info}
-                  </p>
-                ))}
-              </div>
-            </div>
+              {basicInfo?.subject}
+            </h3>
+            {basicInfo?.followInfos?.filter(Boolean).map((info, idx) => (
+              <p
+                key={idx}
+                className="typography-descriptorMini text-neutral-b2 truncate"
+                data-sign="followInfo"
+              >
+                {info}
+              </p>
+            ))}
+          </div>
+        </div>
 
-            <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-              <div className="flex flex-1 flex-col overflow-auto">
-                {!this.activeCallViewOptions?.hideCallNote && (
-                  <div className="min-w-0 px-4 pt-3">
-                    <Textarea
-                      placeholder={t('enterCallNotes')}
-                      value={notes}
-                      onChange={handleNotesChange}
-                      data-sign="quickNotesInput"
-                      rows={2}
-                      maxLength={32000}
-                      fullWidth
-                    />
-                  </div>
-                )}
-                <div className="flex-1" />
-                <div className="px-6 py-4">
-                  <CallControlGrid actions={callActions} />
-                </div>
+        <div className="flex-1 flex flex-col relative overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-auto">
+            {!this.activeCallViewOptions?.hideCallNote && (
+              <div className="px-4 pt-3 min-w-0">
+                <Textarea
+                  placeholder={t('enterCallNotes')}
+                  value={notes}
+                  onChange={handleNotesChange}
+                  data-sign="quickNotesInput"
+                  rows={2}
+                  maxLength={32000}
+                  fullWidth
+                />
               </div>
-
-              <DialpadPanel
-                isOpen={isKeypadOpen}
-                value={keypadValue}
-                onToggle={uiFunctions.setKeypadOpen}
-                onChange={uiFunctions.handleKeypadChange}
-                onKeyPress={uiFunctions.handleKeypadKeyPress}
-              />
-            </div>
-
-            <div className="flex-shrink-0">
-              <div className="flex justify-center py-4">
-                {isOnActive ? (
-                  <IconButton
-                    symbol={ActiveCallMd}
-                    onClick={uiFunctions.onActiveCall}
-                    disabled={isInComingCall}
-                    size="large"
-                    variant="inverted"
-                    color="success"
-                    data-sign="activeCallButton"
-                    TooltipProps={{ title: 'Active Calls' }}
-                  />
-                ) : (
-                  <CallButton
-                    variant="end"
-                    onClick={uiFunctions.onHangup}
-                    disabled={isInComingCall}
-                    size="medium"
-                    data-sign="hangupButton"
-                    TooltipProps={{ title: t('hangUp') }}
-                  />
-                )}
-              </div>
+            )}
+            <div className="flex-1" />
+            <div className="px-6 py-4">
+              <CallControlGrid actions={callActions} />
             </div>
           </div>
 
-          {hasAgentScript && (
-            <div className="hidden min-h-0 min-w-0 overflow-hidden min-[660px]:flex">
-              <AgentScriptPanel
-                callId={this.callId}
-                call={currentCall}
-                script={agentScript}
-                loading={agentScriptLoading}
-                error={agentScriptError}
-                onResultChange={uiFunctions.onAgentScriptResult}
-                onDisposition={uiFunctions.onAgentScriptDisposition}
-                getKnowledgeBaseArticles={
-                  uiFunctions.getKnowledgeBaseArticles
-                }
+          <DialpadPanel
+            isOpen={isKeypadOpen}
+            value={keypadValue}
+            onToggle={uiFunctions.setKeypadOpen}
+            onChange={uiFunctions.handleKeypadChange}
+            onKeyPress={uiFunctions.handleKeypadKeyPress}
+          />
+        </div>
+
+        <div className="flex-shrink-0">
+          <div className="flex justify-center py-4">
+            {isOnActive ? (
+              <IconButton
+                symbol={ActiveCallMd}
+                onClick={uiFunctions.onActiveCall}
+                disabled={isInComingCall}
+                size="large"
+                variant="inverted"
+                color="success"
+                data-sign="activeCallButton"
+                TooltipProps={{ title: 'Active Calls' }}
               />
-            </div>
-          )}
+            ) : (
+              <CallButton
+                variant="end"
+                onClick={uiFunctions.onHangup}
+                disabled={isInComingCall}
+                size="medium"
+                data-sign="hangupButton"
+                TooltipProps={{ title: t('hangUp') }}
+              />
+            )}
+          </div>
         </div>
         <AppFooterNav />
       </div>

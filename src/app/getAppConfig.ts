@@ -1,6 +1,7 @@
 import {
   createMemoryHistory,
   render,
+  type RootOptions,
   RouterOptions,
   RouterPlugin,
   StoragePlugin,
@@ -61,6 +62,7 @@ import {
   EvIntegratedSoftphone,
   EvPresence,
   EvAgentScript,
+  SideWidget,
   Environment,
   EvCallDisposition,
   EvCallHistory,
@@ -103,6 +105,7 @@ import {
   OffhookButtonView,
   EvIntegratedSoftphoneView,
   ConnectivityView,
+  SideWidgetView,
   DispositionViewOptions,
   ActiveCallViewOptions,
 } from './views';
@@ -225,6 +228,16 @@ export const getAppConfig = ({
       useValue: prefix,
     },
     {
+      provide: 'RootOptions',
+      useValue: {
+        // Keep the main column at the widget's 300px when a side widget expands
+        // the app; the framework default is 344px. Frame resizing is handled by
+        // `SideWidget` via `Adapter.setExpanded`, not by `onExpand`, because this
+        // is a plain value with no access to DI.
+        expandedLayoutMainClass: 'w-[300px] min-w-[300px] max-w-[300px]',
+      } satisfies RootOptions,
+    },
+    {
       provide: 'PortManagerOptions',
       useValue: {
         disableAutoPickMainTab: true,
@@ -298,6 +311,7 @@ export const getAppConfig = ({
     EvIntegratedSoftphone,
     EvPresence,
     EvAgentScript,
+    SideWidget,
     Environment,
     EvCallDisposition,
     EvCallHistory,
@@ -392,6 +406,7 @@ export const getAppConfig = ({
     WorkingStateSelectView,
     OffhookButtonView,
     EvIntegratedSoftphoneView,
+    SideWidgetView,
     {
       provide: 'AnalyticsOptions',
       useValue: {

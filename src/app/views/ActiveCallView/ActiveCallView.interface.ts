@@ -1,9 +1,4 @@
 import type { IvrAlertData } from '../../components/IvrAlertPanel';
-import type {
-  EvAgentScriptData,
-  EvAgentScriptResult,
-  EvCallDispositionItem,
-} from '../../services/EvAgentScript';
 
 /**
  * Basic call info with follow-up info
@@ -58,10 +53,6 @@ export interface ActiveCallViewUIProps {
   isDefaultRecord: boolean;
   isInbound: boolean;
   notes: string;
-  hasAgentScript: boolean;
-  agentScript: EvAgentScriptData | null;
-  agentScriptLoading: boolean;
-  agentScriptError: string | null;
 }
 
 /**
@@ -88,17 +79,4 @@ export interface ActiveCallViewUIFunctions {
   handleKeypadChange: (value: string) => void;
   handleKeypadKeyPress: (digit: string) => void;
   onUpdateNotes: (value: string) => void;
-  setAgentScriptExpanded: (expanded: boolean) => Promise<void>;
-  onAgentScriptResult: (
-    callId: string,
-    result: EvAgentScriptResult,
-  ) => Promise<void>;
-  onAgentScriptDisposition: (
-    callId: string,
-    disposition: EvCallDispositionItem,
-  ) => Promise<void>;
-  getKnowledgeBaseArticles: (
-    callId: string,
-    groupIds: number[],
-  ) => Promise<unknown>;
 }
