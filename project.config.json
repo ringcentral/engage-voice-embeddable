@@ -28,7 +28,6 @@
     { "from": "src/favicon.ico", "to": "favicon.ico" },
     { "from": "src/icon.svg", "to": "icon.svg" },
     { "from": "src/popup.html", "to": "popup.html" },
-    { "from": "src/agentAssistant.html", "to": "agentAssistant.html" },
     { "from": "src/index.html", "to": "index.html" },
     { "from": "src/agentLibrary.js", "to": "agentLibrary.js" },
     { "from": "src/scriptingRender.js", "to": "scriptingRender.js" },
