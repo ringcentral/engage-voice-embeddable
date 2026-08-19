@@ -111,6 +111,7 @@ class SideWidgetView extends RcViewModule {
     widgetId: SideWidgetId | null,
     uiProps: SideWidgetViewUIProps,
     uiFunctions: SideWidgetViewUIFunctions,
+    showTitle: boolean,
   ) {
     if (!uiProps.callId) return null;
 
@@ -119,6 +120,7 @@ class SideWidgetView extends RcViewModule {
         <AgentAssistantPanel
           key={uiProps.callId}
           callId={uiProps.callId}
+          showTitle={showTitle}
           getParams={uiFunctions.getAgentAssistantParams}
         />
       );
@@ -130,6 +132,7 @@ class SideWidgetView extends RcViewModule {
       <AgentScriptPanel
         callId={uiProps.callId}
         call={uiProps.currentCall}
+        showTitle={showTitle}
         script={uiProps.agentScript}
         loading={uiProps.agentScriptLoading}
         error={uiProps.agentScriptError}
@@ -174,6 +177,10 @@ class SideWidgetView extends RcViewModule {
 
     if (!expanded || !containerReady || !currentWidget) return null;
 
+    // With tabs on screen the tab label already names the panel, so the panel's
+    // own header would just repeat it.
+    const showTabs = widgets.length > 1;
+
     return (
       <AppExpandedContent>
         {/* The expanded slot is `position: relative` and scrolls its own
@@ -189,7 +196,7 @@ class SideWidgetView extends RcViewModule {
               void uiFunctions.setCurrentWidgetId(value as SideWidgetId)
             }
           >
-            {widgets.length > 1 && (
+            {showTabs && (
               <Tabs variant="moreMenu" className="h-7 flex-none">
                 {widgets.map((widget) => (
                   <Tab
@@ -213,7 +220,12 @@ class SideWidgetView extends RcViewModule {
                     widget.id === currentWidget.id ? 'flex' : 'hidden'
                   }`}
                 >
-                  {this.renderWidget(widget.id, uiProps, uiFunctions)}
+                  {this.renderWidget(
+                    widget.id,
+                    uiProps,
+                    uiFunctions,
+                    !showTabs,
+                  )}
                 </div>
               ))}
           </TabContext>

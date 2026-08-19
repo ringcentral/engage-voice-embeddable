@@ -8,6 +8,11 @@ import type {
 export interface AgentScriptPanelProps {
   callId: string;
   call: EvBaseCall;
+  /**
+   * Defaults to true. The side widget turns it off once tabs are shown, because
+   * the tab label already names the panel.
+   */
+  showTitle?: boolean;
   script: EvAgentScriptData | null;
   loading: boolean;
   error: string | null;
