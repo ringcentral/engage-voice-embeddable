@@ -20,6 +20,13 @@ export default {
     componentName: 'EAG',
     isI18nEnabled: false,
   },
+  agentAssistantConfig: {
+    // The Agent Assistant app authenticates with this client id on every
+    // platform, so the interop code has to be minted for it.
+    clientId:
+      process.env.AGENT_ASSISTANT_CLIENT_ID || '',
+    pageUrl: process.env.AGENT_ASSISTANT_PAGE_URL || './agentAssistant.html',
+  },
   analyticsKey: process.env.MIXPANEL_KEY || '',
   analyticsSecretKey: process.env.ANALYTICS_SECRET_KEY || '',
   enableIDB: false,

@@ -17,6 +17,20 @@ export interface EvClientServiceOptions {
 }
 
 /**
+ * Identity values that live on the Agent SDK instance (or its local storage)
+ * rather than in module state, so they are only readable on the main client.
+ */
+export interface EvAgentIdentity {
+  /** Engage token used for RingCX HTTP requests. */
+  engageAccessToken: string;
+  /** Engage platform id, e.g. `aws91-l26`. */
+  platformId: string;
+  mainAccountId: string;
+  /** RingCentral extension id of the logged in agent. */
+  rcUserId: string;
+}
+
+/**
  * Transfer call parameters
  */
 export interface EvClientTransferParams {

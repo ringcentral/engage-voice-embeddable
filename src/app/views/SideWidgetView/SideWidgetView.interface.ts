@@ -4,6 +4,7 @@ import type {
   EvBaseCall,
   EvCallDispositionItem,
 } from '../../services/EvClient/interfaces';
+import type { EvAgentAssistantFrameParams } from '../../services/EvAgentAssistant';
 import type { SideWidgetId, SideWidgetItem } from '../../services/SideWidget';
 
 export interface SideWidgetViewUIProps {
@@ -32,4 +33,7 @@ export interface SideWidgetViewUIFunctions {
     callId: string,
     groupIds: number[],
   ) => Promise<unknown>;
+  getAgentAssistantParams: (
+    callId: string,
+  ) => Promise<EvAgentAssistantFrameParams | null>;
 }

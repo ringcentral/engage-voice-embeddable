@@ -16,6 +16,14 @@ export interface EvAgentConfig {
   isI18nEnabled: boolean;
 }
 
+/**
+ * Agent Assistant (AI Assistant) side widget configuration
+ */
+export interface AgentAssistantConfig {
+  clientId: string;
+  pageUrl: string;
+}
+
 export interface AppConfig {
   appVersion: string;
   prefix: string;
@@ -32,6 +40,7 @@ export interface AppConfig {
     enableDiscovery?: boolean;
   };
   evAgentConfig: EvAgentConfig;
+  agentAssistantConfig: AgentAssistantConfig;
   analyticsKey: string;
 }
 
@@ -87,6 +96,7 @@ export const createApp = async (
     brandConfig,
     sdkConfig,
     evAgentConfig,
+    agentAssistantConfig,
     analyticsKey,
     analyticsSecretKey,
   } = config as AppConfig;
@@ -119,6 +129,7 @@ export const createApp = async (
     brandConfig,
     sdkConfig: mergedSdkConfig,
     evAgentConfig: mergedEvAgentConfig,
+    agentAssistantConfig,
     modules: additionalModules,
     share: options ?? {
       name: 'cx-embeddable',

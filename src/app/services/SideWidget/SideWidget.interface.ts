@@ -6,7 +6,6 @@
  */
 export const SIDE_WIDGET_IDS = {
   agentScript: 'agentScript',
-  /** Reserved for the AI Assistant panel; not registered yet. */
   agentAssistant: 'agentAssistant',
 } as const;
 

@@ -11,6 +11,7 @@ import { AppExpandedContent } from '@ringcentral-integration/micro-core/src/app/
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import { Tab, TabContext, Tabs } from '@ringcentral/spring-ui';
 
+import { EvAgentAssistant } from '../../services/EvAgentAssistant';
 import { EvAgentScript } from '../../services/EvAgentScript';
 import { EvCall } from '../../services/EvCall';
 import { EvCallMonitor } from '../../services/EvCallMonitor';
@@ -20,6 +21,7 @@ import {
   SideWidget,
   type SideWidgetId,
 } from '../../services/SideWidget';
+import { AgentAssistantPanel } from '../../components/AgentAssistantPanel';
 import { AgentScriptPanel } from '../../components/AgentScriptPanel';
 
 import type {
@@ -44,6 +46,7 @@ class SideWidgetView extends RcViewModule {
     private root: Root,
     private sideWidget: SideWidget,
     private evAgentScript: EvAgentScript,
+    private evAgentAssistant: EvAgentAssistant,
     private evCall: EvCall,
     private evPresence: EvPresence,
     private evCallMonitor: EvCallMonitor,
@@ -92,23 +95,35 @@ class SideWidgetView extends RcViewModule {
         this.evAgentScript.updateDisposition(callId, disposition),
       getKnowledgeBaseArticles: (callId, groupIds) =>
         this.evAgentScript.getKnowledgeBaseArticles(callId, groupIds),
+      getAgentAssistantParams: (callId) =>
+        this.evAgentAssistant.getFrameParams(callId),
     };
   }
 
   /**
    * Map a widget id to its panel.
    *
-   * To add a widget (e.g. the AI Assistant): reserve an id in
-   * `SIDE_WIDGET_IDS`, add a branch here, and have the owning service call
-   * `SideWidget.openWidget()`. An iframe-backed panel also needs its page
-   * registered in `project.config.json` `pages[]` — `src/agentAssistant.html`
-   * is not built today.
+   * To add a widget: reserve an id in `SIDE_WIDGET_IDS`, add a branch here, and
+   * have the owning service call `SideWidget.openWidget()`. A panel backed by a
+   * local page also needs that page shipped by `project.config.json`.
    */
   private renderWidget(
     widgetId: SideWidgetId | null,
     uiProps: SideWidgetViewUIProps,
     uiFunctions: SideWidgetViewUIFunctions,
   ) {
+    if (!uiProps.callId) return null;
+
+    if (widgetId === SIDE_WIDGET_IDS.agentAssistant) {
+      return (
+        <AgentAssistantPanel
+          key={uiProps.callId}
+          callId={uiProps.callId}
+          getParams={uiFunctions.getAgentAssistantParams}
+        />
+      );
+    }
+
     if (widgetId !== SIDE_WIDGET_IDS.agentScript) return null;
     if (!uiProps.currentCall) return null;
     return (
@@ -141,10 +156,23 @@ class SideWidgetView extends RcViewModule {
       setContainerReady(expanded);
     }, [expanded]);
 
-    if (!expanded || !containerReady || widgets.length === 0) return null;
+    const currentWidget = widgets.length
+      ? (widgets.find((widget) => widget.id === currentWidgetId) ?? widgets[0])
+      : null;
 
-    const currentWidget =
-      widgets.find((widget) => widget.id === currentWidgetId) ?? widgets[0];
+    // A panel is mounted the first time its tab is selected and then kept in the
+    // DOM (hidden) while another tab is on top: panels hold live state - an
+    // assistant session, script answers - that a remount would throw away.
+    const [mountedIds, setMountedIds] = useState<SideWidgetId[]>([]);
+    const currentId = currentWidget?.id;
+    useEffect(() => {
+      if (!currentId) return;
+      setMountedIds((ids) =>
+        ids.includes(currentId) ? ids : [...ids, currentId],
+      );
+    }, [currentId]);
+
+    if (!expanded || !containerReady || !currentWidget) return null;
 
     return (
       <AppExpandedContent>
@@ -176,9 +204,18 @@ class SideWidgetView extends RcViewModule {
                 ))}
               </Tabs>
             )}
-            <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
-              {this.renderWidget(currentWidget.id, uiProps, uiFunctions)}
-            </div>
+            {widgets
+              .filter((widget) => mountedIds.includes(widget.id))
+              .map((widget) => (
+                <div
+                  key={widget.id}
+                  className={`min-h-0 min-w-0 flex-1 overflow-hidden ${
+                    widget.id === currentWidget.id ? 'flex' : 'hidden'
+                  }`}
+                >
+                  {this.renderWidget(widget.id, uiProps, uiFunctions)}
+                </div>
+              ))}
           </TabContext>
         </div>
       </AppExpandedContent>

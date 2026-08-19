@@ -62,6 +62,7 @@ import {
   EvIntegratedSoftphone,
   EvPresence,
   EvAgentScript,
+  EvAgentAssistant,
   SideWidget,
   Environment,
   EvCallDisposition,
@@ -77,6 +78,7 @@ import {
   OAuth as OAuthWithJWT,
   EvTabManagerOptions,
   EvWorkingStateOptions,
+  EvAgentAssistantOptions,
 } from './services';
 
 // Views
@@ -151,6 +153,14 @@ interface EvAgentConfig {
   isI18nEnabled: boolean;
 }
 
+/**
+ * Agent Assistant (AI Assistant) side widget configuration
+ */
+interface AgentAssistantConfig {
+  clientId: string;
+  pageUrl: string;
+}
+
 interface CreateAppEntryOptions {
   disableLoginPopup?: boolean;
   redirectUri?: string;
@@ -163,6 +173,7 @@ interface CreateAppEntryOptions {
   brandConfig: BaseBrandConfig;
   sdkConfig: SDKConfig;
   evAgentConfig: EvAgentConfig;
+  agentAssistantConfig: AgentAssistantConfig;
   modules?: any[];
   share: ISharedAppOptions;
   analyticsKey: string;
@@ -177,6 +188,7 @@ export const getAppConfig = ({
   brandConfig,
   sdkConfig,
   evAgentConfig,
+  agentAssistantConfig,
   modules = [],
   share,
   disableLoginPopup = false,
@@ -311,6 +323,7 @@ export const getAppConfig = ({
     EvIntegratedSoftphone,
     EvPresence,
     EvAgentScript,
+    EvAgentAssistant,
     SideWidget,
     Environment,
     EvCallDisposition,
@@ -358,6 +371,13 @@ export const getAppConfig = ({
     {
       provide: 'EvSubscriptionOptions',
       useValue: {},
+    },
+    {
+      provide: 'EvAgentAssistantOptions',
+      useValue: {
+        clientId: agentAssistantConfig?.clientId,
+        pageUrl: agentAssistantConfig?.pageUrl,
+      } satisfies EvAgentAssistantOptions,
     },
     {
       provide: 'HeaderNavViewOptions',
