@@ -2,6 +2,7 @@ import type { IvrAlertData } from '../../components/IvrAlertPanel';
 import type { CallInfoItem } from '../../components/CallInfoHeader';
 import type { DispositionItem, DispositionData, DispositionValidation, DispositionRequired } from '../../components/DispositionForm';
 import type { SaveStatus } from './DispositionView.view';
+import type { SideWidgetItem } from '../../services/SideWidget';
 
 /**
  * Basic call info with follow-up info
@@ -42,6 +43,9 @@ export interface DispositionViewUIProps {
   isSummaryFinal: boolean;
   isSummaryLoading: boolean;
   isSummaryEdited: boolean;
+  /** Side widgets registered for this call, shown or hidden. */
+  sideWidgets: SideWidgetItem[];
+  sideWidgetVisible: boolean;
 }
 
 /**
@@ -53,4 +57,5 @@ export interface DispositionViewUIFunctions {
   onUpdateCallLog: (field: string, value: string) => void;
   onUpdateSummary: (value: string) => void;
   disposeCall: () => Promise<void>;
+  onToggleSideWidget: () => Promise<void>;
 }

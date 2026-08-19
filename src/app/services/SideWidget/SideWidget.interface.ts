@@ -11,6 +11,17 @@ export const SIDE_WIDGET_IDS = {
 
 export type SideWidgetId = (typeof SIDE_WIDGET_IDS)[keyof typeof SIDE_WIDGET_IDS];
 
+export interface SideWidgetOptions {
+  /**
+   * The embedding page declares that it grows the frame when the widget asks
+   * for the wider layout, so the widget can lay itself out beside the main
+   * column right away instead of first measuring whether the room appeared.
+   *
+   * Set from the `enableSideWidget` URL parameter.
+   */
+  enableSideWidget?: boolean;
+}
+
 export interface SideWidgetItem {
   id: SideWidgetId;
   /**

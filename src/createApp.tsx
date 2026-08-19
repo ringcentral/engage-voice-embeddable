@@ -55,6 +55,7 @@ interface UrlParams {
   redirectUri?: string;
   hideCallNote?: boolean;
   fromPopup?: boolean;
+  enableSideWidget?: boolean;
 }
 
 function parseBooleanParam(value: string | undefined): boolean {
@@ -80,6 +81,7 @@ function readUrlParams(): UrlParams {
     redirectUri: params.redirectUri || undefined,
     hideCallNote: parseBooleanParam(params.hideCallNote),
     fromPopup: parseBooleanParam(params.fromPopup),
+    enableSideWidget: parseBooleanParam(params.enableSideWidget),
   };
 }
 
@@ -143,6 +145,7 @@ export const createApp = async (
     jwtOwnerId: urlParams.jwtOwnerId,
     hideCallNote: urlParams.hideCallNote,
     fromPopup: urlParams.fromPopup,
+    enableSideWidget: urlParams.enableSideWidget,
   });
 
   const app = await createSharedApp(appConfig);

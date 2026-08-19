@@ -37,6 +37,8 @@ export const adapterMessageTypes = ObjectMap.prefixKeys(
     'loginPopup',
     'searchAndScreenPop',
     'pushLocale',
+    'sideWidgetOpenNotify',
+    'setSideWidgetExtended',
   ],
   'rc-ev',
 );

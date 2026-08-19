@@ -41,6 +41,7 @@ Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/index.h
 * [API](docs/api.md)
 * [Message Transport](docs/message-transport.md)
 * [Call Events](docs/call-events.md)
+* [Side Widget](docs/side-widget.md)
 * [Popup a standalone widget](docs/popup-window.md)
 
 ## Supported features

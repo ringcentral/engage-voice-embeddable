@@ -64,6 +64,7 @@ import {
   EvAgentScript,
   EvAgentAssistant,
   SideWidget,
+  type SideWidgetOptions,
   Environment,
   EvCallDisposition,
   EvCallHistory,
@@ -168,6 +169,7 @@ interface CreateAppEntryOptions {
   jwtOwnerId?: string;
   hideCallNote?: boolean;
   fromPopup?: boolean;
+  enableSideWidget?: boolean;
   appVersion: string;
   prefix?: string;
   brandConfig: BaseBrandConfig;
@@ -197,6 +199,7 @@ export const getAppConfig = ({
   jwtOwnerId = '',
   hideCallNote = false,
   fromPopup = false,
+  enableSideWidget = false,
   analyticsKey,
   analyticsSecretKey,
 }: CreateAppEntryOptions) => {
@@ -460,6 +463,16 @@ export const getAppConfig = ({
       useValue: {
         hideCallNote,
       } satisfies ActiveCallViewOptions,
+    },
+    {
+      provide: 'SideWidgetOptions',
+      useValue: {
+        // The popped-out window is the exception: its host adapter honours the
+        // wider frame, but the window itself stays narrow and clips the overflow
+        // with no scrollbar, so trusting the flag there would put the widget
+        // somewhere the agent cannot reach.
+        enableSideWidget: enableSideWidget && !fromPopup,
+      } satisfies SideWidgetOptions,
     },
   ];
 

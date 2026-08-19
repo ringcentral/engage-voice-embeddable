@@ -227,8 +227,8 @@ class AppView extends RcViewModule {
         >
           <this.MainContent />
         </div>
-        {/* Portals into the root view's expanded area; renders nothing when no
-            side widget is open. */}
+        {/* Renders beside the main column when the frame has room for it and
+            over the app when it does not; nothing when no side widget is open. */}
         <this._sideWidgetView.component />
       </this._appRootView.component>
     );

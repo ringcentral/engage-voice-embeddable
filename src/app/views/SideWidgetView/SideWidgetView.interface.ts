@@ -8,8 +8,16 @@ import type { EvAgentAssistantFrameParams } from '../../services/EvAgentAssistan
 import type { SideWidgetId, SideWidgetItem } from '../../services/SideWidget';
 
 export interface SideWidgetViewUIProps {
-  /** `Root.expanded` — whether the root view's expanded container is rendered. */
+  /**
+   * `Root.expanded` — whether the root view's expanded container is rendered,
+   * i.e. whether the panels sit beside the main column or overlay it.
+   */
   expanded: boolean;
+  /**
+   * Whether the agent has the widget shown. A hidden widget still renders (kept
+   * in the DOM, display-none) so its panels keep their live state.
+   */
+  visible: boolean;
   widgets: SideWidgetItem[];
   currentWidgetId: SideWidgetId | null;
   callId: string;
@@ -21,6 +29,8 @@ export interface SideWidgetViewUIProps {
 
 export interface SideWidgetViewUIFunctions {
   setCurrentWidgetId: (widgetId: SideWidgetId) => Promise<void>;
+  setVisible: (visible: boolean) => Promise<void>;
+  setCanExpandLayout: (canExpandLayout: boolean) => Promise<void>;
   onAgentScriptResult: (
     callId: string,
     result: EvAgentScriptResult,

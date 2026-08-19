@@ -55,6 +55,9 @@ export interface AdapterPosition {
  */
 export const EXPANDED_APP_WIDTH = 660;
 
+/** Frame width used while no side widget is open. */
+export const DEFAULT_APP_WIDTH = 300;
+
 /**
  * Lead properties for dialLead lookup
  */
@@ -96,6 +99,7 @@ class Adapter extends RcModule {
   private _lastPosition: any = {};
   private _sizeBeforeExpanded: AdapterSize | null = null;
   private _isExpanded = false;
+  private _staleExpandedWidthChecked = false;
 
   constructor(
     private evAuth: EvAuth,
@@ -239,13 +243,69 @@ class Adapter extends RcModule {
       return;
     }
 
-    if (!this._isExpanded) return;
+    if (!this._isExpanded) {
+      // `size` is persisted but `_isExpanded` is not, so a worker restart while
+      // expanded rehydrates a 660px frame that nothing owns any more. Give the
+      // width back instead of leaving the host stuck wide with no widget in it.
+      //
+      // Only once, and only before this instance has expanded anything: past
+      // that point a frame this wide is the user's own doing (a drag-resize
+      // arrives as `syncSize`) and is not ours to reset.
+      if (!this._staleExpandedWidthChecked) {
+        this._staleExpandedWidthChecked = true;
+        if (this.size.width >= EXPANDED_APP_WIDTH) {
+          this._setSize({ ...this.size, width: DEFAULT_APP_WIDTH });
+        }
+      }
+      return;
+    }
 
     this._isExpanded = false;
     if (this._sizeBeforeExpanded) {
       this._setSize(this._sizeBeforeExpanded);
     }
     this._sizeBeforeExpanded = null;
+  }
+
+  /**
+   * Host override for the side widget layout, set through
+   * `setSideWidgetExtended`. `null` means "no opinion" and leaves the decision
+   * to the app's own viewport measurement.
+   *
+   * This is the opt-in for hosts we cannot measure our way out of: an embedding
+   * page that can grow its container tells us so explicitly instead of relying
+   * on us guessing from the frame width.
+   */
+  @state
+  sideWidgetExtendedOverride: boolean | null = null;
+
+  @action
+  _setSideWidgetExtendedOverride(extended: boolean | null) {
+    this.sideWidgetExtendedOverride = extended;
+  }
+
+  @delegate('server')
+  async setSideWidgetExtended(extended: boolean | null): Promise<void> {
+    this._setSideWidgetExtendedOverride(
+      extended === null || extended === undefined ? null : !!extended,
+    );
+  }
+
+  /**
+   * Tell the host page about the side widget, so it can size its own container
+   * and answer with `setSideWidgetExtended`. Driven by `SideWidget`.
+   *
+   * `open` means a widget exists for the current call and wants room - that is
+   * the host's cue to make some. `visible` is whether it is actually on screen,
+   * which it will not be while there is nowhere to put it.
+   */
+  @delegate('clients')
+  async notifySideWidgetOpen(open: boolean, visible: boolean): Promise<void> {
+    this._postExternalMessage({
+      type: this.messageTypes.sideWidgetOpenNotify,
+      open,
+      visible,
+    });
   }
 
   @action
@@ -315,6 +375,9 @@ class Adapter extends RcModule {
             break;
           case this.messageTypes.dialLead:
             this.dialLead(payload.lead, payload.destination);
+            break;
+          case this.messageTypes.setSideWidgetExtended:
+            this.setSideWidgetExtended(payload.extended);
             break;
           default:
             break;
