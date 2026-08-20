@@ -31,13 +31,24 @@ const interopScope = 'Interoperability';
 const defaultPageUrl = './agentAssistant.html';
 
 /**
+ * The recording mode the assistant needs: it works off the agent leg audio, so
+ * a segment that is not recorded that way has nothing for it to listen to.
+ */
+const allAgentLegsRecording = 'ALL_AGENT_LEGS';
+
+/**
  * Agent Assistant (AI Assistant) side widget lifecycle.
  *
  * The assistant itself is a RingCX single page app loaded by `agentAssistant.html`;
  * this service decides when its tab is on screen and assembles the per call
  * configuration that page needs, including a short lived RingCentral interop
- * code. The whole feature is hidden when the RingCentral app is not allowed to
- * mint that code.
+ * code. The whole feature is hidden when the account has not enabled agent
+ * assist, when the agent is not a RingCentral user, or when the RingCentral app
+ * is not allowed to mint that code.
+ *
+ * The eligibility rules deliberately mirror the desktop agent app
+ * (`agent-service`, `apps/eag/src/app/phone/phone.detail.js`) so that the same
+ * call is offered the assistant in both.
  */
 @injectable({
   name: 'EvAgentAssistant',
@@ -78,6 +89,25 @@ class EvAgentAssistant extends RcModule {
   }
 
   /**
+   * Whether this Engage agent is backed by a RingCentral user, which the
+   * assistant requires - it logs in as that user. Read from the SDK's own user
+   * details, so it is only readable on the main client and has to be resolved
+   * into state to be usable in a synchronous eligibility check.
+   *
+   * `null` means "not read yet" and keeps the feature hidden, the same way the
+   * desktop app holds the tab back until its user details have loaded.
+   */
+  @state
+  isRCAgent: boolean | null = null;
+
+  @action
+  private _setIsRCAgent(isRCAgent: boolean | null) {
+    this.isRCAgent = isRCAgent;
+  }
+
+  private _resolvingIsRCAgent = false;
+
+  /**
    * The assistant needs an interop code minted for its own client id, which
    * requires the `Interoperability` permission on the RingCentral app. The scope
    * is not always present on the token, so an unknown scope is treated as
@@ -89,11 +119,21 @@ class EvAgentAssistant extends RcModule {
     return scope.split(' ').includes(interopScope);
   }
 
+  /**
+   * Account level `enable_agent_assist` permission, as reported by the agent
+   * config on login.
+   */
+  get hasAgentAssistPermission(): boolean {
+    return !!this.evAuth.agentPermissions?.enableAgentAssist;
+  }
+
   get isSupported(): boolean {
     return !!(
       !this.evAgentAssistantOptions?.disabled &&
       this.interopSupported !== false &&
-      this.hasInteropScope
+      this.hasInteropScope &&
+      this.hasAgentAssistPermission &&
+      this.isRCAgent
     );
   }
 
@@ -103,7 +143,7 @@ class EvAgentAssistant extends RcModule {
 
   /**
    * Whether the AI Assistant side widget should be on screen: the call being
-   * worked on is answered and carries the context the assistant runs on.
+   * worked on is answered and eligible for the assistant.
    */
   get hasVisibleAssistant(): boolean {
     return this.getIsAgentAssistant(
@@ -113,8 +153,37 @@ class EvAgentAssistant extends RcModule {
 
   private initialize(): void {
     this.evAuth.beforeAgentLogout(() => {
+      this._setIsRCAgent(null);
       void this.sideWidget.closeWidget(SIDE_WIDGET_IDS.agentAssistant);
     });
+
+    if (this.evAuth.isEvLogged) {
+      void this._resolveIsRCAgent();
+    }
+    watch(
+      this,
+      () => this.evAuth.isEvLogged,
+      (logged) => {
+        if (logged) {
+          void this._resolveIsRCAgent();
+        } else {
+          this._setIsRCAgent(null);
+        }
+      },
+    );
+
+    // The SDK writes its user details around login, so a read that came back
+    // without an RC user id is retried on the next call rather than turning the
+    // feature off for the whole session.
+    watch(
+      this,
+      () => this.evCall.activityCallId,
+      (callId) => {
+        if (callId && this.isRCAgent !== true && this.evAuth.isEvLogged) {
+          void this._resolveIsRCAgent();
+        }
+      },
+    );
 
     // Same rule as the Agent Script widget: keep the tab a pure function of the
     // call state so answering, ending and logging out are all covered.
@@ -134,9 +203,25 @@ class EvAgentAssistant extends RcModule {
     );
   }
 
+  /**
+   * Whether the assistant can run on this call.
+   *
+   * A knowledge base is deliberately *not* required: without one the assistant
+   * still runs, just with no knowledge context, which is why `knowledgeBaseId`
+   * only feeds `kbContextIds`. What it does need is the agent leg recording it
+   * listens to, and - specific to the embeddable - a dialog id, because the
+   * frame's auto suggestion handshake keys on it.
+   */
   getIsAgentAssistant(call?: EvBaseCall | null): boolean {
     if (!this.isSupported || !call) return false;
-    return !!(this.getKnowledgeBaseId(call) && this.getDialogId(call));
+    if (this.getPerspectiveRecordingMode(call) !== allAgentLegsRecording) {
+      return false;
+    }
+    return !!this.getDialogId(call);
+  }
+
+  getPerspectiveRecordingMode(call?: EvBaseCall | null): string {
+    return call?.segmentContext?.agentContext?.perspectiveRecordingMode || '';
   }
 
   getKnowledgeBaseId(call?: EvBaseCall | null): string {
@@ -149,6 +234,28 @@ class EvAgentAssistant extends RcModule {
 
   getSegmentId(call?: EvBaseCall | null): string {
     return call?.session?.segmentId || call?.segmentContext?.segmentId || '';
+  }
+
+  /**
+   * Reads the RC user id off the main client and remembers whether there is one.
+   * Guarded against overlapping reads because both login and an arriving call
+   * can ask for it.
+   */
+  private async _resolveIsRCAgent(): Promise<void> {
+    if (this._resolvingIsRCAgent) return;
+    this._resolvingIsRCAgent = true;
+    try {
+      const identity = await this.evClient.getAgentIdentity();
+      this._setIsRCAgent(!!identity?.rcUserId);
+    } catch (error) {
+      this.logger.warn(
+        'Agent Assistant: failed to read the agent identity',
+        error,
+      );
+      this._setIsRCAgent(false);
+    } finally {
+      this._resolvingIsRCAgent = false;
+    }
   }
 
   private getCall(callId: string): EvCallData | null {
@@ -182,6 +289,10 @@ class EvAgentAssistant extends RcModule {
     }
 
     const identity = await this.evClient.getAgentIdentity();
+    // Authoritative read of the same value the eligibility check caches.
+    if (this.isRCAgent !== !!identity.rcUserId) {
+      this._setIsRCAgent(!!identity.rcUserId);
+    }
     const platformId =
       identity.platformId || this.evAuth.authenticateResponse?.platformId || '';
     if (!identity.engageAccessToken || !platformId) {

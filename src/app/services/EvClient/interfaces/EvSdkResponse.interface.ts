@@ -437,6 +437,8 @@ export interface EvAgentPermissions {
   allowCampaignStats: boolean;
   allowGateStats: boolean;
   allowChatStats: boolean;
+  /** Account permission (`enable_agent_assist`) gating the AI Assistant. */
+  enableAgentAssist: boolean;
 }
 
 interface EvAllowLeadUpdatesByCampaign {}
