@@ -108,6 +108,7 @@ class SideWidgetView extends RcViewModule {
         this.evAgentScript.getKnowledgeBaseArticles(callId, groupIds),
       getAgentAssistantParams: (callId) =>
         this.evAgentAssistant.getFrameParams(callId),
+      getAgentScriptModel: (call) => this.evAgentScript.getScriptModel(call),
     };
   }
 
@@ -152,6 +153,7 @@ class SideWidgetView extends RcViewModule {
         onResultChange={uiFunctions.onAgentScriptResult}
         onDisposition={uiFunctions.onAgentScriptDisposition}
         getKnowledgeBaseArticles={uiFunctions.getKnowledgeBaseArticles}
+        getScriptModel={uiFunctions.getAgentScriptModel}
       />
     );
   }

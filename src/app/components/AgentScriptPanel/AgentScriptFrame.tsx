@@ -17,6 +17,7 @@ type AgentScriptFrameProps = Pick<
   | 'onResultChange'
   | 'onDisposition'
   | 'getKnowledgeBaseArticles'
+  | 'getScriptModel'
 >;
 
 export function AgentScriptFrame({
@@ -26,6 +27,7 @@ export function AgentScriptFrame({
   onResultChange,
   onDisposition,
   getKnowledgeBaseArticles,
+  getScriptModel,
 }: AgentScriptFrameProps) {
   const frameRef = useRef<HTMLIFrameElement>(null);
   const portRef = useRef<MessagePort | null>(null);
@@ -43,7 +45,7 @@ export function AgentScriptFrame({
     if (!rendererReady || !script) return;
     send({
       type: 'initialize',
-      payload: { callId, call, config: script },
+      payload: { callId, call, config: script, model: getScriptModel(call) },
     });
   }, [rendererReady, callId, call, script]);
 

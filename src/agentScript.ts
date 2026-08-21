@@ -189,6 +189,7 @@ class AgentScriptFrameApp {
         this.eventEmitter.emit(toAngularKey + eventKeys.updateScript, {
           config: message.payload.config,
           call: message.payload.call,
+          model: message.payload.model,
         });
         break;
       case 'reset':
@@ -197,6 +198,7 @@ class AgentScriptFrameApp {
           this.eventEmitter.emit(toAngularKey + eventKeys.updateScript, {
             config: null,
             call: null,
+            model: null,
           });
         }
         break;
@@ -218,6 +220,24 @@ class AgentScriptFrameApp {
   private createRequestId(): string {
     return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   }
+}
+
+/**
+ * Copy refreshed call facts onto the model the renderer is already rendering.
+ *
+ * Only meaningful values are copied, so a later, thinner snapshot cannot blank a
+ * tag that already resolved. Mutating in place is what the renderer itself does
+ * when it fills in `call.recordingUrl` after a call ends.
+ */
+function mergeCallFacts(target: any, source: any): void {
+  if (!target || !source) return;
+
+  Object.keys(source).forEach((key) => {
+    const value = source[key];
+    if (value === undefined || value === null || value === '') return;
+    if (Array.isArray(value) && value.length === 0) return;
+    target[key] = value;
+  });
 }
 
 function registerAngularRenderer(app: AgentScriptFrameApp): void {
@@ -332,14 +352,44 @@ function registerAngularRenderer(app: AgentScriptFrameApp): void {
         return deferred.promise;
       };
 
-      const updateScript = (data: { config: unknown; call: unknown }) => {
+      const updateScript = (data: {
+        config: unknown;
+        call: unknown;
+        model: unknown;
+      }) => {
         $scope.$apply(() => {
-          $scope.config = data.config;
-          $scope.call = data.call;
-          recordingState = Boolean(
-            (data.call as any)?.agentRecording?.agentRecording,
-          );
-          holdState = Boolean((data.call as any)?.hold);
+          const call = data.call as any;
+          const config = data.config as any;
+          const model = data.model as any;
+
+          $scope.call = call;
+          recordingState = Boolean(call?.agentRecording?.agentRecording);
+          // The app writes `isHold`; `hold` only exists on the raw SDK payload.
+          holdState = Boolean(call?.isHold ?? call?.hold);
+
+          // `<script-render>` takes `config` as a two-way binding and stores that
+          // exact object in its own `Render_ScriptSvc`, then writes the live
+          // interpolation model back onto `config.scriptResult` and the agent's
+          // position onto `config.navPosition`. The host re-sends `initialize`
+          // whenever the call object changes (hold, recording, session), so
+          // reassigning `$scope.config` there would strand the renderer's
+          // reference and reassigning the model would discard the answers the
+          // agent has already typed. Refresh the call facts in place instead,
+          // which keeps `{{model.call.*}}` bindings live.
+          const liveModel = $scope.config?.scriptResult;
+          const isSameScript =
+            liveModel &&
+            config &&
+            $scope.config.scriptId === config.scriptId &&
+            liveModel.call?.uii === model?.call?.uii;
+
+          if (isSameScript) {
+            mergeCallFacts(liveModel.call, model?.call);
+            return;
+          }
+
+          $scope.config = config;
+          $scope.scriptModel = model;
         });
       };
 
@@ -366,6 +416,12 @@ function registerAngularRenderer(app: AgentScriptFrameApp): void {
         }
       }, initDebounceTime);
 
+      // The renderer's Router, NavSvc and Render_ScriptSvc key their state by
+      // `uii`, reading it from the `$stateParams` stub above while RenderCtrl
+      // passes this attribute into `Router.init()`. The two must be the same
+      // string or `Render_ScriptSvc.getScript()` returns undefined, so this is a
+      // fixed local routing key — one frame only ever hosts one call. The real
+      // uii reaches the script as `model.call.uii`.
       $scope.uii = 1;
       $scope.callbacks = {
         setScriptResult: (value: unknown) => {
@@ -385,16 +441,16 @@ function registerAngularRenderer(app: AgentScriptFrameApp): void {
         requestColdRequeue: () => resolvedPromise(true),
         requestWarmRequeue: () => resolvedPromise(true),
         requestHangup: () => resolvedPromise(true),
+        // Whatever this resolves with becomes the renderer's `$scope.model`, so
+        // it is the root every `{{model.*}}` tag in the script resolves against.
+        // The host builds it (see `EvAgentScript.getScriptModel`) because the
+        // `{{model.call.agent*}}` tags need agent settings this frame never sees.
+        // The empty floor keeps `model.call` dereferenceable: the renderer's
+        // ActionSvc reads `model.call.dispositions` without guarding.
         getScriptData: () =>
-          resolvedPromise({
-            model: {},
-            lead: {},
-            call: {
-              uii: $scope.uii,
-              dispositions:
-                $scope.call?.outdialDispositions?.dispositions || [],
-            },
-          }),
+          resolvedPromise(
+            $scope.scriptModel || { model: {}, lead: {}, call: {} },
+          ),
         requestColdTransfer: () => resolvedPromise(true),
         requestWarmTransfer: () => resolvedPromise(true),
         requestDisposition: (

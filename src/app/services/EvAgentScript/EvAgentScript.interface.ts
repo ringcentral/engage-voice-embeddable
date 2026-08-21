@@ -4,6 +4,7 @@ import type {
   EvBaseCall,
   EvCallDispositionItem,
 } from '../EvClient/interfaces';
+import type { EvAgentScriptModel } from './formatAgentScriptModel';
 
 export interface EvAgentScriptOptions {
   /**
@@ -27,6 +28,12 @@ export interface EvAgentScriptInitializePayload {
   callId: string;
   config: EvAgentScriptData;
   call: EvBaseCall;
+  /**
+   * The root the renderer interpolates `{{model.*}}` tags against. Built host
+   * side by `EvAgentScript.getScriptModel`, because the frame has no access to
+   * the agent settings the `{{model.call.agent*}}` tags need.
+   */
+  model: EvAgentScriptModel;
 }
 
 export type AgentScriptHostMessage =

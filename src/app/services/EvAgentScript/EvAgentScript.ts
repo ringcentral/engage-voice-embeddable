@@ -27,6 +27,10 @@ import type {
   EvCallScriptMapping,
   EvCallScriptResultMapping,
 } from './EvAgentScript.interface';
+import {
+  formatAgentScriptModel,
+  type EvAgentScriptModel,
+} from './formatAgentScriptModel';
 import { formatAgentScriptResult } from './formatAgentScriptResult';
 
 /**
@@ -193,6 +197,18 @@ class EvAgentScript extends RcModule {
 
   getScriptError(callId: string): string | null {
     return this.callScriptErrorMapping[callId] ?? null;
+  }
+
+  /**
+   * Build the object the renderer interpolates `{{model.*}}` tags against.
+   *
+   * Built here rather than inside the renderer frame so that only the six agent
+   * fields the script contract exposes cross the frame boundary — `agentSettings`
+   * also carries `agentPassword` and `phoneLoginPin`, and a script author can
+   * write a tag for anything reachable under `model`.
+   */
+  getScriptModel(call?: EvBaseCall | null): EvAgentScriptModel {
+    return formatAgentScriptModel(call, this.evAuth.agentSettings);
   }
 
   @delegate('server')

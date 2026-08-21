@@ -4,6 +4,7 @@ import type {
   EvBaseCall,
   EvCallDispositionItem,
 } from '../../services/EvClient/interfaces';
+import type { EvAgentScriptModel } from '../../services/EvAgentScript';
 
 export interface AgentScriptPanelProps {
   callId: string;
@@ -28,5 +29,11 @@ export interface AgentScriptPanelProps {
     callId: string,
     groupIds: number[],
   ) => Promise<unknown>;
+  /**
+   * Build the `{{model.*}}` interpolation root for the renderer. A function
+   * rather than a prop so the freshly built object never takes part in the
+   * connector's shallow prop comparison.
+   */
+  getScriptModel: (call: EvBaseCall) => EvAgentScriptModel;
 }
 

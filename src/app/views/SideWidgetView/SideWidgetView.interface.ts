@@ -5,6 +5,7 @@ import type {
   EvCallDispositionItem,
 } from '../../services/EvClient/interfaces';
 import type { EvAgentAssistantFrameParams } from '../../services/EvAgentAssistant';
+import type { EvAgentScriptModel } from '../../services/EvAgentScript';
 import type { SideWidgetId, SideWidgetItem } from '../../services/SideWidget';
 
 export interface SideWidgetViewUIProps {
@@ -46,4 +47,10 @@ export interface SideWidgetViewUIFunctions {
   getAgentAssistantParams: (
     callId: string,
   ) => Promise<EvAgentAssistantFrameParams | null>;
+  /**
+   * A UI function rather than a UI prop: it builds a new nested object on every
+   * call, which would fail the connector's per-key identity comparison and make
+   * the script frame re-initialize on every store dispatch.
+   */
+  getAgentScriptModel: (call: EvBaseCall) => EvAgentScriptModel;
 }

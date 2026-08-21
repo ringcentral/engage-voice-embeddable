@@ -49,6 +49,14 @@
     </style>
   </head>
   <body ng-controller="AgentScriptHostCtrl" ng-cloak>
+    <!--
+      Do not add `is-i18n-enabled` here without first implementing the
+      `getE164FormattedNumber` and `getPhoneFormatFilter` callbacks. When that
+      flag is on, the renderer overwrites `model.call.ani` and `model.call.dnis`
+      with the result of `getE164FormattedNumber(...)`, so enabling it without
+      those callbacks blanks both tags. E.164 values are exposed as the separate
+      `{{model.call.aniE164}}` / `{{model.call.dnisE164}}` tags instead.
+    -->
     <script-render ng-if="config" data-uii="{{uii}}" data-config="config" data-callbacks="callbacks"></script-render>
     <div ng-if="!config">{{showMessage}}</div>
   </body>
