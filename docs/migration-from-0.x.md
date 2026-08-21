@@ -116,6 +116,9 @@ existing call logger, contact matcher, call log matcher, or lead viewer services
   dialer searches the RingCentral corporate directory, so agents can find a
   colleague and dial their extension directly instead of entering the full
   number.
+- **Agent scripts** — the script assigned to a call is rendered in a side panel
+  and its answers are saved with the disposition. It is off unless the host opts
+  in with `enableAgentScript=1`; see [Agent Script](agent-script.md).
 - Ongoing improvements to integrated softphone connection handling. SIP
   connection events (`rc-ev-sipRegistered`, `rc-ev-sipUnregistered`,
   `rc-ev-sipUnstable`, `rc-ev-sipFailed`) are documented in
@@ -128,7 +131,6 @@ The following are still not available in 1.0 (same as 0.x):
 - Preview dial mode with search
 - HCI dialing
 - Progressive dial mode
-- Agent scripts
 
 ## If you build from source (self-hosting)
 

@@ -81,6 +81,7 @@ class EvAgentScript extends RcModule {
    * a load in flight, or a load error for the call being worked on.
    */
   get hasVisibleScript(): boolean {
+    if (!this.evAgentScriptOptions?.enabled) return false;
     const callId = this.evCall.activityCallId;
     if (!callId) return false;
     return !!(
@@ -176,7 +177,7 @@ class EvAgentScript extends RcModule {
 
   getIsAgentScript(call?: EvBaseCall | null): boolean {
     return !!(
-      !this.evAgentScriptOptions?.disabled &&
+      this.evAgentScriptOptions?.enabled &&
       this.isDisplayAgentScript &&
       call?.scriptId
     );

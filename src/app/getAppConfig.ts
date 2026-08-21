@@ -80,6 +80,7 @@ import {
   EvTabManagerOptions,
   EvWorkingStateOptions,
   EvAgentAssistantOptions,
+  EvAgentScriptOptions,
 } from './services';
 
 // Views
@@ -170,6 +171,7 @@ interface CreateAppEntryOptions {
   hideCallNote?: boolean;
   fromPopup?: boolean;
   enableSideWidget?: boolean;
+  enableAgentScript?: boolean;
   appVersion: string;
   prefix?: string;
   brandConfig: BaseBrandConfig;
@@ -200,6 +202,7 @@ export const getAppConfig = ({
   hideCallNote = false,
   fromPopup = false,
   enableSideWidget = false,
+  enableAgentScript = false,
   analyticsKey,
   analyticsSecretKey,
 }: CreateAppEntryOptions) => {
@@ -374,6 +377,12 @@ export const getAppConfig = ({
     {
       provide: 'EvSubscriptionOptions',
       useValue: {},
+    },
+    {
+      provide: 'EvAgentScriptOptions',
+      useValue: {
+        enabled: enableAgentScript,
+      } satisfies EvAgentScriptOptions,
     },
     {
       provide: 'EvAgentAssistantOptions',

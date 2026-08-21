@@ -11,7 +11,7 @@
    - Preview dial mode
    - Preview dial mode with search (TODO)
    - Progressive dial mode (TODO)
-* Agent scripts (TODO)
+* Agent scripts (opt-in, see [Agent Script](agent-script.md))
 * A online device limitation
 
 ### Features at RingCentral Embeddable

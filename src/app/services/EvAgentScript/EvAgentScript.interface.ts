@@ -6,8 +6,13 @@ import type {
 } from '../EvClient/interfaces';
 
 export interface EvAgentScriptOptions {
-  /** Keep the compatibility renderer disabled without removing call metadata. */
-  disabled?: boolean;
+  /**
+   * Opt in to the Agent Script side widget. Off unless the host sets the
+   * `enableAgentScript` parameter, so an embedding that never asked for the
+   * feature keeps the panel hidden even though the call metadata still carries
+   * a script id.
+   */
+  enabled?: boolean;
 }
 
 export type EvCallScriptMapping = Record<string, EvAgentScriptData>;

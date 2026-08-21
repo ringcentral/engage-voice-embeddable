@@ -56,6 +56,7 @@ interface UrlParams {
   hideCallNote?: boolean;
   fromPopup?: boolean;
   enableSideWidget?: boolean;
+  enableAgentScript?: boolean;
 }
 
 function parseBooleanParam(value: string | undefined): boolean {
@@ -82,6 +83,7 @@ function readUrlParams(): UrlParams {
     hideCallNote: parseBooleanParam(params.hideCallNote),
     fromPopup: parseBooleanParam(params.fromPopup),
     enableSideWidget: parseBooleanParam(params.enableSideWidget),
+    enableAgentScript: parseBooleanParam(params.enableAgentScript),
   };
 }
 
@@ -146,6 +148,7 @@ export const createApp = async (
     hideCallNote: urlParams.hideCallNote,
     fromPopup: urlParams.fromPopup,
     enableSideWidget: urlParams.enableSideWidget,
+    enableAgentScript: urlParams.enableAgentScript,
   });
 
   const app = await createSharedApp(appConfig);

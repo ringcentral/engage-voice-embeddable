@@ -42,6 +42,7 @@ Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/index.h
 * [Message Transport](docs/message-transport.md)
 * [Call Events](docs/call-events.md)
 * [Side Widget](docs/side-widget.md)
+* [Agent Script](docs/agent-script.md)
 * [Popup a standalone widget](docs/popup-window.md)
 
 ## Supported features
@@ -57,6 +58,7 @@ Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/index.h
   - Notes
   - Disposition
   - AI Summary
+* Agent scripts (opt-in, see [Agent Script](docs/agent-script.md))
 
 ## Unsupported features:
 
@@ -64,7 +66,6 @@ Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/index.h
   - Preview dial mode with search
   - HCI dialing
   - Progressive dial mode
-* Agent scripts
 
 ## Contribution and Development
 

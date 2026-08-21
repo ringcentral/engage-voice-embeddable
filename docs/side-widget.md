@@ -1,7 +1,7 @@
 # Side Widget
 
-The side widget hosts the Agent Script and AI Assistant panels for the call being
-worked on. It has two layouts:
+The side widget hosts the Agent Script panel for the call being worked on. It
+has two layouts:
 
 * **Side by side** - the widget sits beside the main 300px column and the widget
   asks the host page to grow the frame to 660px. This needs the host to actually
@@ -34,7 +34,7 @@ overrides both the parameter and the measurement.
 In the overlay case the widget is **registered but not shown**: an overlay
 covering the call screen unasked is worse than a hint, so the agent opens it from
 the toggle button in the call screen header, whose tooltip names what is waiting
-(`Show Agent Script, AI Assistant`).
+(`Show Agent Script`).
 
 ## Widget availability notification
 
