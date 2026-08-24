@@ -20,6 +20,13 @@ export default {
     componentName: 'EAG',
     isI18nEnabled: false,
   },
+  agentAssistantConfig: {
+    // The Agent Assistant app authenticates with this client id on every
+    // platform, so the interop code has to be minted for it.
+    clientId:
+      process.env.AGENT_ASSISTANT_CLIENT_ID || '',
+    pageUrl: process.env.AGENT_ASSISTANT_PAGE_URL || 'https://cdn.labs.ringcentral.com/ringcx-embeddable/ai-assistant/0.0.1/index.html',
+  },
   analyticsKey: process.env.MIXPANEL_KEY || '',
   analyticsSecretKey: process.env.ANALYTICS_SECRET_KEY || '',
   enableIDB: false,

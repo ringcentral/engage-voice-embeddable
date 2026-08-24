@@ -430,6 +430,18 @@ class Adapter extends AdapterCore {
 
   override renderAdapterSize(): void {
     super.renderAdapterSize();
+    if (this._minimized) {
+      this._container.style.removeProperty('width');
+    } else {
+      // The dock stylesheet fixes the adapter root at 300px. Resizing only the
+      // frame leaves wider app layouts clipped by that root, so keep the host
+      // container in sync with the frame width as well.
+      this._container.style.setProperty(
+        'width',
+        `${this._appWidth}px`,
+        'important',
+      );
+    }
     if (this._fromPopup) {
       this._contentFrameContainerEl.style.width = '100%';
       this._contentFrameContainerEl.style.height = 'calc(100% - 36px)';

@@ -1,6 +1,7 @@
 import {
   createMemoryHistory,
   render,
+  type RootOptions,
   RouterOptions,
   RouterPlugin,
   StoragePlugin,
@@ -60,6 +61,10 @@ import {
   EvCall,
   EvIntegratedSoftphone,
   EvPresence,
+  EvAgentScript,
+  EvAgentAssistant,
+  SideWidget,
+  type SideWidgetOptions,
   Environment,
   EvCallDisposition,
   EvCallHistory,
@@ -74,6 +79,8 @@ import {
   OAuth as OAuthWithJWT,
   EvTabManagerOptions,
   EvWorkingStateOptions,
+  EvAgentAssistantOptions,
+  EvAgentScriptOptions,
 } from './services';
 
 // Views
@@ -102,6 +109,7 @@ import {
   OffhookButtonView,
   EvIntegratedSoftphoneView,
   ConnectivityView,
+  SideWidgetView,
   DispositionViewOptions,
   ActiveCallViewOptions,
 } from './views';
@@ -147,6 +155,14 @@ interface EvAgentConfig {
   isI18nEnabled: boolean;
 }
 
+/**
+ * Agent Assistant (AI Assistant) side widget configuration
+ */
+interface AgentAssistantConfig {
+  clientId: string;
+  pageUrl: string;
+}
+
 interface CreateAppEntryOptions {
   disableLoginPopup?: boolean;
   redirectUri?: string;
@@ -154,11 +170,14 @@ interface CreateAppEntryOptions {
   jwtOwnerId?: string;
   hideCallNote?: boolean;
   fromPopup?: boolean;
+  enableSideWidget?: boolean;
+  enableAgentScript?: boolean;
   appVersion: string;
   prefix?: string;
   brandConfig: BaseBrandConfig;
   sdkConfig: SDKConfig;
   evAgentConfig: EvAgentConfig;
+  agentAssistantConfig: AgentAssistantConfig;
   modules?: any[];
   share: ISharedAppOptions;
   analyticsKey: string;
@@ -173,6 +192,7 @@ export const getAppConfig = ({
   brandConfig,
   sdkConfig,
   evAgentConfig,
+  agentAssistantConfig,
   modules = [],
   share,
   disableLoginPopup = false,
@@ -181,6 +201,8 @@ export const getAppConfig = ({
   jwtOwnerId = '',
   hideCallNote = false,
   fromPopup = false,
+  enableSideWidget = false,
+  enableAgentScript = false,
   analyticsKey,
   analyticsSecretKey,
 }: CreateAppEntryOptions) => {
@@ -222,6 +244,16 @@ export const getAppConfig = ({
     {
       provide: 'Prefix',
       useValue: prefix,
+    },
+    {
+      provide: 'RootOptions',
+      useValue: {
+        // Keep the main column at the widget's 300px when a side widget expands
+        // the app; the framework default is 344px. Frame resizing is handled by
+        // `SideWidget` via `Adapter.setExpanded`, not by `onExpand`, because this
+        // is a plain value with no access to DI.
+        expandedLayoutMainClass: 'w-[300px] min-w-[300px] max-w-[300px]',
+      } satisfies RootOptions,
     },
     {
       provide: 'PortManagerOptions',
@@ -296,6 +328,9 @@ export const getAppConfig = ({
     EvCall,
     EvIntegratedSoftphone,
     EvPresence,
+    EvAgentScript,
+    EvAgentAssistant,
+    SideWidget,
     Environment,
     EvCallDisposition,
     EvCallHistory,
@@ -344,6 +379,19 @@ export const getAppConfig = ({
       useValue: {},
     },
     {
+      provide: 'EvAgentScriptOptions',
+      useValue: {
+        enabled: enableAgentScript,
+      } satisfies EvAgentScriptOptions,
+    },
+    {
+      provide: 'EvAgentAssistantOptions',
+      useValue: {
+        clientId: agentAssistantConfig?.clientId,
+        pageUrl: agentAssistantConfig?.pageUrl,
+      } satisfies EvAgentAssistantOptions,
+    },
+    {
       provide: 'HeaderNavViewOptions',
       useValue: {} satisfies HeaderNavViewOptions,
     },
@@ -390,6 +438,7 @@ export const getAppConfig = ({
     WorkingStateSelectView,
     OffhookButtonView,
     EvIntegratedSoftphoneView,
+    SideWidgetView,
     {
       provide: 'AnalyticsOptions',
       useValue: {
@@ -423,6 +472,16 @@ export const getAppConfig = ({
       useValue: {
         hideCallNote,
       } satisfies ActiveCallViewOptions,
+    },
+    {
+      provide: 'SideWidgetOptions',
+      useValue: {
+        // The popped-out window is the exception: its host adapter honours the
+        // wider frame, but the window itself stays narrow and clips the overflow
+        // with no scrollbar, so trusting the flag there would put the widget
+        // somewhere the agent cannot reach.
+        enableSideWidget: enableSideWidget && !fromPopup,
+      } satisfies SideWidgetOptions,
     },
   ];
 

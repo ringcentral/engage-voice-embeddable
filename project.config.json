@@ -14,6 +14,14 @@
     {
       "index": "src/redirect.html",
       "main": "src/redirect.ts"
+    },
+    {
+      "index": "src/agentScript.html",
+      "main": "src/agentScript.ts",
+      "filename": "agentScript.js",
+      "params": {
+        "inject": false
+      }
     }
   ],
   "assets": [
@@ -22,6 +30,8 @@
     { "from": "src/popup.html", "to": "popup.html" },
     { "from": "src/index.html", "to": "index.html" },
     { "from": "src/agentLibrary.js", "to": "agentLibrary.js" },
+    { "from": "src/scriptingRender.js", "to": "scriptingRender.js" },
+    { "from": "src/scriptingRender.js.LICENSE.txt", "to": "scriptingRender.js.LICENSE.txt" },
     { "from": "src/assets/ringCXLogo.svg", "to": "assets/ringCXLogo.svg" },
     { "from": "src/assets/logo.svg", "to": "assets/logo.svg" },
     { "from": "src/assets/popup.svg", "to": "assets/popup.svg" }

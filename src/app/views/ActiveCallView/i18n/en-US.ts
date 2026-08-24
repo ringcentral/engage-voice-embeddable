@@ -24,4 +24,9 @@ export default {
   // Notes
   enterCallNotes: 'Enter call notes here',
   notes: 'Notes',
+
+  // Side widget - `widgets` is the list of what is waiting behind the toggle,
+  // so the agent knows there is a script or an assistant to open.
+  showSideWidget: 'Show {widgets}',
+  hideSideWidget: 'Hide {widgets}',
 } as const;

@@ -41,6 +41,8 @@ const {
   jwt,
   jwtOwnerId,
   hideCallNote,
+  enableSideWidget,
+  enableAgentScript,
 } = parseUri(paramsUri);
 
 /**
@@ -73,6 +75,8 @@ const appUri = `${appUrl}?${obj2uri({
   jwt,
   jwtOwnerId,
   hideCallNote,
+  enableSideWidget,
+  enableAgentScript,
   _t: Date.now(),
 })}`;
 

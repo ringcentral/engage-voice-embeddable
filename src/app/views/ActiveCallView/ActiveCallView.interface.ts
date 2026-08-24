@@ -1,4 +1,5 @@
 import type { IvrAlertData } from '../../components/IvrAlertPanel';
+import type { SideWidgetItem } from '../../services/SideWidget';
 
 /**
  * Basic call info with follow-up info
@@ -53,6 +54,9 @@ export interface ActiveCallViewUIProps {
   isDefaultRecord: boolean;
   isInbound: boolean;
   notes: string;
+  /** Side widgets registered for this call, shown or hidden. */
+  sideWidgets: SideWidgetItem[];
+  sideWidgetVisible: boolean;
 }
 
 /**
@@ -79,4 +83,5 @@ export interface ActiveCallViewUIFunctions {
   handleKeypadChange: (value: string) => void;
   handleKeypadKeyPress: (digit: string) => void;
   onUpdateNotes: (value: string) => void;
+  onToggleSideWidget: () => Promise<void>;
 }

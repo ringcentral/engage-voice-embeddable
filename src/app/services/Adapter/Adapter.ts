@@ -50,6 +50,15 @@ export interface AdapterPosition {
 }
 
 /**
+ * Frame width used while a side widget is open: the 300px main column plus the
+ * 360px expanded area.
+ */
+export const EXPANDED_APP_WIDTH = 660;
+
+/** Frame width used while no side widget is open. */
+export const DEFAULT_APP_WIDTH = 300;
+
+/**
  * Lead properties for dialLead lookup
  */
 export interface LeadProps {
@@ -86,7 +95,11 @@ class Adapter extends RcModule {
 
   private _lastClosed: boolean = false;
   private _lastMinimized: boolean = false;
+  private _lastSize: Partial<AdapterSize> = {};
   private _lastPosition: any = {};
+  private _sizeBeforeExpanded: AdapterSize | null = null;
+  private _isExpanded = false;
+  private _staleExpandedWidthChecked = false;
 
   constructor(
     private evAuth: EvAuth,
@@ -195,7 +208,104 @@ class Adapter extends RcModule {
 
   @delegate('server')
   async setSize(size: AdapterSize): Promise<void> {
-    this._setSize(size);
+    this._setSize(
+      this._isExpanded && size.width < EXPANDED_APP_WIDTH
+        ? {
+            ...size,
+            width: EXPANDED_APP_WIDTH,
+          }
+        : size,
+    );
+  }
+
+  /**
+   * Widen the host frame while a side widget is open, and restore the previous
+   * size when the last one closes. Driven by `SideWidget`.
+   */
+  @delegate('server')
+  async setExpanded(expanded: boolean): Promise<void> {
+    if (expanded) {
+      if (!this._isExpanded) {
+        this._sizeBeforeExpanded = { ...this.size };
+        this._isExpanded = true;
+      }
+
+      // Size sync messages can arrive after the side widget mounts. Do not let
+      // a late 300px host size collapse the expanded area, and make an
+      // idempotent expansion call repair the width if it was changed outside
+      // this module.
+      if (this.size.width < EXPANDED_APP_WIDTH) {
+        this._setSize({
+          ...this.size,
+          width: EXPANDED_APP_WIDTH,
+        });
+      }
+      return;
+    }
+
+    if (!this._isExpanded) {
+      // `size` is persisted but `_isExpanded` is not, so a worker restart while
+      // expanded rehydrates a 660px frame that nothing owns any more. Give the
+      // width back instead of leaving the host stuck wide with no widget in it.
+      //
+      // Only once, and only before this instance has expanded anything: past
+      // that point a frame this wide is the user's own doing (a drag-resize
+      // arrives as `syncSize`) and is not ours to reset.
+      if (!this._staleExpandedWidthChecked) {
+        this._staleExpandedWidthChecked = true;
+        if (this.size.width >= EXPANDED_APP_WIDTH) {
+          this._setSize({ ...this.size, width: DEFAULT_APP_WIDTH });
+        }
+      }
+      return;
+    }
+
+    this._isExpanded = false;
+    if (this._sizeBeforeExpanded) {
+      this._setSize(this._sizeBeforeExpanded);
+    }
+    this._sizeBeforeExpanded = null;
+  }
+
+  /**
+   * Host override for the side widget layout, set through
+   * `setSideWidgetExtended`. `null` means "no opinion" and leaves the decision
+   * to the app's own viewport measurement.
+   *
+   * This is the opt-in for hosts we cannot measure our way out of: an embedding
+   * page that can grow its container tells us so explicitly instead of relying
+   * on us guessing from the frame width.
+   */
+  @state
+  sideWidgetExtendedOverride: boolean | null = null;
+
+  @action
+  _setSideWidgetExtendedOverride(extended: boolean | null) {
+    this.sideWidgetExtendedOverride = extended;
+  }
+
+  @delegate('server')
+  async setSideWidgetExtended(extended: boolean | null): Promise<void> {
+    this._setSideWidgetExtendedOverride(
+      extended === null || extended === undefined ? null : !!extended,
+    );
+  }
+
+  /**
+   * Tell the host page about the side widget, so it can size its own container
+   * and answer with `setSideWidgetExtended`. Driven by `SideWidget`.
+   *
+   * `open` means a widget exists for the current call and wants room - that is
+   * the host's cue to make some. `visible` is whether it is actually on screen,
+   * which it will not be while there is nowhere to put it.
+   */
+  @delegate('clients')
+  async notifySideWidgetOpen(open: boolean, visible: boolean): Promise<void> {
+    this._postExternalMessage({
+      type: this.messageTypes.sideWidgetOpenNotify,
+      open,
+      visible,
+    });
   }
 
   @action
@@ -214,8 +324,18 @@ class Adapter extends RcModule {
   private _setupStateWatcher(): void {
     watch(
       this,
-      () => [this.closed, this.minimized, this.position] as const,
+      () => [this.closed, this.minimized, this.size, this.position] as const,
       () => {
+        // Storage hydration and shared-module state replication can update the
+        // observable directly instead of going through setSize(). Keep the
+        // expanded layout invariant at the state boundary too.
+        if (this._isExpanded && this.size.width < EXPANDED_APP_WIDTH) {
+          this._setSize({
+            ...this.size,
+            width: EXPANDED_APP_WIDTH,
+          });
+          return;
+        }
         this._pushAdapterState();
       },
       { multiple: true },
@@ -255,6 +375,9 @@ class Adapter extends RcModule {
             break;
           case this.messageTypes.dialLead:
             this.dialLead(payload.lead, payload.destination);
+            break;
+          case this.messageTypes.setSideWidgetExtended:
+            this.setSideWidgetExtended(payload.extended);
             break;
           default:
             break;
@@ -415,6 +538,8 @@ class Adapter extends RcModule {
     if (
       this._lastClosed !== this.closed ||
       this._lastMinimized !== this.minimized ||
+      this._lastSize.width !== this.size.width ||
+      this._lastSize.height !== this.size.height ||
       this._lastPosition.translateX !== this.position.translateX ||
       this._lastPosition.translateY !== this.position.translateY ||
       this._lastPosition.minTranslateX !== this.position.minTranslateX ||
@@ -422,6 +547,7 @@ class Adapter extends RcModule {
     ) {
       this._lastClosed = this.closed;
       this._lastMinimized = this.minimized;
+      this._lastSize = { ...this.size };
       this._lastPosition = this.position;
       this._postMessage({
         type: this.messageTypes.pushAdapterState,

@@ -34,6 +34,7 @@ import { EvAgentScript } from '../../services/EvAgentScript';
 import { EvActiveCallControl } from '../../services/EvActiveCallControl';
 import { ThirdParty } from '../../services/ThirdParty';
 import { EvClient } from '../../services/EvClient';
+import { SideWidget } from '../../services/SideWidget';
 import { dialoutStatuses } from '../../../enums';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
 import { getClockByTimestamp } from '../../../lib/getClockByTimestamp';
@@ -44,6 +45,7 @@ import type {
 
 import { CallInfoHeader } from '../../components/CallInfoHeader';
 import { DispositionForm } from '../../components/DispositionForm';
+import { SideWidgetToggleButton } from '../../components/SideWidgetToggleButton';
 import { getCallInfos } from '../../utils/getCallInfos';
 import { shouldShowDispositionSubmitStep } from '../../utils/shouldShowDispositionSubmitStep';
 import type {
@@ -51,6 +53,7 @@ import type {
   DispositionViewUIProps,
   DispositionViewUIFunctions,
 } from './DispositionView.interface';
+import sideWidgetI18n from '../SideWidgetView/i18n';
 import i18n, { t as translate } from './i18n';
 
 /**
@@ -99,6 +102,7 @@ class DispositionView extends RcViewModule {
     private evActiveCallControl: EvActiveCallControl,
     private thirdParty: ThirdParty,
     private evClient: EvClient,
+    private sideWidget: SideWidget,
     private router: RouterPlugin,
     private toast: Toast,
     private storagePlugin: StoragePlugin,
@@ -110,7 +114,13 @@ class DispositionView extends RcViewModule {
     this.storagePlugin.enable(this);
   }
 
-  @storage
+  /**
+   * Deliberately not persisted: this is the outcome of one submit, not
+   * something the next call inherits. Storing it meant a session that ended on
+   * `SAVED` - the agent navigates away, or the worker restarts, before the
+   * delay below hands over to `reset` - came back with the submit button
+   * already showing success for a disposition nobody had filled in.
+   */
   @state
   saveStatus: SaveStatus = SaveStatus.SUBMIT;
 
@@ -156,10 +166,21 @@ class DispositionView extends RcViewModule {
   }
 
   @action
-  reset() {
+  private _reset() {
     this.saveStatus = SaveStatus.SUBMIT;
     this.validated = { dispositionId: true, notes: true };
     this.required = { notes: false };
+  }
+
+  /**
+   * Delegated because this state is written by `disposeCall` on the server, so
+   * the client cannot clear it on its own: a client-side action is replaced by
+   * the server's copy on the next full-state sync, which left the view opening
+   * on whatever the previous disposition ended with.
+   */
+  @delegate('server')
+  async reset() {
+    this._reset();
   }
 
   get isHistoryMode(): boolean {
@@ -273,7 +294,7 @@ class DispositionView extends RcViewModule {
     if (this.isHistoryMode) {
       this._setViewCallId('');
       this.router.goBack();
-      this.reset();
+      this._reset();
       return;
     }
     const isEnded = this.callStatus === 'callEnd' || !this.hasCurrentCall;
@@ -281,11 +302,11 @@ class DispositionView extends RcViewModule {
       this.evCall.setDialoutStatus(dialoutStatuses.idle);
       this._setViewCallId('');
       this.router.replace(this.dialerPath);
-      this.reset();
+      this._reset();
       this.evCall.setActivityCallId('');
     } else {
       this.router.goBack();
-      this.reset();
+      this._reset();
     }
   }
 
@@ -450,21 +471,19 @@ class DispositionView extends RcViewModule {
         p => p.dispositionId === dispositionId
       );
       const authorized = await this.evAuth.refreshEvToken();
-      if (!authorized) {
-        return;
+      if (authorized) {
+        await this.evClient.updateActivityDisposition({
+          dialogId,
+          params: {
+            dispositionName: dispositionItem?.label || '',
+            agentSummary: this.summary,
+            agentNotes: disposition?.notes || '',
+          },
+        });
       }
-      await this.evClient.updateActivityDisposition({
-        dialogId,
-        params: {
-          dispositionName: dispositionItem?.label || '',
-          agentSummary: this.summary,
-          agentNotes: disposition?.notes || '',
-        },
-      });
     }
     if (call?.scriptId) {
-      this.evAgentScript.setCurrentCallScript(null);
-      this.evAgentScript.saveScriptResult(call);
+      await this.evAgentScript.saveScriptResult(call);
     }
   }
 
@@ -494,7 +513,7 @@ class DispositionView extends RcViewModule {
           this.evCall.setDialoutStatus(dialoutStatuses.idle);
           this._setViewCallId('');
           this.router.replace(this.dialerPath);
-          this.reset();
+          this._reset();
           this.evCall.setActivityCallId('');
           return;
         }
@@ -538,6 +557,8 @@ class DispositionView extends RcViewModule {
       isSummaryFinal: summaryState?.isFinal || false,
       isSummaryLoading: summaryState?.isLoading || false,
       isSummaryEdited: summaryState?.isEditedAfterFinal || false,
+      sideWidgets: this.sideWidget.widgets,
+      sideWidgetVisible: this.sideWidget.visible,
     };
   }
 
@@ -548,12 +569,15 @@ class DispositionView extends RcViewModule {
       onUpdateCallLog: (field, value) => this.onUpdateCallLog(field, value),
       onUpdateSummary: (value) => this.onUpdateSummary(value),
       disposeCall: () => this.disposeCall(),
+      onToggleSideWidget: () => this.sideWidget.toggleVisible(),
     };
   }
 
   component(_props?: DispositionViewProps) {
     const params = useParams<{ id?: string; method?: string }>();
-    const { t } = useLocale(i18n);
+    // Merged so the toggle tooltip can name the widgets without a second copy
+    // of their labels living here.
+    const { t } = useLocale(i18n, sideWidgetI18n);
     const { current: uiFunctions } = useRef(this.getUIFunctions());
 
     const uiProps = useConnector(() => this.getUIProps());
@@ -578,7 +602,23 @@ class DispositionView extends RcViewModule {
       isSummaryFinal,
       isSummaryLoading,
       isSummaryEdited,
+      sideWidgets,
+      sideWidgetVisible,
     } = uiProps;
+
+    // The agent script stays available until the disposition is saved, so this
+    // route needs its own way back to a widget hidden on the call screen.
+    const sideWidgetToggle = sideWidgets.length ? (
+      <SideWidgetToggleButton
+        visible={sideWidgetVisible}
+        onToggle={() => void uiFunctions.onToggleSideWidget()}
+        label={t(sideWidgetVisible ? 'hideSideWidget' : 'showSideWidget', {
+          widgets: sideWidgets
+            .map((widget) => t(widget.nameKey as 'agentScript'))
+            .join(', '),
+        })}
+      />
+    ) : undefined;
 
     useEffect(() => {
       if (params.id) {
@@ -587,7 +627,7 @@ class DispositionView extends RcViewModule {
     }, [params.id]);
 
     useEffect(() => {
-      this.reset();
+      void this.reset();
     }, [params.id]);
 
     useEffect(() => {
@@ -612,7 +652,10 @@ class DispositionView extends RcViewModule {
       return (
         <div className="flex flex-col h-full bg-neutral-base">
           <AppHeaderNav override resetImmediately>
-            <PageHeader onBackClick={uiFunctions.onBack}>
+            <PageHeader
+              onBackClick={uiFunctions.onBack}
+              endAdornment={sideWidgetToggle}
+            >
               {pageTitle}
             </PageHeader>
           </AppHeaderNav>
@@ -627,7 +670,10 @@ class DispositionView extends RcViewModule {
     return (
       <div className="flex flex-col h-full bg-neutral-base overflow-hidden">
         <AppHeaderNav override resetImmediately>
-          <PageHeader onBackClick={uiFunctions.onBack}>
+          <PageHeader
+            onBackClick={uiFunctions.onBack}
+            endAdornment={sideWidgetToggle}
+          >
             {pageTitle}
           </PageHeader>
         </AppHeaderNav>

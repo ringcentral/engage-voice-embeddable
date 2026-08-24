@@ -18,6 +18,15 @@ export type EvBaseCall = {
   queueTime: string;
   ani: string;
   dnis: string;
+  /**
+   * E.164 forms of `ani`/`dnis`. The agent library reads them from the
+   * `ani_e164`/`dnis_e164` fields of the NEW-CALL, CALL-CANCELED and
+   * INTERACTION-PREVIEW notifications, and `EvCallDataSource.addNewCall` spreads
+   * the whole raw call, so they reach us even though the documented call schema
+   * omits them.
+   */
+  aniE164?: string;
+  dnisE164?: string;
   callType: 'INBOUND' | 'OUTBOUND';
   appUrl: string;
   isMonitoring: boolean;
@@ -437,6 +446,8 @@ export interface EvAgentPermissions {
   allowCampaignStats: boolean;
   allowGateStats: boolean;
   allowChatStats: boolean;
+  /** Account permission (`enable_agent_assist`) gating the AI Assistant. */
+  enableAgentAssist: boolean;
 }
 
 interface EvAllowLeadUpdatesByCampaign {}

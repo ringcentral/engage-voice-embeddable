@@ -46,8 +46,8 @@ import { EvActiveCallControl } from '../../services/EvActiveCallControl';
 import { EvAgentSession } from '../../services/EvAgentSession';
 import { EvTransferCall } from '../../services/EvTransferCall';
 import { EvRequeueCall } from '../../services/EvRequeueCall';
-import { EvAgentScript } from '../../services/EvAgentScript';
 import { EvAuth } from '../../services/EvAuth';
+import { SideWidget } from '../../services/SideWidget';
 import { dialoutStatuses } from '../../../enums';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
 import type { EvCallData } from '../../services/EvCallDataSource/EvCallDataSource.interface';
@@ -57,11 +57,13 @@ import { CallControlGrid } from '../../components/CallControlGrid';
 import type { CallControlAction } from '../../components/CallControlGrid';
 import { IvrAlertPanel } from '../../components/IvrAlertPanel';
 import { DialpadPanel } from '../../components/DialpadPanel';
+import { SideWidgetToggleButton } from '../../components/SideWidgetToggleButton';
 import type {
   ActiveCallViewProps,
   ActiveCallViewUIProps,
   ActiveCallViewUIFunctions,
 } from './ActiveCallView.interface';
+import sideWidgetI18n from '../SideWidgetView/i18n';
 import i18n, { t as translate } from './i18n';
 
 /**
@@ -90,8 +92,8 @@ class ActiveCallView extends RcViewModule {
     private evAgentSession: EvAgentSession,
     private evTransferCall: EvTransferCall,
     private evRequeueCall: EvRequeueCall,
-    private evAgentScript: EvAgentScript,
     private evAuth: EvAuth,
+    private sideWidget: SideWidget,
     private router: RouterPlugin,
     private toast: Toast,
     private storagePlugin: StoragePlugin,
@@ -593,6 +595,8 @@ class ActiveCallView extends RcViewModule {
       isDefaultRecord: this.isDefaultRecord,
       isInbound: this.isInbound,
       notes: dispositionData?.notes || '',
+      sideWidgets: this.sideWidget.widgets,
+      sideWidgetVisible: this.sideWidget.visible,
     };
   }
 
@@ -618,6 +622,7 @@ class ActiveCallView extends RcViewModule {
       handleKeypadChange: (value) => this.handleKeypadChange(value),
       handleKeypadKeyPress: (digit) => this.handleKeypadKeyPress(digit),
       onUpdateNotes: (value) => this.onUpdateNotes(value),
+      onToggleSideWidget: () => this.sideWidget.toggleVisible(),
     };
   }
 
@@ -682,7 +687,9 @@ class ActiveCallView extends RcViewModule {
 
   component(_props?: ActiveCallViewProps) {
     const params = useParams<{ id?: string }>();
-    const { t } = useLocale(i18n);
+    // Merged so the toggle tooltip can name the widgets without a second copy
+    // of their labels living here.
+    const { t } = useLocale(i18n, sideWidgetI18n);
     const { current: uiFunctions } = useRef(this.getUIFunctions());
 
     const uiProps = useConnector(() => this.getUIProps());
@@ -708,7 +715,24 @@ class ActiveCallView extends RcViewModule {
       isDefaultRecord,
       isInbound,
       notes,
+      sideWidgets,
+      sideWidgetVisible,
     } = uiProps;
+
+    // Naming what is behind the toggle is the only cue the agent gets that a
+    // script or an assistant is waiting, since a narrow frame no longer opens
+    // one on its own.
+    const sideWidgetToggle = sideWidgets.length ? (
+      <SideWidgetToggleButton
+        visible={sideWidgetVisible}
+        onToggle={() => void uiFunctions.onToggleSideWidget()}
+        label={t(sideWidgetVisible ? 'hideSideWidget' : 'showSideWidget', {
+          widgets: sideWidgets
+            .map((widget) => t(widget.nameKey as 'agentScript'))
+            .join(', '),
+        })}
+      />
+    ) : undefined;
 
     useEffect(() => {
       if (params.id) {
@@ -801,7 +825,10 @@ class ActiveCallView extends RcViewModule {
       return (
         <div className="flex flex-col h-full bg-neutral-base">
           <AppHeaderNav override resetImmediately>
-            <PageHeader onBackClick={uiFunctions.onBack}>
+            <PageHeader
+              onBackClick={uiFunctions.onBack}
+              endAdornment={sideWidgetToggle}
+            >
               {t('activeCall')}
             </PageHeader>
           </AppHeaderNav>
@@ -856,7 +883,10 @@ class ActiveCallView extends RcViewModule {
     return (
       <div className="flex flex-col h-full bg-neutral-base overflow-hidden">
         <AppHeaderNav override resetImmediately>
-          <PageHeader onBackClick={uiFunctions.onBack}>
+          <PageHeader
+            onBackClick={uiFunctions.onBack}
+            endAdornment={sideWidgetToggle}
+          >
             {t('activeCall')}
           </PageHeader>
         </AppHeaderNav>

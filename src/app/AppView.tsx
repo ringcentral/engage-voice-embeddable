@@ -35,6 +35,7 @@ import { ActiveCallListView } from './views/ActiveCallListView';
 import { CallHistoryDetailView } from './views/CallHistoryDetailView';
 import { AgentView } from './views/AgentView';
 import { ConnectivityView } from './views/ConnectivityView';
+import { SideWidgetView } from './views/SideWidgetView';
 
 import type { AppViewOptions } from '../interfaces';
 
@@ -174,6 +175,7 @@ class AppView extends RcViewModule {
     private _activeCallListView: ActiveCallListView,
     private _callHistoryDetailView: CallHistoryDetailView,
     private _connectivityView: ConnectivityView,
+    private _sideWidgetView: SideWidgetView,
     @optional('AppViewOptions')
     private _appViewOptions?: AppViewOptions,
   ) {
@@ -225,6 +227,9 @@ class AppView extends RcViewModule {
         >
           <this.MainContent />
         </div>
+        {/* Renders beside the main column when the frame has room for it and
+            over the app when it does not; nothing when no side widget is open. */}
+        <this._sideWidgetView.component />
       </this._appRootView.component>
     );
   }

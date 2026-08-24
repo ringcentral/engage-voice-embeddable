@@ -16,6 +16,14 @@ export interface EvAgentConfig {
   isI18nEnabled: boolean;
 }
 
+/**
+ * Agent Assistant (AI Assistant) side widget configuration
+ */
+export interface AgentAssistantConfig {
+  clientId: string;
+  pageUrl: string;
+}
+
 export interface AppConfig {
   appVersion: string;
   prefix: string;
@@ -32,6 +40,7 @@ export interface AppConfig {
     enableDiscovery?: boolean;
   };
   evAgentConfig: EvAgentConfig;
+  agentAssistantConfig: AgentAssistantConfig;
   analyticsKey: string;
 }
 
@@ -46,6 +55,8 @@ interface UrlParams {
   redirectUri?: string;
   hideCallNote?: boolean;
   fromPopup?: boolean;
+  enableSideWidget?: boolean;
+  enableAgentScript?: boolean;
 }
 
 function parseBooleanParam(value: string | undefined): boolean {
@@ -71,6 +82,8 @@ function readUrlParams(): UrlParams {
     redirectUri: params.redirectUri || undefined,
     hideCallNote: parseBooleanParam(params.hideCallNote),
     fromPopup: parseBooleanParam(params.fromPopup),
+    enableSideWidget: parseBooleanParam(params.enableSideWidget),
+    enableAgentScript: parseBooleanParam(params.enableAgentScript),
   };
 }
 
@@ -87,6 +100,7 @@ export const createApp = async (
     brandConfig,
     sdkConfig,
     evAgentConfig,
+    agentAssistantConfig,
     analyticsKey,
     analyticsSecretKey,
   } = config as AppConfig;
@@ -119,6 +133,7 @@ export const createApp = async (
     brandConfig,
     sdkConfig: mergedSdkConfig,
     evAgentConfig: mergedEvAgentConfig,
+    agentAssistantConfig,
     modules: additionalModules,
     share: options ?? {
       name: 'cx-embeddable',
@@ -132,6 +147,8 @@ export const createApp = async (
     jwtOwnerId: urlParams.jwtOwnerId,
     hideCallNote: urlParams.hideCallNote,
     fromPopup: urlParams.fromPopup,
+    enableSideWidget: urlParams.enableSideWidget,
+    enableAgentScript: urlParams.enableAgentScript,
   });
 
   const app = await createSharedApp(appConfig);

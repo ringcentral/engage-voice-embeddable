@@ -47,6 +47,7 @@ import type {
   RecordResponse,
 } from './interfaces';
 import type {
+  EvAgentIdentity,
   EvClientServiceOptions,
   EvClientTransferParams,
   EvClientHangUpParams,
@@ -877,11 +878,13 @@ class EvClient extends RcModule {
    */
   @delegate('mainClient')
   getScript(scriptId: string, version: string): Promise<EvScriptResponse> {
-    return new Promise<EvScriptResponse>((resolve) => {
+    return new Promise<EvScriptResponse>((resolve, reject) => {
       this._sdk.getScript(scriptId, version, (res: EvScriptResponse) => {
         if (res.status) {
           resolve(res);
+          return;
         }
+        reject(new Error(res.detail || 'Unable to load Agent Script'));
       });
     });
   }
@@ -1029,6 +1032,27 @@ class EvClient extends RcModule {
     }
     const userDetailsJson = JSON.parse(userDetails);
     return userDetailsJson;
+  }
+
+  /**
+   * Identity bits that only exist on the SDK instance / its local storage, so
+   * they can only be read on the main client. Fetched in one round trip because
+   * consumers (Agent Assistant) need all of them together.
+   */
+  @delegate('mainClient')
+  async getAgentIdentity(): Promise<EvAgentIdentity> {
+    const authenticateRequest = this._sdk.getAuthenticateRequest() || {};
+    const fullUserDetails = this.getFullUserDetails() || {};
+    const toStringValue = (value: unknown) =>
+      value === null || value === undefined ? '' : `${value}`;
+    return {
+      engageAccessToken: toStringValue(authenticateRequest.engageAccessToken),
+      platformId: toStringValue(authenticateRequest.platformId),
+      mainAccountId: toStringValue(
+        authenticateRequest.mainAccountId ?? fullUserDetails.evMainAccountId,
+      ),
+      rcUserId: toStringValue(fullUserDetails.rcUserId),
+    };
   }
 
   @delegate('mainClient')
