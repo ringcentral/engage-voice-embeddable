@@ -68,6 +68,7 @@ export interface DialerViewUIProps {
   directoryRecords: DirectoryRecord[];
   isSearchingDirectory: boolean;
   isToNumberPhoneNumber: boolean;
+  showKeypad: boolean;
 }
 
 /**
@@ -78,6 +79,7 @@ export interface DialerViewUIFunctions {
   onDial: () => Promise<void>;
   onHangup: () => void;
   onInputChange: (value: string) => void;
+  onKeypadPress: (key: string) => void;
   onGoToSettings: () => void;
   onDialDirectoryRecord: (record: DirectoryRecord) => void;
 }

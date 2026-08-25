@@ -58,6 +58,15 @@ export const EXPANDED_APP_WIDTH = 660;
 /** Frame width used while no side widget is open. */
 export const DEFAULT_APP_WIDTH = 300;
 
+/** Default frame height. */
+export const DEFAULT_APP_HEIGHT = 540;
+
+/**
+ * The default frame height before the dialer gained a keypad. Sessions still
+ * sitting on exactly this value are migrated up to `DEFAULT_APP_HEIGHT`.
+ */
+export const LEGACY_APP_HEIGHT = 500;
+
 /**
  * Lead properties for dialLead lookup
  */
@@ -146,6 +155,11 @@ class Adapter extends RcModule {
    * Subscribe to SIP lifecycle events and forward them to the parent window
    */
   initializeServer(): void {
+    // Runs on whichever port owns the state. `onRehydrated` fires immediately
+    // when storage has already been restored, so registering late is safe.
+    this.storagePlugin.onRehydrated(() => {
+      this._migrateStoredHeight();
+    });
     this.evSubscription.subscribe(EvCallbackTypes.SIP_REGISTERED, () => {
       this.onSIPRegistered();
     });
@@ -170,7 +184,10 @@ class Adapter extends RcModule {
 
   @storage
   @state
-  size: AdapterSize = { width: 300, height: 500 };
+  size: AdapterSize = {
+    width: DEFAULT_APP_WIDTH,
+    height: DEFAULT_APP_HEIGHT,
+  };
 
   @storage
   @state
@@ -204,6 +221,26 @@ class Adapter extends RcModule {
   @action
   _setSize(size: AdapterSize) {
     this.size = size;
+  }
+
+  /**
+   * Raise sessions still on the pre-keypad default frame height.
+   *
+   * `size` is persisted, so bumping `DEFAULT_APP_HEIGHT` only reaches new
+   * installs -- everyone else keeps 500 and a cramped dialer keypad. Runs once
+   * per store rehydration, before the host is told anything, so the frame comes
+   * up at the new height rather than visibly resizing.
+   *
+   * Only the exact legacy default is touched: any other height is a deliberate
+   * drag-resize and is not ours to override. A user who happened to resize to
+   * exactly 500 is indistinguishable from an untouched default and gets the
+   * extra 40px too, which is the intended outcome either way.
+   */
+  private _migrateStoredHeight(): void {
+    if (this.size.height !== LEGACY_APP_HEIGHT) {
+      return;
+    }
+    this._setSize({ ...this.size, height: DEFAULT_APP_HEIGHT });
   }
 
   @delegate('server')

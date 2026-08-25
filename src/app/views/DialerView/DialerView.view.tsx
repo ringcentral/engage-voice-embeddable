@@ -8,7 +8,6 @@ import {
   StoragePlugin,
   useConnector,
   delegate,
-  watch,
   PortManager,
   RouterPlugin,
 } from '@ringcentral-integration/next-core';
@@ -16,6 +15,9 @@ import type { UIFunctions, UIProps } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import {
   DialTextField,
+  DialPad,
+  DialerPadSoundsMPEG,
+  CallButton,
   Button,
   IconButton,
   Link,
@@ -43,7 +45,9 @@ import i18n from './i18n';
 import type { I18nKey } from './i18n';
 
 const SEARCH_DEBOUNCE_MS = 400;
-const PHONE_NUMBER_PATTERN = /^[+\d][\d\s()\-+*#]*$/;
+// `*` and `#` are allowed to lead so that star codes typed on the keypad
+// (`*67`, `*82`, …) count as dialable. Directory names never start with them.
+const PHONE_NUMBER_PATTERN = /^[+\d*#][\d\s()\-+*#]*$/;
 
 /**
  * DialerView - Phone dialer view for outbound calls
@@ -117,6 +121,13 @@ class DialerView extends RcViewModule {
     return !!value && PHONE_NUMBER_PATTERN.test(value);
   }
 
+  /**
+   * The keypad and call button yield the panel to directory results
+   */
+  get showKeypad(): boolean {
+    return this.directoryRecords.length === 0;
+  }
+
   @action
   _setToNumber(value: string): void {
     this.toNumber = value;
@@ -125,6 +136,23 @@ class DialerView extends RcViewModule {
   @delegate('server')
   async setToNumber(value: string): Promise<void> {
     this._setToNumber(value);
+    this._scheduleDirectorySearch(value);
+  }
+
+  /**
+   * Append a keypad key to the input.
+   *
+   * The keypad can only emit digits, `*`, `#` and `+`, so there is nothing to
+   * look up: this never searches the directory and drops any results left over
+   * from earlier keyboard input. Appending happens here rather than in the
+   * component so that rapid presses cannot drop a key while state syncs back
+   * to the calling port.
+   */
+  @delegate('server')
+  async appendToNumber(key: string): Promise<void> {
+    this._setToNumber(this.toNumber + key);
+    this._cancelDirectorySearch();
+    this.clearDirectoryResults();
   }
 
   @action
@@ -161,24 +189,26 @@ class DialerView extends RcViewModule {
 
   initialize(): void {
     this.evAuth.beforeAgentLogout(() => {
+      this._cancelDirectorySearch();
       this.reset();
     });
-    watch(
-      this,
-      () => this.toNumber,
-      () => {
-        this._scheduleDirectorySearch(this.toNumber);
-      },
-    );
+  }
+
+  /**
+   * Drop any pending debounced directory search
+   */
+  private _cancelDirectorySearch(): void {
+    if (this._searchDebounceTimer) {
+      clearTimeout(this._searchDebounceTimer);
+      this._searchDebounceTimer = undefined;
+    }
   }
 
   /**
    * Debounce directory search on input changes
    */
   private _scheduleDirectorySearch(searchString: string): void {
-    if (this._searchDebounceTimer) {
-      clearTimeout(this._searchDebounceTimer);
-    }
+    this._cancelDirectorySearch();
     const trimmed = searchString.trim();
     if (!trimmed) {
       this.clearDirectoryResults();
@@ -225,19 +255,20 @@ class DialerView extends RcViewModule {
   }
 
   /**
-   * Initiate an outbound call with redial support
+   * Initiate an outbound call.
+   *
+   * The call button is never shown disabled, so this is also the guard: an
+   * empty field does nothing, and letters mean the user is searching the
+   * directory rather than dialling, so that does nothing either instead of
+   * placing a call that cannot connect.
    */
   @delegate('server')
   async dialout(): Promise<void> {
-    if (this.toNumber) {
-      this.setLatestDialoutNumber();
-    } else if (this.latestDialoutNumber) {
-      this.setToNumber(this.latestDialoutNumber);
+    if (!this.toNumber || !this.isToNumberPhoneNumber) {
       return;
     }
-    if (this.toNumber) {
-      await this.evCall.dialout(this.toNumber);
-    }
+    this.setLatestDialoutNumber();
+    await this.evCall.dialout(this.toNumber);
   }
 
   /**
@@ -285,6 +316,7 @@ class DialerView extends RcViewModule {
       directoryRecords: this.directoryRecords,
       isSearchingDirectory: this.isSearchingDirectory,
       isToNumberPhoneNumber: this.isToNumberPhoneNumber,
+      showKeypad: this.showKeypad,
     };
   }
 
@@ -304,6 +336,9 @@ class DialerView extends RcViewModule {
       },
       onInputChange: (value: string) => {
         this.setToNumber(value);
+      },
+      onKeypadPress: (key: string) => {
+        this.appendToNumber(key);
       },
       onGoToSettings: () => {
         this.goToManualDialSettings();
@@ -327,6 +362,7 @@ class DialerView extends RcViewModule {
       directoryRecords,
       isSearchingDirectory,
       isToNumberPhoneNumber,
+      showKeypad,
     } = useConnector(() => this.getUIProps());
 
     if (!hasDialer) {
@@ -335,7 +371,7 @@ class DialerView extends RcViewModule {
 
     if (isPendingDisposition || !isIdle || isOnCall) {
       return (
-        <div className="flex flex-col h-full bg-neutral-base p-4">
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-neutral-base p-4">
           <div className="flex-1 flex flex-col justify-center items-center">
             {isPendingDisposition ? (
               <p
@@ -373,8 +409,14 @@ class DialerView extends RcViewModule {
     const hasInput = !!toNumber;
 
     return (
-      <div className="flex flex-col h-full bg-neutral-base">
-        <div className="px-4 pt-4 [&_input]:text-center flex justify-center">
+      // `flex-1 min-h-0`, not `h-full`: SyncTabView's TabContext renders no DOM
+      // node, so this is a direct flex child of AppView's column alongside the
+      // header nav and the tab bar. Claiming 100% height there overflows the
+      // column by the height of those siblings and pushes the settings link
+      // out of view. Filling the remaining space instead lets the keypad
+      // region absorb the difference.
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-neutral-base">
+        <div className="px-4 pt-2 [&_input]:text-center flex justify-center">
           <DialTextField
             value={toNumber}
             onChange={uiFunctions.onInputChange}
@@ -405,26 +447,63 @@ class DialerView extends RcViewModule {
             }
           />
         </div>
-        {!hasInput ? (
+        {showKeypad ? (
           <>
-            <div className="px-4 mt-3 text-center">
-              <p
-                className="typography-descriptor text-neutral-b2"
-                data-sign="callButtonTip"
-              >
-                {t('callButtonTip')}
-              </p>
-              <p
-                className="typography-descriptor text-neutral-b2 mt-2"
-                data-sign="callButtonEmergencyTip"
-              >
-                {t('callButtonEmergencyTip')}
-              </p>
+            {/* Reserved whether or not a search is running. The keypad below
+                takes the remaining height, so rendering this row conditionally
+                would resize the pad the moment the status appears. Keeping the
+                row in the fixed chrome holds the pad at one size. */}
+            <div className="h-4 flex-shrink-0 px-4 text-center leading-4">
+              {hasInput && isSearchingDirectory && (
+                <span
+                  className="typography-descriptor text-neutral-b2"
+                  data-sign="directoryStatus"
+                >
+                  {t('searchingDirectory')}
+                </span>
+              )}
             </div>
-            <div className="flex-1" />
+            {/* Keypad + call button block, matching micro-phone's DialerPage:
+                a fixed `size="medium"` pad (200x248, 56px keys) whose `gap-y-2`
+                replaces the pad's default percentage `gap`. The fixed row gap
+                matters beyond spacing -- a percentage row-gap resolves against
+                the pad's own height, so it only stays self-consistent while
+                nothing constrains that height.
+                Two deliberate departures from the reference:
+                - `min-h-0 overflow-y-auto`, because this panel is shorter than
+                  micro-phone's. The block is a fixed 312px and scrolls here
+                  rather than pushing the settings link out of the tab.
+                - no `<Dialer>` wrapper, and an explicit `onChange`. That
+                  context auto-inserts keys into the DialTextField, which would
+                  route keypad presses through onInputChange and trigger a
+                  directory search. Keeping the two paths separate is what
+                  makes keypad input skip the search. */}
+            <main
+              className="px-10 pb-2 flex flex-col items-center flex-auto min-h-0 overflow-y-auto"
+              data-sign="dialerKeypad"
+            >
+              <DialPad
+                size="medium"
+                className="gap-y-2"
+                onChange={uiFunctions.onKeypadPress}
+                sounds={DialerPadSoundsMPEG}
+                data-sign="dialerDialPad"
+              />
+              <div className="flex justify-center items-center pt-2">
+                <CallButton
+                  variant="start"
+                  size="medium"
+                  onClick={uiFunctions.onDial}
+                  data-sign="callButton"
+                  TooltipProps={{ title: t('callButton') }}
+                />
+              </div>
+            </main>
           </>
         ) : (
-          <div className="flex-1 overflow-y-auto mt-2">
+          <div className="flex-1 min-h-0 overflow-y-auto mt-2">
+            {/* The keypad hosts the dial action, so the raw number is only
+                offered as a list row once directory results hide the keypad */}
             {isToNumberPhoneNumber && (
               <ListItem
                 size="large"
@@ -439,14 +518,12 @@ class DialerView extends RcViewModule {
                 />
               </ListItem>
             )}
-            {directoryRecords.length > 0 && (
-              <div
-                className="typography-label uppercase text-neutral-b3 px-4 pt-3 pb-1"
-                data-sign="corporateDirectoryHeader"
-              >
-                {t('corporateDirectory')}
-              </div>
-            )}
+            <div
+              className="typography-label uppercase text-neutral-b3 px-4 pt-3 pb-1"
+              data-sign="corporateDirectoryHeader"
+            >
+              {t('corporateDirectory')}
+            </div>
             {directoryRecords.map((record) => (
               <ListItem
                 key={record.id}
@@ -460,14 +537,6 @@ class DialerView extends RcViewModule {
                 />
               </ListItem>
             ))}
-            {directoryRecords.length === 0 && isSearchingDirectory && (
-              <div
-                className="typography-descriptor text-neutral-b2 text-center px-4 py-3"
-                data-sign="directoryStatus"
-              >
-                {t('searchingDirectory')}
-              </div>
-            )}
           </div>
         )}
         {this._renderSettingsLink(t, uiFunctions)}
@@ -494,7 +563,7 @@ class DialerView extends RcViewModule {
     uiFunctions: UIFunctions<DialerViewUIFunctions>,
   ) {
     return (
-      <div className="text-center pb-2 pt-2">
+      <div className="text-center py-0.5 flex-shrink-0">
         <Link
           onClick={uiFunctions.onGoToSettings}
           data-sign="manualDialSettings"
