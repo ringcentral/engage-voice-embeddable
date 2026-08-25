@@ -128,16 +128,6 @@ class DialerView extends RcViewModule {
     return this.directoryRecords.length === 0;
   }
 
-  /**
-   * Dialable when the input looks like a phone number, or when the input is
-   * empty but there is a number to redial
-   */
-  get canDial(): boolean {
-    return this.toNumber
-      ? this.isToNumberPhoneNumber
-      : !!this.latestDialoutNumber;
-  }
-
   @action
   _setToNumber(value: string): void {
     this.toNumber = value;
@@ -265,19 +255,20 @@ class DialerView extends RcViewModule {
   }
 
   /**
-   * Initiate an outbound call with redial support
+   * Initiate an outbound call.
+   *
+   * The call button is never shown disabled, so this is also the guard: an
+   * empty field does nothing, and letters mean the user is searching the
+   * directory rather than dialling, so that does nothing either instead of
+   * placing a call that cannot connect.
    */
   @delegate('server')
   async dialout(): Promise<void> {
-    if (this.toNumber) {
-      this.setLatestDialoutNumber();
-    } else if (this.latestDialoutNumber) {
-      this.setToNumber(this.latestDialoutNumber);
+    if (!this.toNumber || !this.isToNumberPhoneNumber) {
       return;
     }
-    if (this.toNumber) {
-      await this.evCall.dialout(this.toNumber);
-    }
+    this.setLatestDialoutNumber();
+    await this.evCall.dialout(this.toNumber);
   }
 
   /**
@@ -326,7 +317,6 @@ class DialerView extends RcViewModule {
       isSearchingDirectory: this.isSearchingDirectory,
       isToNumberPhoneNumber: this.isToNumberPhoneNumber,
       showKeypad: this.showKeypad,
-      canDial: this.canDial,
     };
   }
 
@@ -373,7 +363,6 @@ class DialerView extends RcViewModule {
       isSearchingDirectory,
       isToNumberPhoneNumber,
       showKeypad,
-      canDial,
     } = useConnector(() => this.getUIProps());
 
     if (!hasDialer) {
@@ -382,7 +371,7 @@ class DialerView extends RcViewModule {
 
     if (isPendingDisposition || !isIdle || isOnCall) {
       return (
-        <div className="flex flex-col h-full bg-neutral-base p-4">
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-neutral-base p-4">
           <div className="flex-1 flex flex-col justify-center items-center">
             {isPendingDisposition ? (
               <p
@@ -420,8 +409,14 @@ class DialerView extends RcViewModule {
     const hasInput = !!toNumber;
 
     return (
-      <div className="flex flex-col h-full bg-neutral-base">
-        <div className="px-4 pt-4 [&_input]:text-center flex justify-center">
+      // `flex-1 min-h-0`, not `h-full`: SyncTabView's TabContext renders no DOM
+      // node, so this is a direct flex child of AppView's column alongside the
+      // header nav and the tab bar. Claiming 100% height there overflows the
+      // column by the height of those siblings and pushes the settings link
+      // out of view. Filling the remaining space instead lets the keypad
+      // region absorb the difference.
+      <div className="flex flex-col flex-1 min-h-0 overflow-hidden bg-neutral-base">
+        <div className="px-4 pt-2 [&_input]:text-center flex justify-center">
           <DialTextField
             value={toNumber}
             onChange={uiFunctions.onInputChange}
@@ -454,55 +449,56 @@ class DialerView extends RcViewModule {
         </div>
         {showKeypad ? (
           <>
-            {hasInput && isSearchingDirectory && (
-              <div
-                className="typography-descriptor text-neutral-b2 text-center px-4 pt-2 flex-shrink-0"
-                data-sign="directoryStatus"
-              >
-                {t('searchingDirectory')}
-              </div>
-            )}
-            {/* `size="medium"` keys as in micro-phone's DialerPage, but sized
-                with `autoSize` so the pad always fits this panel: fixed 56px
-                keys need 224px of rows, more than the dialer tab has once the
-                input, call button and settings link are accounted for.
-                Drive `autoSize` from width, never height. It derives its rows
-                from a percentage `gap`, and a percentage row-gap resolves
-                against the pad's own height -- so constraining the height
-                makes the four rows total more than the box and spill over the
-                call button. This sizer takes whatever height is left and hands
-                the pad a width; the pad's height then follows at its natural
-                1:1.4334 ratio with no spill. Capped at the pad's natural 200px
-                so keys stop growing in a popped-out panel.
-                Unlike the reference we do not wrap in `<Dialer>`: that context
-                auto-inserts keys into the DialTextField, which would route
-                keypad presses through onInputChange and trigger a directory
-                search. The explicit onChange keeps the two paths separate. */}
-            <div
-              className="flex-1 min-h-0 overflow-y-auto flex justify-center px-4 py-1"
+            {/* Reserved whether or not a search is running. The keypad below
+                takes the remaining height, so rendering this row conditionally
+                would resize the pad the moment the status appears. Keeping the
+                row in the fixed chrome holds the pad at one size. */}
+            <div className="h-4 flex-shrink-0 px-4 text-center leading-4">
+              {hasInput && isSearchingDirectory && (
+                <span
+                  className="typography-descriptor text-neutral-b2"
+                  data-sign="directoryStatus"
+                >
+                  {t('searchingDirectory')}
+                </span>
+              )}
+            </div>
+            {/* Keypad + call button block, matching micro-phone's DialerPage:
+                a fixed `size="medium"` pad (200x248, 56px keys) whose `gap-y-2`
+                replaces the pad's default percentage `gap`. The fixed row gap
+                matters beyond spacing -- a percentage row-gap resolves against
+                the pad's own height, so it only stays self-consistent while
+                nothing constrains that height.
+                Two deliberate departures from the reference:
+                - `min-h-0 overflow-y-auto`, because this panel is shorter than
+                  micro-phone's. The block is a fixed 312px and scrolls here
+                  rather than pushing the settings link out of the tab.
+                - no `<Dialer>` wrapper, and an explicit `onChange`. That
+                  context auto-inserts keys into the DialTextField, which would
+                  route keypad presses through onInputChange and trigger a
+                  directory search. Keeping the two paths separate is what
+                  makes keypad input skip the search. */}
+            <main
+              className="px-10 pb-2 flex flex-col items-center flex-auto min-h-0 overflow-y-auto"
               data-sign="dialerKeypad"
             >
-              <div className="h-full m-auto aspect-[1/1.4334] max-w-[200px] min-w-[120px]">
-                <DialPad
-                  autoSize
+              <DialPad
+                size="medium"
+                className="gap-y-2"
+                onChange={uiFunctions.onKeypadPress}
+                sounds={DialerPadSoundsMPEG}
+                data-sign="dialerDialPad"
+              />
+              <div className="flex justify-center items-center pt-2">
+                <CallButton
+                  variant="start"
                   size="medium"
-                  onChange={uiFunctions.onKeypadPress}
-                  sounds={DialerPadSoundsMPEG}
-                  className="w-full"
-                  data-sign="dialerDialPad"
+                  onClick={uiFunctions.onDial}
+                  data-sign="callButton"
+                  TooltipProps={{ title: t('callButton') }}
                 />
               </div>
-            </div>
-            <div className="flex justify-center pb-2 flex-shrink-0">
-              <CallButton
-                variant="start"
-                size="medium"
-                onClick={uiFunctions.onDial}
-                disabled={!canDial}
-                data-sign="callButton"
-                TooltipProps={{ title: t('callButton') }}
-              />
-            </div>
+            </main>
           </>
         ) : (
           <div className="flex-1 min-h-0 overflow-y-auto mt-2">
@@ -567,7 +563,7 @@ class DialerView extends RcViewModule {
     uiFunctions: UIFunctions<DialerViewUIFunctions>,
   ) {
     return (
-      <div className="text-center py-1 flex-shrink-0">
+      <div className="text-center py-0.5 flex-shrink-0">
         <Link
           onClick={uiFunctions.onGoToSettings}
           data-sign="manualDialSettings"

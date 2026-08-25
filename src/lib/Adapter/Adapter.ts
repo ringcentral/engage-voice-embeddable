@@ -67,7 +67,7 @@ class Adapter extends AdapterCore {
     prefix = 'rc-widget',
     version,
     appWidth = 300,
-    appHeight = 500,
+    appHeight = 540,
     zIndex = 999,
     enablePopup = false,
     fromPopup = false,

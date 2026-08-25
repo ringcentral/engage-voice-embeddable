@@ -69,7 +69,6 @@ export interface DialerViewUIProps {
   isSearchingDirectory: boolean;
   isToNumberPhoneNumber: boolean;
   showKeypad: boolean;
-  canDial: boolean;
 }
 
 /**
