@@ -436,10 +436,20 @@ class ActiveCallView extends RcViewModule {
 
   // Navigation Actions
 
-  goToTransferPage = () => {
+  /**
+   * Delegated because the reset and the agent list are EvTransferCall state:
+   * resetting from the client port is undone by the next full-state sync, so
+   * the transfer panel opened on whatever the previous transfer left behind.
+   */
+  @delegate('server')
+  async prepareTransferPage() {
     this.evTransferCall.resetTransferStatus();
-    this.evTransferCall.fetchAgentList();
+    await this.evTransferCall.fetchAgentList();
     this.router.replace(`/activityCallLog/${this.callId}/transferCall`);
+  }
+
+  goToTransferPage = () => {
+    this.prepareTransferPage();
   };
 
   goToActiveCallList = () => {

@@ -1,4 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState, type FunctionComponent } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FunctionComponent,
+} from 'react';
 import { TabContext, Tabs, Tab, TabPanel, Switch, Button } from '@ringcentral/spring-ui';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 
@@ -84,11 +91,21 @@ export const TransferPanel: FunctionComponent<TransferPanelProps> = ({
     sortedTabs.filter((tab) => tab.disabled).map((tab) => tab.value),
   );
 
+  // Tracks the tab already reported to the parent, so the initially active tab
+  // is synced as well. Without it the parent keeps its own default transfer
+  // type and destination validation runs against the wrong tab.
+  const reportedTabRef = useRef<EvTransferType | null>(null);
+
   useEffect(() => {
     const shouldReset = activeTab === null || disabledTabValues.has(activeTab);
-    if (shouldReset && defaultTab !== null) {
-      setActiveTab(defaultTab);
-      onTabChange(defaultTab);
+    const nextTab = shouldReset ? defaultTab : activeTab;
+    if (nextTab === null) return;
+    if (nextTab !== activeTab) {
+      setActiveTab(nextTab);
+    }
+    if (reportedTabRef.current !== nextTab) {
+      reportedTabRef.current = nextTab;
+      onTabChange(nextTab);
     }
   }, [activeTab, defaultTab, disabledTabValues, onTabChange]);
 
@@ -98,6 +115,7 @@ export const TransferPanel: FunctionComponent<TransferPanelProps> = ({
       const tabValue = value as EvTransferType;
       if (disabledTabValues.has(tabValue)) return;
       setActiveTab(tabValue);
+      reportedTabRef.current = tabValue;
       onTabChange(tabValue);
     },
     [onTabChange, disabledTabValues],
