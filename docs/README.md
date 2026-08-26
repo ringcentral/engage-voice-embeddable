@@ -14,3 +14,4 @@ This is an out-of-the-box embeddable web application that help developers to int
 * [Call Events](call-events.md)
 * [Side Widget](side-widget.md)
 * [Agent Script](agent-script.md)
+* [Initialize Audio](initialize-audio.md)
