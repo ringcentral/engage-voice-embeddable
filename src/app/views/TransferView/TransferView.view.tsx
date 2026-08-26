@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import {
   action,
   computed,
+  delegate,
   injectable,
   optional,
   RcViewModule,
@@ -59,8 +60,20 @@ class TransferView extends RcViewModule {
   private _manualEntryNumber = '';
 
   @action
-  setManualEntryNumber(value: string) {
+  private _setManualEntryNumber(value: string) {
     this._manualEntryNumber = value;
+  }
+
+  /**
+   * The view runs in a client port while its state lives on the server, so
+   * every handler in this view that mutates state has to be delegated: a
+   * client-side action is replaced by the server's copy on the next full-state
+   * sync, which reverted the user's input a few seconds after they made it.
+   */
+  @delegate('server')
+  async setManualEntryNumber(value: string): Promise<void> {
+    this._setManualEntryNumber(value);
+    this._evTransferCall.changeTransferType(transferTypes.manualEntry);
   }
 
   get callId(): string {
@@ -69,6 +82,22 @@ class TransferView extends RcViewModule {
 
   get isQueueTransfer(): boolean {
     return this._evTransferCall.transferType === transferTypes.queue;
+  }
+
+  /**
+   * A queue transfer is executed by EvRequeueCall, which keeps its own
+   * `stayOnCall` for the requeue `maintain` flag, so the switch has to read and
+   * write that module instead of EvTransferCall while the queue tab is active.
+   */
+  @computed((that: TransferView) => [
+    that.isQueueTransfer,
+    that._evRequeueCall.stayOnCall,
+    that._evTransferCall.stayOnCall,
+  ])
+  get isStayOnCall(): boolean {
+    return this.isQueueTransfer
+      ? this._evRequeueCall.stayOnCall
+      : this._evTransferCall.stayOnCall;
   }
 
   /** Whether the current call allows non-queue transfer actions */
@@ -150,6 +179,7 @@ class TransferView extends RcViewModule {
     }
   }
 
+  @delegate('server')
   async executeTransfer(): Promise<void> {
     try {
       if (this.isQueueTransfer) {
@@ -166,39 +196,72 @@ class TransferView extends RcViewModule {
     }
   }
 
-  cancelTransfer(): void {
+  @delegate('server')
+  async cancelTransfer(): Promise<void> {
     this._evTransferCall.resetTransferStatus();
-    this.setManualEntryNumber('');
+    this._setManualEntryNumber('');
     this._options?.onCancel?.();
     this._router.replace(`/activityCallLog/${this.callId}`);
   }
 
-  goBack(): void {
+  @delegate('server')
+  async goBack(): Promise<void> {
     this._router.replace(`/activityCallLog/${this.callId}`);
   }
 
-  handleTabChange(type: EvTransferType): void {
+  @delegate('server')
+  async handleTabChange(type: EvTransferType): Promise<void> {
     this._evTransferCall.changeTransferType(type);
     if (type === transferTypes.internal) {
-      this._evTransferCall.fetchAgentList();
+      await this._evTransferCall.fetchAgentList();
     }
   }
 
-  handleQueueGroupChange(groupId: string): void {
+  @delegate('server')
+  async handleStayOnCallChange(): Promise<void> {
+    if (this.isQueueTransfer) {
+      this._evRequeueCall.setStatus({
+        stayOnCall: !this._evRequeueCall.stayOnCall,
+      });
+      return;
+    }
+    this._evTransferCall.changeStayOnCall(this._evTransferCall.stayOnCall);
+  }
+
+  @delegate('server')
+  async selectAgent(agentId: string): Promise<void> {
+    this._evTransferCall.changeTransferAgentId(agentId);
+    this._evTransferCall.changeTransferType(transferTypes.internal);
+  }
+
+  @delegate('server')
+  async selectPhoneBookContact(index: number | null): Promise<void> {
+    this._evTransferCall.changeTransferPhoneBookSelected(index);
+    this._evTransferCall.changeTransferType(transferTypes.phoneBook);
+  }
+
+  @delegate('server')
+  async fetchAgentList(): Promise<void> {
+    await this._evTransferCall.fetchAgentList();
+  }
+
+  @delegate('server')
+  async handleQueueGroupChange(groupId: string): Promise<void> {
     this._evRequeueCall.setStatus({
       selectedQueueGroupId: groupId,
       selectedGateId: '',
     });
   }
 
-  handleGateChange(gateId: string): void {
+  @delegate('server')
+  async handleGateChange(gateId: string): Promise<void> {
     this._evRequeueCall.setStatus({ selectedGateId: gateId });
   }
 
   getUIProps(): UIProps<TransferViewUIProps> {
     return {
       transferType: this._evTransferCall.transferType,
-      isStayOnCall: this._evTransferCall.stayOnCall,
+      isStayOnCall: this.isStayOnCall,
       isTransferring:
         this._evTransferCall.transferring || this._evRequeueCall.requeuing,
       isDisabled: this.isTransferDisabled,
@@ -219,23 +282,16 @@ class TransferView extends RcViewModule {
   getUIFunctions(): UIFunctions<TransferViewUIFunctions> {
     return {
       onTabChange: (type) => this.handleTabChange(type),
-      onStayOnCallChange: () =>
-        this._evTransferCall.changeStayOnCall(this._evTransferCall.stayOnCall),
-      onSelectAgent: (agentId) => {
-        this._evTransferCall.changeTransferAgentId(agentId);
-        this._evTransferCall.changeTransferType(transferTypes.internal);
-      },
-      onSelectPhoneBookContact: (index) => {
-        this._evTransferCall.changeTransferPhoneBookSelected(index);
-        this._evTransferCall.changeTransferType(transferTypes.phoneBook);
-      },
+      onStayOnCallChange: () => this.handleStayOnCallChange(),
+      onSelectAgent: (agentId) => this.selectAgent(agentId),
+      onSelectPhoneBookContact: (index) => this.selectPhoneBookContact(index),
       onManualEntryChange: (value) => this.setManualEntryNumber(value),
       onQueueGroupChange: (groupId) => this.handleQueueGroupChange(groupId),
       onGateChange: (gateId) => this.handleGateChange(gateId),
       onTransfer: () => this.executeTransfer(),
       onCancel: () => this.cancelTransfer(),
       onBack: () => this.goBack(),
-      fetchAgentList: () => this._evTransferCall.fetchAgentList(),
+      fetchAgentList: () => this.fetchAgentList(),
     };
   }
 
