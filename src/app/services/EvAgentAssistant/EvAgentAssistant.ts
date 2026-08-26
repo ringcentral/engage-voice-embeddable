@@ -18,6 +18,7 @@ import { EvCallMonitor, type EvCallData } from '../EvCallMonitor';
 import { EvClient } from '../EvClient';
 import { EvPresence } from '../EvPresence';
 import { SideWidget, SIDE_WIDGET_IDS } from '../SideWidget';
+import { getCallAni, getCallDnis } from '../../../lib/getEvCallNumbers';
 
 import type {
   EvAgentAssistantFrameParams,
@@ -348,7 +349,7 @@ class EvAgentAssistant extends RcModule {
   private _getCustomerNumber(call: EvCallData): string {
     const identityNumber = call.segmentContext?.customerIdentity?.aniE164;
     if (identityNumber) return identityNumber;
-    return (call.callType === 'INBOUND' ? call.ani : call.dnis) || '';
+    return call.callType === 'INBOUND' ? getCallAni(call) : getCallDnis(call);
   }
 
   /**

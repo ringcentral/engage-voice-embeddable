@@ -18,6 +18,25 @@ describe('formatEvCallForConnected', () => {
     },
   } as any;
 
+  it('prefers the E.164 numbers when the notification carries them', () => {
+    const result = formatEvCallForConnected({
+      ...call,
+      aniE164: '+16505550100',
+      dnisE164: '+16505550200',
+    });
+
+    // OUTBOUND, so from is the DNIS and to is the ANI.
+    expect(result.from.phoneNumber).toBe('+16505550200');
+    expect(result.to.phoneNumber).toBe('+16505550100');
+  });
+
+  it('falls back to ani/dnis when no E.164 form is present', () => {
+    const result = formatEvCallForRing(call);
+
+    expect(result.from.phoneNumber).toBe('16505550200');
+    expect(result.to.phoneNumber).toBe('16505550100');
+  });
+
   it('uses the recording URL from ended-call data', () => {
     const result = formatEvCallForConnected({
       ...call,

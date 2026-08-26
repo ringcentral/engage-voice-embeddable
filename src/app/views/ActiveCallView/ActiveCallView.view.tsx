@@ -50,6 +50,7 @@ import { EvAuth } from '../../services/EvAuth';
 import { SideWidget } from '../../services/SideWidget';
 import { dialoutStatuses } from '../../../enums';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
+import { getCallAni, getCallDnis } from '../../../lib/getEvCallNumbers';
 import type { EvCallData } from '../../services/EvCallDataSource/EvCallDataSource.interface';
 import type { EvCallDispositionData } from '../../services/EvCallDisposition/EvCallDisposition.interface';
 
@@ -293,8 +294,10 @@ class ActiveCallView extends RcViewModule {
     const contactMatches: any[] = call.contactMatches || [];
     const contactMatch = contactMatches[0];
     const name = contactMatch?.name;
-    const fromNumber = isInbound ? call.ani : call.dnis;
-    const toNumber = isInbound ? call.dnis : call.ani;
+    const ani = getCallAni(call);
+    const dnis = getCallDnis(call);
+    const fromNumber = isInbound ? ani : dnis;
+    const toNumber = isInbound ? dnis : ani;
     const fromMatchName = name || fromNumber;
     const toMatchName = name || toNumber;
     const phoneNumber = isInbound ? fromNumber : toNumber;
@@ -313,11 +316,12 @@ class ActiveCallView extends RcViewModule {
 
   getContactName(call: any): string {
     if (!call) return '';
+    const ani = getCallAni(call);
     const contactMatches = call.contactMatches || [];
     if (contactMatches.length > 0) {
-      return contactMatches[0].name || call.ani;
+      return contactMatches[0].name || ani;
     }
-    return call.ani || '';
+    return ani;
   }
 
   // Call Control Actions
@@ -639,7 +643,7 @@ class ActiveCallView extends RcViewModule {
         const isInbound = call?.callType === 'INBOUND';
         const name = this.getContactName(call);
         const phone = call
-          ? (isInbound ? call.ani : call.dnis) || ''
+          ? (isInbound ? getCallAni(call) : getCallDnis(call))
           : '';
         return {
           hasActiveCall: hasCall,

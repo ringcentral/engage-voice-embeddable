@@ -14,6 +14,7 @@ import { EvCallMonitor } from '../../services/EvCallMonitor';
 import { CallHistoryDetailPanel } from '../../components/CallHistoryDetailPanel';
 import { callDirection } from '../../../enums';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
+import { getCallAni, getCallDnis } from '../../../lib/getEvCallNumbers';
 
 import type {
   CallHistoryDetailViewOptions,
@@ -30,7 +31,7 @@ function buildCallDetailFromRaw(rawCall: any, callId: string): any {
   const direction = isOutbound ? callDirection.outbound : callDirection.inbound;
   const contactMatches: any[] = rawCall.contactMatches || [];
   const contactName = contactMatches[0]?.name || '';
-  const phone = formatPhoneNumber({ phoneNumber: rawCall.ani || '' });
+  const phone = formatPhoneNumber({ phoneNumber: getCallAni(rawCall) });
   const contact = { name: contactName || phone, phoneNumber: phone };
   const agent = { name: rawCall.agentId || '', phoneNumber: rawCall.agentId || '' };
   const from = isOutbound ? agent : contact;
@@ -105,7 +106,7 @@ class CallHistoryDetailView extends RcViewModule {
       | { termParty?: string; termReason?: string }
       | undefined;
     const callMeta = {
-      dnis: rawCall?.dnis,
+      dnis: getCallDnis(rawCall) || undefined,
       queueName: rawCall?.queue?.name,
       callId: rawCall?.uii,
       termParty: endedCall?.termParty,

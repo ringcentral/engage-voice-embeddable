@@ -4,7 +4,7 @@ import { callErrors } from '../../../../enums/callErrors';
 export default {
   // Call alert messages
   [messageTypes.NO_SUPPORT_COUNTRY]:
-    'Outbound calls outside the U.S. and Canada are not yet supported.',
+    'Outbound calls for the country are not yet supported.',
   [messageTypes.FAILED_TO_CALL]:
     'The line is busy or has a pending disposition.',
   [messageTypes.INTERCEPT]:
