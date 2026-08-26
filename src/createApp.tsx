@@ -57,6 +57,7 @@ interface UrlParams {
   fromPopup?: boolean;
   enableSideWidget?: boolean;
   enableAgentScript?: boolean;
+  enableAudioInitPrompt?: boolean;
 }
 
 function parseBooleanParam(value: string | undefined): boolean {
@@ -84,6 +85,7 @@ function readUrlParams(): UrlParams {
     fromPopup: parseBooleanParam(params.fromPopup),
     enableSideWidget: parseBooleanParam(params.enableSideWidget),
     enableAgentScript: parseBooleanParam(params.enableAgentScript),
+    enableAudioInitPrompt: parseBooleanParam(params.enableAudioInitPrompt),
   };
 }
 
@@ -149,6 +151,7 @@ export const createApp = async (
     fromPopup: urlParams.fromPopup,
     enableSideWidget: urlParams.enableSideWidget,
     enableAgentScript: urlParams.enableAgentScript,
+    enableAudioInitPrompt: urlParams.enableAudioInitPrompt,
   });
 
   const app = await createSharedApp(appConfig);

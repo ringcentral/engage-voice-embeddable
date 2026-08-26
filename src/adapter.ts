@@ -43,6 +43,7 @@ const {
   hideCallNote,
   enableSideWidget,
   enableAgentScript,
+  enableAudioInitPrompt,
 } = parseUri(paramsUri);
 
 /**
@@ -77,6 +78,7 @@ const appUri = `${appUrl}?${obj2uri({
   hideCallNote,
   enableSideWidget,
   enableAgentScript,
+  enableAudioInitPrompt,
   _t: Date.now(),
 })}`;
 

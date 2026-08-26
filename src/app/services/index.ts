@@ -6,6 +6,7 @@ export * from './EvSettings';
 export * from './EvWorkingState';
 export * from './EvCall';
 export * from './EvIntegratedSoftphone';
+export * from './EvAudioSettings';
 export * from './EvPresence';
 export * from './Environment';
 export * from './EvCallDisposition';

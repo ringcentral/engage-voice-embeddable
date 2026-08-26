@@ -35,3 +35,6 @@ export * from './EvIntegratedSoftphoneView';
 
 // Connectivity view
 export * from './ConnectivityView';
+
+// Audio views
+export * from './InitializeAudioView';

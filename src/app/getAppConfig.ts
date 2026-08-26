@@ -60,6 +60,8 @@ import {
   EvWorkingState,
   EvCall,
   EvIntegratedSoftphone,
+  EvAudioSettings,
+  type EvAudioSettingsOptions,
   EvPresence,
   EvAgentScript,
   EvAgentAssistant,
@@ -109,6 +111,7 @@ import {
   OffhookButtonView,
   EvIntegratedSoftphoneView,
   ConnectivityView,
+  InitializeAudioView,
   SideWidgetView,
   DispositionViewOptions,
   ActiveCallViewOptions,
@@ -172,6 +175,7 @@ interface CreateAppEntryOptions {
   fromPopup?: boolean;
   enableSideWidget?: boolean;
   enableAgentScript?: boolean;
+  enableAudioInitPrompt?: boolean;
   appVersion: string;
   prefix?: string;
   brandConfig: BaseBrandConfig;
@@ -203,6 +207,7 @@ export const getAppConfig = ({
   fromPopup = false,
   enableSideWidget = false,
   enableAgentScript = false,
+  enableAudioInitPrompt = false,
   analyticsKey,
   analyticsSecretKey,
 }: CreateAppEntryOptions) => {
@@ -327,6 +332,7 @@ export const getAppConfig = ({
     EvWorkingState,
     EvCall,
     EvIntegratedSoftphone,
+    EvAudioSettings,
     EvPresence,
     EvAgentScript,
     EvAgentAssistant,
@@ -345,6 +351,12 @@ export const getAppConfig = ({
       useValue: {
         fromPopup,
       } satisfies EvTabManagerOptions,
+    },
+    {
+      provide: 'EvAudioSettingsOptions',
+      useValue: {
+        enableAudioInitPrompt,
+      } satisfies EvAudioSettingsOptions,
     },
     {
       provide: OAuth,
@@ -438,6 +450,7 @@ export const getAppConfig = ({
     WorkingStateSelectView,
     OffhookButtonView,
     EvIntegratedSoftphoneView,
+    InitializeAudioView,
     SideWidgetView,
     {
       provide: 'AnalyticsOptions',

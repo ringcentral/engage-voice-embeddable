@@ -35,6 +35,7 @@ import { ActiveCallListView } from './views/ActiveCallListView';
 import { CallHistoryDetailView } from './views/CallHistoryDetailView';
 import { AgentView } from './views/AgentView';
 import { ConnectivityView } from './views/ConnectivityView';
+import { InitializeAudioView } from './views/InitializeAudioView';
 import { SideWidgetView } from './views/SideWidgetView';
 
 import type { AppViewOptions } from '../interfaces';
@@ -175,6 +176,7 @@ class AppView extends RcViewModule {
     private _activeCallListView: ActiveCallListView,
     private _callHistoryDetailView: CallHistoryDetailView,
     private _connectivityView: ConnectivityView,
+    private _initializeAudioView: InitializeAudioView,
     private _sideWidgetView: SideWidgetView,
     @optional('AppViewOptions')
     private _appViewOptions?: AppViewOptions,
@@ -214,6 +216,7 @@ class AppView extends RcViewModule {
           <div className="flex-none">
             <AppAnnouncementRender>
               <this._connectivityView.component />
+              <this._initializeAudioView.component />
               <this._activeCallView.Announcement />
               <this._dispositionView.Announcement />
               {this._appViewOptions?.headers}
