@@ -43,6 +43,7 @@ Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/index.h
 * [Call Events](docs/call-events.md)
 * [Side Widget](docs/side-widget.md)
 * [Agent Script](docs/agent-script.md)
+* [Initialize Audio](docs/initialize-audio.md)
 * [Popup a standalone widget](docs/popup-window.md)
 
 ## Supported features
