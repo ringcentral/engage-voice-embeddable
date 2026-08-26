@@ -14,6 +14,7 @@ import {
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber';
 import { contactMatchIdentifyEncode } from '../../../lib/contactMatchIdentify';
 import { makeCallsUniqueIdentifies } from '../../../lib/callUniqueIdentifies';
+import { getCallAni } from '../../../lib/getEvCallNumbers';
 import { getEvServerTimestamp } from '../../../lib/getEvServerTimestamp';
 import { directTransferNotificationTypes } from '../../../enums/directTransferNotificationTypes';
 import { EvCallbackTypes } from '../EvClient/enums/callbackTypes';
@@ -155,9 +156,10 @@ class EvCallHistory extends RcModule {
           name = matched.name;
         }
       }
+      const contactNumber = this._formatPhoneNumber(getCallAni(call));
       const contact = {
-        name: name || this._formatPhoneNumber(call.ani),
-        phoneNumber: this._formatPhoneNumber(call.ani),
+        name: name || contactNumber,
+        phoneNumber: contactNumber,
       };
       const from = direction === callDirection.outbound ? agent : contact;
       const to = direction === callDirection.outbound ? contact : agent;

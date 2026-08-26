@@ -3,6 +3,7 @@ import type {
   EvEndedCall,
 } from '../app/services/EvClient/interfaces';
 import type { EvCallData } from '../app/services/EvCallMonitor/EvCallMonitor.interface';
+import { getCallAni, getCallDnis } from './getEvCallNumbers';
 import { getEvServerTimestamp } from './getEvServerTimestamp';
 
 function getStartTime(queueDts?: string): number | undefined {
@@ -40,8 +41,10 @@ export interface FormattedEvCall {
  */
 export function formatEvCallForRing(call: EvBaseCall): FormattedEvCall {
   const isOutbound = call.callType === 'OUTBOUND';
-  const fromNumber = isOutbound ? call.dnis : call.ani;
-  const toNumber = isOutbound ? call.ani : call.dnis;
+  const ani = getCallAni(call);
+  const dnis = getCallDnis(call);
+  const fromNumber = isOutbound ? dnis : ani;
+  const toNumber = isOutbound ? ani : dnis;
   return {
     id: call.uii,
     direction: call.callType,
@@ -71,8 +74,10 @@ export function formatEvCallForConnected(call: EvCallData): FormattedEvCall {
   const isOutbound = call.callType === 'OUTBOUND';
   const contactMatches: any[] = call.contactMatches || [];
   const name = contactMatches[0]?.name;
-  const fromNumber = isOutbound ? call.dnis : call.ani;
-  const toNumber = isOutbound ? call.ani : call.dnis;
+  const ani = getCallAni(call);
+  const dnis = getCallDnis(call);
+  const fromNumber = isOutbound ? dnis : ani;
+  const toNumber = isOutbound ? ani : dnis;
   const endedCall = call.endedCall as unknown as EvEndedCall | undefined;
   return {
     id: call.uii,

@@ -39,6 +39,7 @@ import { dialoutStatuses } from '../../../enums';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
 import { getClockByTimestamp } from '../../../lib/getClockByTimestamp';
 import { formatEvCallForConnected } from '../../../lib/formatEvCall';
+import { getCallAni, getCallDnis } from '../../../lib/getEvCallNumbers';
 import type {
   EvCallDispositionData,
 } from '../../services/EvCallDisposition/EvCallDisposition.interface';
@@ -239,8 +240,10 @@ class DispositionView extends RcViewModule {
     const isInbound = call.callType === 'INBOUND';
     const contactMatches: any[] = call.contactMatches || [];
     const name = contactMatches[0]?.name;
-    const fromNumber = isInbound ? call.ani : call.dnis;
-    const toNumber = isInbound ? call.dnis : call.ani;
+    const ani = getCallAni(call);
+    const dnis = getCallDnis(call);
+    const fromNumber = isInbound ? ani : dnis;
+    const toNumber = isInbound ? dnis : ani;
     const fromMatchName = name || fromNumber;
     const toMatchName = name || toNumber;
     const phoneNumber = isInbound ? fromNumber : toNumber;
@@ -282,11 +285,12 @@ class DispositionView extends RcViewModule {
 
   getContactName(call: any): string {
     if (!call) return '';
+    const ani = getCallAni(call);
     const contactMatches = call.contactMatches || [];
     if (contactMatches.length > 0) {
-      return contactMatches[0].name || call.ani;
+      return contactMatches[0].name || ani;
     }
-    return call.ani || '';
+    return ani;
   }
 
   @delegate('server')
