@@ -190,10 +190,25 @@ class TransferView extends RcViewModule {
         }
         await this._evTransferCall.transfer();
       }
-      this._router.replace(`/activityCallLog/${this.callId}`);
+      this._returnToActiveCall();
     } catch (error) {
       this.logger.error('Transfer failed:', error);
     }
+  }
+
+  /**
+   * A transfer with 'Stay on call' off ends the agent's call, and Redirect
+   * routes to the disposition page from its own `onCallEnded` handler. That can
+   * land before the transfer request resolves, so only navigate while the
+   * transfer page is still the current route: otherwise this replaces the
+   * disposition page with the active call page for a call that has already
+   * ended, leaving the user on a call they cannot hang up.
+   */
+  private _returnToActiveCall(): void {
+    if (!/^\/activityCallLog\/.+\/transferCall$/.test(this._router.currentPath)) {
+      return;
+    }
+    this._router.replace(`/activityCallLog/${this.callId}`);
   }
 
   @delegate('server')
