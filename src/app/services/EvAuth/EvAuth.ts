@@ -271,11 +271,8 @@ class EvAuth extends RcModule {
   get availableCountries() {
     const availableCountries =
       this.agentConfig?.applicationSettings?.availableCountries || [];
-    const countriesUsaCan = availableCountries.filter(({ countryId }) =>
-      DEFAULT_COUNTRIES.includes(countryId),
-    );
-    return countriesUsaCan.length > 0
-      ? countriesUsaCan
+    return availableCountries.length > 0
+      ? availableCountries
       : [
           {
             countryId: 'USA',
