@@ -275,7 +275,7 @@ class EvActiveCallControl extends RcModule {
 
   private async _sipToggleMute(state: boolean): Promise<void> {
     if (this.evAgentSession.isIntegratedSoftphone) {
-      await this.evIntegratedSoftphone.sipToggleMute();
+      await this.evIntegratedSoftphone.sipToggleMute(state);
     }
   }
 }

@@ -32,6 +32,7 @@ import {
   HoldMd,
   MuteMd,
   MicrophoneMd,
+  MicrophoneOffFilledMd,
   RecordMd,
   StopMd,
   DialpadMd,
@@ -532,7 +533,7 @@ class ActiveCallView extends RcViewModule {
     const actions: CallControlAction[] = [
       {
         actionType: 'mute',
-        symbol: isIntegratedSoftphone && isMuted ? MuteMd : MicrophoneMd,
+        symbol: isIntegratedSoftphone && isMuted ? MicrophoneOffFilledMd : MicrophoneMd,
         label: isMuted ? t('unmute') : t('mute'),
         onClick: handleMuteToggle,
         disabled: isInComingCall || !isIntegratedSoftphone,

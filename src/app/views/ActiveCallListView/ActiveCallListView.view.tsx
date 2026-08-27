@@ -21,6 +21,7 @@ import {
 import {
   HoldMd,
   MuteMd,
+  MicrophoneOffFilledMd,
   MicrophoneMd,
   CallOffMd,
 } from '@ringcentral/spring-icon';
@@ -215,7 +216,7 @@ class ActiveCallListView extends RcViewModule {
             />
             {showMuteButton && (
               <IconButton
-                symbol={isOnMute ? MuteMd : MicrophoneMd}
+                symbol={isOnMute ? MicrophoneOffFilledMd : MicrophoneMd}
                 onClick={() =>
                   isOnMute ? uiFunctions.onUnmute() : uiFunctions.onMute()
                 }

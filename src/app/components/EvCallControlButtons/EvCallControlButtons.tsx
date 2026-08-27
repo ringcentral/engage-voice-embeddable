@@ -1,7 +1,7 @@
 import { IconButton, CallButton, Tooltip } from '@ringcentral/spring-ui';
 import {
-  MuteMd,
   MicrophoneMd,
+  MicrophoneOffFilledMd,
   HoldMd,
   TransferCallMd,
   RecordMd,
@@ -65,7 +65,7 @@ export const MuteButton: FunctionComponent<MuteButtonProps> = ({
 }) => {
   return (
     <IconButton
-      symbol={isMuted ? MuteMd : MicrophoneMd}
+      symbol={isMuted ? MicrophoneOffFilledMd : MicrophoneMd}
       onClick={onClick}
       disabled={disabled}
       data-sign={dataSign}
