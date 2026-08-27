@@ -446,6 +446,16 @@ export interface EvAgentPermissions {
   allowCampaignStats: boolean;
   allowGateStats: boolean;
   allowChatStats: boolean;
+  /**
+   * Account permission (`allow_warm_xfer_on_hold`): put the customer on hold
+   * before a warm transfer opens the consult leg.
+   */
+  allowWarmXferOnHold: boolean;
+  /**
+   * Account permission (`allow_warm_xfer_auto_unhold`): take the customer off
+   * hold again once the agent leaves the consult leg.
+   */
+  allowWarmXferAutoUnhold: boolean;
   /** Account permission (`enable_agent_assist`) gating the AI Assistant. */
   enableAgentAssist: boolean;
 }

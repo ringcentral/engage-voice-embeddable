@@ -11,7 +11,10 @@ import {
 } from '@ringcentral-integration/next-core';
 
 import { EvClient } from '../EvClient';
+import { EvCallbackTypes } from '../EvClient/enums';
+import type { EvHoldResponse } from '../EvClient/interfaces';
 import { EvPresence } from '../EvPresence';
+import { EvSubscription } from '../EvSubscription';
 import { EvIntegratedSoftphone } from '../EvIntegratedSoftphone';
 import { EvAgentSession } from '../EvAgentSession';
 import type {
@@ -19,6 +22,16 @@ import type {
   EvClientHangUpParams,
   EvClientHoldSessionParams,
 } from './EvActiveCallControl.interface';
+
+/**
+ * Session id of the main call leg. Every other session reports its own hold
+ * state through the same response, so a general hold is only confirmed by this
+ * one -- the same filter eag applies in `CallService.holdCallback`.
+ */
+const MAIN_SESSION_ID = '1';
+
+/** How long to wait for the server to confirm a hold before giving up. */
+const HOLD_RESPONSE_TIMEOUT = 10 * 1000;
 
 /**
  * EvActiveCallControl module - Active call control operations
@@ -31,6 +44,7 @@ class EvActiveCallControl extends RcModule {
   constructor(
     private evClient: EvClient,
     private evPresence: EvPresence,
+    private evSubscription: EvSubscription,
     private evIntegratedSoftphone: EvIntegratedSoftphone,
     private evAgentSession: EvAgentSession,
     private storagePlugin: StoragePlugin,
@@ -49,9 +63,22 @@ class EvActiveCallControl extends RcModule {
   @state
   timeStamp: number | null = null;
 
+  /**
+   * Set by EvTransferCall after a warm transfer that held the customer, so
+   * hanging up the consult leg brings them back off hold. Not persisted: it
+   * only describes the call leg the agent is on right now.
+   */
+  @state
+  unholdOnHangup = false;
+
   @action
   setIsRecording(isRecording: boolean) {
     this.isRecording = isRecording;
+  }
+
+  @action
+  setUnholdOnHangup(unholdOnHangup: boolean) {
+    this.unholdOnHangup = unholdOnHangup;
   }
 
   @action
@@ -143,6 +170,12 @@ class EvActiveCallControl extends RcModule {
   @delegate('server')
   async hangUp(sessionId: string): Promise<void> {
     this.evClient.hangup({ sessionId });
+    // Leaving the consult leg of a warm transfer that held the customer: take
+    // them off hold instead of leaving the agent talking to a held call.
+    if (this.unholdOnHangup) {
+      this.setUnholdOnHangup(false);
+      await this.unhold();
+    }
   }
 
   /**
@@ -167,6 +200,49 @@ class EvActiveCallControl extends RcModule {
   @delegate('server')
   async unhold(): Promise<void> {
     await this._changeOnHoldState(false);
+  }
+
+  /**
+   * Hold the current call and resolve only once the server has confirmed it,
+   * rejecting if it does not. `hold()` cannot be used where the ordering
+   * matters -- a warm transfer must not open the consult leg before the
+   * customer is actually on hold -- because it only posts the request.
+   *
+   * The confirmation comes from the shared HOLD subscription rather than a
+   * callback passed to `evClient.hold`: the agent library keeps a single
+   * callback per response type, so passing one here would replace the handler
+   * EvPresence uses to track hold state.
+   */
+  @delegate('server')
+  async holdAndConfirm(): Promise<void> {
+    const confirmed = this._waitForHoldResponse(true);
+    await this.evClient.hold(true);
+    await confirmed;
+  }
+
+  private _waitForHoldResponse(holdState: boolean): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const stopWaiting = () => {
+        clearTimeout(timeoutId);
+        this.evSubscription.off(EvCallbackTypes.HOLD, onHoldResponse);
+      };
+      const onHoldResponse = (data?: EvHoldResponse) => {
+        if (data?.sessionId !== MAIN_SESSION_ID) return;
+        // A hold toggle we did not ask for: keep waiting for ours.
+        if (data.status === 'OK' && data.holdState !== holdState) return;
+        stopWaiting();
+        if (data.status === 'OK') {
+          resolve();
+        } else {
+          reject(new Error(data.message || 'Hold request was rejected'));
+        }
+      };
+      const timeoutId = setTimeout(() => {
+        stopWaiting();
+        reject(new Error('Hold request timed out'));
+      }, HOLD_RESPONSE_TIMEOUT);
+      this.evSubscription.subscribe(EvCallbackTypes.HOLD, onHoldResponse);
+    });
   }
 
   /**
