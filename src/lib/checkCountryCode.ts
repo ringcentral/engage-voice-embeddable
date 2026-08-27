@@ -1,17 +1,8 @@
-import {
-  isE164,
-  parse,
-  parseIncompletePhoneNumber,
-} from '@ringcentral-integration/phone-number';
-import countries from 'i18n-iso-countries';
-
 import { messageTypes } from '../enums';
 
+import type { AvailableCountry } from './availableCountry';
+import { findAvailableCountry, parseNumberCountry } from './availableCountry';
 import { EvTypeError } from './EvTypeError';
-
-interface AvailableCountry {
-  countryId: string;
-}
 
 /**
  * Check if country code is supported
@@ -22,23 +13,16 @@ export const checkCountryCode = (
   input: string,
   availableCountries?: AvailableCountry[],
 ) => {
-  const cleanedNumber: string = parseIncompletePhoneNumber(input.toString());
-  const isE164Number = isE164(cleanedNumber);
-  if (isE164Number) {
-    const { parsedNumber, isValid, hasInvalidChars, parsedCountry } = parse({
-      input,
+  const numberCountry = parseNumberCountry(input);
+  if (!numberCountry) {
+    return;
+  }
+  const isCountrySupported =
+    numberCountry.countryId === 'USA' ||
+    !!findAvailableCountry(availableCountries, numberCountry);
+  if (!isCountrySupported) {
+    throw new EvTypeError({
+      type: messageTypes.NO_SUPPORT_COUNTRY,
     });
-    if (isValid && !hasInvalidChars && parsedNumber) {
-      const dialoutCountryCode = countries.alpha2ToAlpha3(parsedCountry);
-      const isCountrySupported =
-        dialoutCountryCode === 'USA' ||
-        (availableCountries &&
-          availableCountries.some((c) => c.countryId === dialoutCountryCode));
-      if (!isCountrySupported) {
-        throw new EvTypeError({
-          type: messageTypes.NO_SUPPORT_COUNTRY,
-        });
-      }
-    }
   }
 };

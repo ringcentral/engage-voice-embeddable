@@ -1,6 +1,4 @@
 import { Locale, Toast } from '@ringcentral-integration/micro-core/src/app/services';
-import { format, formatTypes, isE164, parse } from '@ringcentral-integration/phone-number';
-import { alpha2ToAlpha3, alpha3ToAlpha2 } from 'i18n-iso-countries';
 import {
   action,
   computed,
@@ -24,6 +22,11 @@ import {
   directTransferTypes,
 } from '../../../enums';
 import { parseNumber } from '../../../lib/parseNumber';
+import {
+  findAvailableCountry,
+  formatCountryE164,
+  parseNumberCountry,
+} from '../../../lib/availableCountry';
 import { checkCountryCode } from '../../../lib/checkCountryCode';
 import { EvTypeError } from '../../../lib/EvTypeError';
 import { EvClient } from '../EvClient';
@@ -161,26 +164,21 @@ class EvTransferCall extends RcModule {
     return currentCall.transferPhoneBook.reduce<EvTransferPhoneBookItem[]>(
       (prev, bookItem, index) => {
         const { countryId: itemCountryId, destination, name } = bookItem;
-        let countryId = itemCountryId;
-        if (!countryId && isE164(destination)) {
-          const { parsedCountry } = parse({
-            input: destination,
-          });
-          countryId = alpha2ToAlpha3(parsedCountry);
-        }
-        const country = this.evAuth.availableCountries.find(
-          (c: any) => c.countryId === countryId,
-        );
+        // the country of the number itself also carries the dialing code, the
+        // only reliable way to match a country id that is not ISO alpha-3
+        const numberCountry = parseNumberCountry(destination);
+        const country = findAvailableCountry(this.evAuth.availableCountries, {
+          countryId: itemCountryId || numberCountry?.countryId,
+          countryCode: numberCountry?.countryCode,
+        });
         if (!country) {
           return prev;
         }
+        // the transfer APIs expect the id of the agent config, not the ISO one
+        const countryId = country.countryId;
         let parsedDestination = '';
         try {
-          parsedDestination = format({
-            phoneNumber: destination,
-            countryCode: alpha3ToAlpha2(countryId),
-            type: formatTypes.e164,
-          });
+          parsedDestination = formatCountryE164(destination, country);
         } catch (e) {
           // ignore
         }
@@ -322,9 +320,9 @@ class EvTransferCall extends RcModule {
    * Warm transfer call with international support
    */
   async warmTransferCall({ dialDest, countryId }: TransferCallParams): Promise<void> {
-    const country = this.evAuth.availableCountries.find(
-      (c: any) => c.countryId === countryId,
-    );
+    const country = findAvailableCountry(this.evAuth.availableCountries, {
+      countryId,
+    });
     if (!country && !this.allowManualInternationalTransfer) {
       throw new Error('Unexpected Error: ban transferring international call');
     }
@@ -346,9 +344,9 @@ class EvTransferCall extends RcModule {
    * Cold transfer call with international support
    */
   async coldTransferCall({ dialDest, countryId }: TransferCallParams): Promise<void> {
-    const country = this.evAuth.availableCountries.find(
-      (c: any) => c.countryId === countryId,
-    );
+    const country = findAvailableCountry(this.evAuth.availableCountries, {
+      countryId,
+    });
     if (!country) {
       if (this.allowManualInternationalTransfer) {
         await this.evClient.coldTransferIntlCall({

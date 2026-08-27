@@ -366,6 +366,7 @@ class TransferView extends RcViewModule {
     that._manualEntryNumber,
     that._selectedDirectoryRecordId,
     that.manualEntryDirectoryRecords,
+    that.isSearchingDirectory,
     that._evRequeueCall.selectedGateId,
     that._evTransferCall.transferring,
     that._evRequeueCall.requeuing,
@@ -380,7 +381,11 @@ class TransferView extends RcViewModule {
       case transferTypes.phoneBook:
         return this._evTransferCall.transferPhoneBookSelectedIndex === null;
       case transferTypes.manualEntry:
-        return !this.manualEntryDestination;
+        // A search in flight means the destination is not settled yet: the
+        // extension being typed resolves to a member only once results land, so
+        // transferring now would either be rejected or go to the previous
+        // query's match.
+        return this.isSearchingDirectory || !this.manualEntryDestination;
       case transferTypes.queue:
         return !this._evRequeueCall.selectedGateId;
       default:
