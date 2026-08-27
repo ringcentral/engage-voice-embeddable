@@ -5,7 +5,10 @@ export default {
   unavailable: 'Unavailable',
   searchContacts: 'Search contacts...',
   noContacts: 'No contacts available',
-  enterNumber: 'Enter number',
+  enterNumber: 'Enter number or name',
+  searchingDirectory: 'Searching…',
+  corporateDirectory: 'Corporate directory',
+  extension: 'Ext. {extensionNumber}',
   selectQueueGroup: 'Queue group',
   selectQueue: 'Queue',
   noGroups: 'No queue groups available',
@@ -15,4 +18,5 @@ export default {
   stayOnCall: 'Stay on call',
   cancel: 'Cancel',
   transfer: 'Transfer',
+  transferToTip: 'Transfer to: {destination}',
 } as const;

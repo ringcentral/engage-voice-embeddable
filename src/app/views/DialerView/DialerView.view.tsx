@@ -33,21 +33,22 @@ import { EvSettings } from '../../services/EvSettings';
 import { EvClient } from '../../services/EvClient';
 import { EvCallMonitor } from '../../services/EvCallMonitor';
 import { EvWorkingState } from '../../services/EvWorkingState';
+import {
+  EvDirectorySearch,
+  directorySearchScopes,
+  formatDirectoryRecordName,
+} from '../../services/EvDirectorySearch';
+import { isDialableNumberInput } from '../../../lib/isDialableNumberInput';
+import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber';
 import type {
   DialerViewOptions,
   DialerViewProps,
   DialerViewUIProps,
   DialerViewUIFunctions,
   DirectoryRecord,
-  SearchDirectoryResponse,
 } from './DialerView.interface';
 import i18n from './i18n';
 import type { I18nKey } from './i18n';
-
-const SEARCH_DEBOUNCE_MS = 400;
-// `*` and `#` are allowed to lead so that star codes typed on the keypad
-// (`*67`, `*82`, …) count as dialable. Directory names never start with them.
-const PHONE_NUMBER_PATTERN = /^[+\d*#][\d\s()\-+*#]*$/;
 
 /**
  * DialerView - Phone dialer view for outbound calls
@@ -64,6 +65,7 @@ class DialerView extends RcViewModule {
     private evClient: EvClient,
     private evCallMonitor: EvCallMonitor,
     private evWorkingState: EvWorkingState,
+    private evDirectorySearch: EvDirectorySearch,
     private router: RouterPlugin,
     private storagePlugin: StoragePlugin,
     private portManager: PortManager,
@@ -88,16 +90,60 @@ class DialerView extends RcViewModule {
   @state
   latestDialoutNumber = '';
 
-  @state
-  directoryRecords: DirectoryRecord[] = [];
+  private readonly _searchScope = directorySearchScopes.dialer;
 
+  /**
+   * Whether the current input was entered on the keypad rather than typed.
+   * Decides whether the panel below the field is the keypad or the result list.
+   * Persisted with `toNumber`, so a number that survives a reload comes back
+   * with the panel it was entered on.
+   */
+  @storage
   @state
-  directoryMainNumber = '';
+  private _isInputFromKeypad = false;
 
-  @state
-  isSearchingDirectory = false;
+  @action
+  private _setInputFromKeypad(fromKeypad: boolean): void {
+    this._isInputFromKeypad = fromKeypad;
+  }
 
-  private _searchDebounceTimer?: ReturnType<typeof setTimeout>;
+  get directoryRecords(): DirectoryRecord[] {
+    return this.evDirectorySearch.getRecords(this._searchScope);
+  }
+
+  get isSearchingDirectory(): boolean {
+    return this.evDirectorySearch.isSearching(this._searchScope);
+  }
+
+  /**
+   * The directory member whose extension is exactly what has been typed. This
+   * is what makes a keypad-entered extension dialable: on its own it is not a
+   * routable number, so the matched record supplies the real destination.
+   */
+  get matchedDirectoryRecord(): DirectoryRecord | null {
+    return this.evDirectorySearch.findExactExtensionMatch(
+      this._searchScope,
+      this.toNumber,
+    );
+  }
+
+  get matchedDirectoryName(): string {
+    const record = this.matchedDirectoryRecord;
+    return record ? formatDirectoryRecordName(record) : '';
+  }
+
+  /**
+   * What the call button would dial, named where the directory knows it. Empty
+   * for input the button would refuse anyway, so the tooltip falls back to its
+   * plain label rather than reading out a half-typed name.
+   */
+  get dialDestinationLabel(): string {
+    if (!this.isToNumberPhoneNumber) {
+      return '';
+    }
+    const formatted = formatPhoneNumber({ phoneNumber: this.toNumber.trim() });
+    return [this.matchedDirectoryName, formatted].filter(Boolean).join(' ');
+  }
 
   /**
    * Check if agent has permission to make manual calls
@@ -117,15 +163,20 @@ class DialerView extends RcViewModule {
    * Check if the current input looks like a phone number (no letters)
    */
   get isToNumberPhoneNumber(): boolean {
-    const value = this.toNumber.trim();
-    return !!value && PHONE_NUMBER_PATTERN.test(value);
+    return isDialableNumberInput(this.toNumber);
   }
 
   /**
-   * The keypad and call button yield the panel to directory results
+   * Which panel sits below the field: the keypad, or the result list.
+   *
+   * Entering on the pad keeps the pad -- pad input searches now, so handing the
+   * panel to the list would pull the pad out from under the next keypress, and
+   * an exact extension match surfaces as a name above it instead. Typing hands
+   * the panel over whether or not anything was found, because the list is the
+   * only place the raw number can be dialled once the call button is hidden.
    */
   get showKeypad(): boolean {
-    return this.directoryRecords.length === 0;
+    return !this.toNumber.trim() || this._isInputFromKeypad;
   }
 
   @action
@@ -136,23 +187,36 @@ class DialerView extends RcViewModule {
   @delegate('server')
   async setToNumber(value: string): Promise<void> {
     this._setToNumber(value);
-    this._scheduleDirectorySearch(value);
+    this._setInputFromKeypad(false);
+    this.evDirectorySearch.search(this._searchScope, value);
+  }
+
+  /**
+   * Backspace deliberately leaves the input source alone: correcting a keypad
+   * entry should not flip the panel over to the result list mid-correction.
+   */
+  @delegate('server')
+  async backspaceNumber(): Promise<void> {
+    const value = this.toNumber.slice(0, -1);
+    this._setToNumber(value);
+    this.evDirectorySearch.search(this._searchScope, value);
   }
 
   /**
    * Append a keypad key to the input.
    *
-   * The keypad can only emit digits, `*`, `#` and `+`, so there is nothing to
-   * look up: this never searches the directory and drops any results left over
-   * from earlier keyboard input. Appending happens here rather than in the
-   * component so that rapid presses cannot drop a key while state syncs back
-   * to the calling port.
+   * Keypad input searches the directory just like typing does: an extension
+   * entered on the pad is only dialable once the search has resolved it to a
+   * member, so skipping the lookup here left the agent unable to place the
+   * call. Appending happens in the module rather than the component so that
+   * rapid presses cannot drop a key while state syncs back to the calling port.
    */
   @delegate('server')
   async appendToNumber(key: string): Promise<void> {
-    this._setToNumber(this.toNumber + key);
-    this._cancelDirectorySearch();
-    this.clearDirectoryResults();
+    const value = this.toNumber + key;
+    this._setToNumber(value);
+    this._setInputFromKeypad(true);
+    this.evDirectorySearch.search(this._searchScope, value);
   }
 
   @action
@@ -161,97 +225,17 @@ class DialerView extends RcViewModule {
   }
 
   @action
-  setDirectoryResults(records: DirectoryRecord[], mainNumber: string): void {
-    this.directoryRecords = records;
-    this.directoryMainNumber = mainNumber;
-  }
-
-  @action
-  clearDirectoryResults(): void {
-    this.directoryRecords = [];
-    this.directoryMainNumber = '';
-    this.isSearchingDirectory = false;
-  }
-
-  @action
-  setSearchingDirectory(isSearching: boolean): void {
-    this.isSearchingDirectory = isSearching;
-  }
-
-  @action
   reset(): void {
     this.toNumber = '';
     this.latestDialoutNumber = '';
-    this.directoryRecords = [];
-    this.directoryMainNumber = '';
-    this.isSearchingDirectory = false;
+    this._isInputFromKeypad = false;
   }
 
   initialize(): void {
+    // EvDirectorySearch clears its own results on agent logout
     this.evAuth.beforeAgentLogout(() => {
-      this._cancelDirectorySearch();
       this.reset();
     });
-  }
-
-  /**
-   * Drop any pending debounced directory search
-   */
-  private _cancelDirectorySearch(): void {
-    if (this._searchDebounceTimer) {
-      clearTimeout(this._searchDebounceTimer);
-      this._searchDebounceTimer = undefined;
-    }
-  }
-
-  /**
-   * Debounce directory search on input changes
-   */
-  private _scheduleDirectorySearch(searchString: string): void {
-    this._cancelDirectorySearch();
-    const trimmed = searchString.trim();
-    if (!trimmed) {
-      this.clearDirectoryResults();
-      return;
-    }
-    this._searchDebounceTimer = setTimeout(() => {
-      this._performDirectorySearch(trimmed);
-    }, SEARCH_DEBOUNCE_MS);
-  }
-
-  /**
-   * Query the corporate directory and store results
-   */
-  private async _performDirectorySearch(searchString: string): Promise<void> {
-    this.setSearchingDirectory(true);
-    try {
-      const authorized = await this.evAuth.refreshEvToken();
-      if (!authorized) {
-        return;
-      }
-      // Ignore stale responses if the input changed while authenticating
-      if (this.toNumber.trim() !== searchString) {
-        return;
-      }
-      const response: SearchDirectoryResponse =
-        await this.evClient.searchDirectory(searchString);
-      // Ignore stale responses if the input changed while searching
-      if (this.toNumber.trim() !== searchString) {
-        return;
-      }
-      this.setDirectoryResults(
-        response?.records ?? [],
-        response?.mainNumber ?? '',
-      );
-    } catch (error) {
-      if (this.toNumber.trim() === searchString) {
-        this.clearDirectoryResults();
-      }
-    } finally {
-      if (this.toNumber.trim() === searchString) {
-        this.setSearchingDirectory(false);
-      }
-    }
   }
 
   /**
@@ -268,6 +252,17 @@ class DialerView extends RcViewModule {
       return;
     }
     this.setLatestDialoutNumber();
+    // A matched extension has to go out as its RC_EXT destination; the raw
+    // digits would not route. Falling back to the input covers a match whose
+    // account has no main number to build that destination from.
+    const record = this.matchedDirectoryRecord;
+    const destination = record
+      ? this.evDirectorySearch.buildRecordDestination(this._searchScope, record)
+      : null;
+    if (destination) {
+      await this.evCall.dialout(destination, { skipParse: true });
+      return;
+    }
     await this.evCall.dialout(this.toNumber);
   }
 
@@ -276,12 +271,13 @@ class DialerView extends RcViewModule {
    */
   @delegate('server')
   async dialDirectoryRecord(record: DirectoryRecord): Promise<void> {
-    const mainNumber =
-      record.account?.mainNumber?.phoneNumber || this.directoryMainNumber;
-    if (!mainNumber || !record.extensionNumber) {
+    const destination = this.evDirectorySearch.buildRecordDestination(
+      this._searchScope,
+      record,
+    );
+    if (!destination) {
       return;
     }
-    const destination = `${mainNumber}*${record.extensionNumber}@RC_EXT`;
     await this.evCall.dialout(destination, { skipParse: true });
   }
 
@@ -317,6 +313,8 @@ class DialerView extends RcViewModule {
       isSearchingDirectory: this.isSearchingDirectory,
       isToNumberPhoneNumber: this.isToNumberPhoneNumber,
       showKeypad: this.showKeypad,
+      matchedDirectoryName: this.matchedDirectoryName,
+      dialDestinationLabel: this.dialDestinationLabel,
     };
   }
 
@@ -326,7 +324,7 @@ class DialerView extends RcViewModule {
   getUIFunctions(): UIFunctions<DialerViewUIFunctions> {
     return {
       onBackspace: () => {
-        this.setToNumber(this.toNumber.slice(0, -1));
+        this.backspaceNumber();
       },
       onDial: async () => {
         await this.dialout();
@@ -363,6 +361,8 @@ class DialerView extends RcViewModule {
       isSearchingDirectory,
       isToNumberPhoneNumber,
       showKeypad,
+      matchedDirectoryName,
+      dialDestinationLabel,
     } = useConnector(() => this.getUIProps());
 
     if (!hasDialer) {
@@ -447,22 +447,26 @@ class DialerView extends RcViewModule {
             }
           />
         </div>
+        {/* Fixed chrome, outside both panels below. Reserved whether or not
+            there is anything to say: the keypad takes the remaining height, so
+            rendering this row conditionally would resize the pad the moment the
+            status appears, and it has to sit above the result list too, which
+            is otherwise the one place a name search gives no progress signal.
+            A matched member's name takes precedence over the progress text: it
+            is the answer the search was running for, and on the keypad it is
+            the only place an entered extension is identified. */}
+        <div className="h-4 flex-shrink-0 px-4 text-center leading-4">
+          {hasInput && (matchedDirectoryName || isSearchingDirectory) && (
+            <span
+              className="typography-descriptor text-neutral-b2"
+              data-sign="directoryStatus"
+            >
+              {matchedDirectoryName || t('searchingDirectory')}
+            </span>
+          )}
+        </div>
         {showKeypad ? (
           <>
-            {/* Reserved whether or not a search is running. The keypad below
-                takes the remaining height, so rendering this row conditionally
-                would resize the pad the moment the status appears. Keeping the
-                row in the fixed chrome holds the pad at one size. */}
-            <div className="h-4 flex-shrink-0 px-4 text-center leading-4">
-              {hasInput && isSearchingDirectory && (
-                <span
-                  className="typography-descriptor text-neutral-b2"
-                  data-sign="directoryStatus"
-                >
-                  {t('searchingDirectory')}
-                </span>
-              )}
-            </div>
             {/* Keypad + call button block, matching micro-phone's DialerPage:
                 a fixed `size="medium"` pad (200x248, 56px keys) whose `gap-y-2`
                 replaces the pad's default percentage `gap`. The fixed row gap
@@ -495,15 +499,20 @@ class DialerView extends RcViewModule {
                   size="medium"
                   onClick={uiFunctions.onDial}
                   data-sign="callButton"
-                  TooltipProps={{ title: t('callButton') }}
+                  TooltipProps={{
+                    title: dialDestinationLabel
+                      ? t('callNumberTip', { destination: dialDestinationLabel })
+                      : t('callButton'),
+                  }}
                 />
               </div>
             </main>
           </>
         ) : (
           <div className="flex-1 min-h-0 overflow-y-auto mt-2">
-            {/* The keypad hosts the dial action, so the raw number is only
-                offered as a list row once directory results hide the keypad */}
+            {/* Only typed input gets here, and it has hidden the keypad along
+                with the call button, so the raw number needs a row of its own
+                to stay dialable */}
             {isToNumberPhoneNumber && (
               <ListItem
                 size="large"
@@ -518,12 +527,16 @@ class DialerView extends RcViewModule {
                 />
               </ListItem>
             )}
-            <div
-              className="typography-label uppercase text-neutral-b3 px-4 pt-3 pb-1"
-              data-sign="corporateDirectoryHeader"
-            >
-              {t('corporateDirectory')}
-            </div>
+            {/* Typing hands this panel the whole area before any result
+                arrives, so the header only appears once it has rows under it */}
+            {directoryRecords.length > 0 && (
+              <div
+                className="typography-label uppercase text-neutral-b3 px-4 pt-3 pb-1"
+                data-sign="corporateDirectoryHeader"
+              >
+                {t('corporateDirectory')}
+              </div>
+            )}
             {directoryRecords.map((record) => (
               <ListItem
                 key={record.id}
@@ -537,6 +550,18 @@ class DialerView extends RcViewModule {
                 />
               </ListItem>
             ))}
+            {/* A name that matched nothing offers neither a raw-number row nor
+                results, which would otherwise leave the panel blank */}
+            {!isToNumberPhoneNumber &&
+              directoryRecords.length === 0 &&
+              !isSearchingDirectory && (
+                <p
+                  className="typography-descriptor text-neutral-b2 text-center pt-4"
+                  data-sign="noDirectoryResults"
+                >
+                  {t('noDirectoryResults')}
+                </p>
+              )}
           </div>
         )}
         {this._renderSettingsLink(t, uiFunctions)}
@@ -548,11 +573,7 @@ class DialerView extends RcViewModule {
    * Build a display name for a directory record
    */
   private _formatRecordName(record: DirectoryRecord): string {
-    const fullName = [record.firstName, record.lastName]
-      .filter(Boolean)
-      .join(' ')
-      .trim();
-    return fullName || record.name || record.extensionNumber;
+    return formatDirectoryRecordName(record);
   }
 
   /**

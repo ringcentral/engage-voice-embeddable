@@ -309,6 +309,7 @@ class EvIntegratedSoftphone extends RcModule {
     this.evSubscription.subscribe(EvCallbackTypes.SIP_CONNECTED, async () => {
       this.logger.info('SIP_CONNECTED~~');
       await this.evPresence.setOffhook(true);
+      await this._resetSdkMuteState();
       await this.resetController();
     });
     this.evSubscription.subscribe(EvCallbackTypes.SIP_ENDED, async () => {
@@ -415,13 +416,31 @@ class EvIntegratedSoftphone extends RcModule {
   }
 
   /**
-   * Toggle mute
+   * Mute or unmute the current SIP call.
+   *
+   * `muteActive` is deliberately not updated here: the agent library fires
+   * SIP_MUTE / SIP_UNMUTE for whatever it actually did, and those handlers own
+   * the state. Setting it optimistically would let the button show "muted"
+   * while the microphone is still live.
    */
   @delegate('mainClient')
-  async sipToggleMute(): Promise<void> {
-    const newMuteState = !this.muteActive;
-    await this.evClient.sipToggleMute(newMuteState);
-    await this.setMuteActive(newMuteState);
+  async sipToggleMute(state: boolean): Promise<void> {
+    await this.evClient.sipToggleMute(state);
+  }
+
+  /**
+   * The agent library keeps its own `softphoneSettings.muteActive` flag and
+   * only clears it on sipTerminate, so a call ended while muted leaves it set.
+   * Its toggle unmutes whenever that flag is true, which would silently invert
+   * the first mute of the next call. A fresh WebRTC session is never muted, so
+   * force the flag back in sync when a call connects.
+   */
+  private async _resetSdkMuteState(): Promise<void> {
+    try {
+      await this.evClient.sipToggleMute(false);
+    } catch (error) {
+      this.logger.warn('reset sdk mute state failed', error);
+    }
   }
 
   private _initAudio() {

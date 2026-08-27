@@ -20,13 +20,18 @@ import {
   transferEvents,
   transferErrors,
   messageTypes,
+  directTransferStatues,
+  directTransferTypes,
 } from '../../../enums';
 import { parseNumber } from '../../../lib/parseNumber';
 import { checkCountryCode } from '../../../lib/checkCountryCode';
 import { EvTypeError } from '../../../lib/EvTypeError';
 import { EvClient } from '../EvClient';
+import { EvCallbackTypes } from '../EvClient/enums';
+import type { EvDirectAgentTransferResponse } from '../EvClient/interfaces';
 import { EvAuth } from '../EvAuth';
 import { EvCall } from '../EvCall';
+import { EvActiveCallControl } from '../EvActiveCallControl';
 import { EvWorkingState } from '../EvWorkingState';
 import { EvSubscription } from '../EvSubscription';
 import { EvAgentSession } from '../EvAgentSession';
@@ -37,6 +42,16 @@ import type {
   EvReceivedTransferCall,
   TransferCallParams,
 } from './EvTransferCall.interface';
+
+/**
+ * countryId for a destination that is not a dialable phone number.
+ *
+ * `evAuth.availableCountries` always contains USA, so this reliably takes the
+ * domestic branch in warm/coldTransferCall. A country left over from an earlier
+ * manual-entry transfer would otherwise push the destination into
+ * warmTransferIntlCall (throws) or coldTransferIntlCall (silently no-ops).
+ */
+const NON_PHONE_DEST_COUNTRY_ID = 'USA';
 
 /**
  * EvTransferCall module - Call transfer management
@@ -53,6 +68,7 @@ class EvTransferCall extends RcModule {
     private evClient: EvClient,
     private evAuth: EvAuth,
     private evCall: EvCall,
+    private evActiveCallControl: EvActiveCallControl,
     private evWorkingState: EvWorkingState,
     private evSubscription: EvSubscription,
     private evAgentSession: EvAgentSession,
@@ -97,6 +113,17 @@ class EvTransferCall extends RcModule {
   @storage
   @state
   transferRecipientNumber = '';
+
+  /**
+   * Whether `transferRecipientNumber` is already a fully-qualified EV
+   * destination rather than a phone number -- a corporate directory pick is
+   * `<mainNumber>*<ext>@RC_EXT`, which `parseNumber` rejects for the `*` and
+   * `@`. Persisted alongside the number itself so a reload cannot leave the
+   * number set with the flag lost and send it through the parser.
+   */
+  @storage
+  @state
+  transferRecipientSkipParse = false;
 
   @storage
   @state
@@ -191,6 +218,7 @@ class EvTransferCall extends RcModule {
     this.transferAgentList = [];
     this.transferPhoneBookSelectedIndex = null;
     this.transferRecipientNumber = '';
+    this.transferRecipientSkipParse = false;
     this.transferRecipientCountryId = 'USA';
     this.stayOnCall = true;
     this.isTransferCancelable = false;
@@ -223,9 +251,18 @@ class EvTransferCall extends RcModule {
     this.transferAgentList = data;
   }
 
+  /**
+   * Set the manual-entry recipient. `skipParse` is written here rather than
+   * through its own setter so the number and the flag can never disagree: any
+   * caller that sets a plain phone number also clears the flag.
+   */
   @action
-  changeRecipientNumber(phoneNumber: string) {
+  changeRecipientNumber(
+    phoneNumber: string,
+    options?: { skipParse?: boolean },
+  ) {
     this.transferRecipientNumber = phoneNumber;
+    this.transferRecipientSkipParse = !!options?.skipParse;
   }
 
   @action
@@ -252,6 +289,12 @@ class EvTransferCall extends RcModule {
         type: transferErrors.RECIPIENT_NUMBER_ERROR,
         data: `Abnormal Transfer: this.transferRecipientNumber -> ${this.transferRecipientNumber}`,
       });
+    }
+    if (this.transferRecipientSkipParse) {
+      return {
+        dialDest: this.transferRecipientNumber,
+        countryId: NON_PHONE_DEST_COUNTRY_ID,
+      };
     }
     checkCountryCode(this.transferRecipientNumber, this.evAuth.availableCountries);
     const toNumber = parseNumber(this.transferRecipientNumber);
@@ -282,18 +325,19 @@ class EvTransferCall extends RcModule {
     const country = this.evAuth.availableCountries.find(
       (c: any) => c.countryId === countryId,
     );
+    if (!country && !this.allowManualInternationalTransfer) {
+      throw new Error('Unexpected Error: ban transferring international call');
+    }
+    // Held only once the destination is known to be dialable, so a transfer
+    // this module refuses to send never leaves the customer on hold.
+    await this._holdBeforeWarmTransfer();
+    this._transferDest = dialDest;
     if (!country) {
-      if (this.allowManualInternationalTransfer) {
-        this._transferDest = dialDest;
-        await this.evClient.warmTransferIntlCall({
-          dialDest,
-          countryId,
-        });
-      } else {
-        throw new Error('Unexpected Error: ban transferring international call');
-      }
+      await this.evClient.warmTransferIntlCall({
+        dialDest,
+        countryId,
+      });
     } else {
-      this._transferDest = dialDest;
       await this.evClient.warmTransferCall({ dialDest });
     }
   }
@@ -317,6 +361,28 @@ class EvTransferCall extends RcModule {
     } else {
       await this.evClient.coldTransferCall({ dialDest });
     }
+  }
+
+  /**
+   * Put the customer on hold before a warm transfer opens the consult leg,
+   * when the account asks for it, so they do not hear the agent talk to the
+   * transfer target. Same rule as eag, which holds on `allowWarmXferOnHold`
+   * for both a destination (`CallService.warmXfer`) and a direct agent
+   * (`CallService.directAgentTransfer`).
+   *
+   * The hold is awaited rather than fired alongside the transfer: it has to be
+   * in place before the consult leg opens, and a hold the server rejects
+   * aborts the transfer instead of transferring un-held.
+   */
+  private async _holdBeforeWarmTransfer(): Promise<void> {
+    if (!this.evAuth.agentPermissions?.allowWarmXferOnHold) return;
+    // Holding an already held call would only be answered with an error.
+    // `isHold` is what the app writes on the call; `hold` is the raw SDK field.
+    const currentCall = this.evCall.currentCall as
+      | { isHold?: boolean; hold?: boolean }
+      | null;
+    if (currentCall?.isHold || currentCall?.hold) return;
+    await this.evActiveCallControl.holdAndConfirm();
   }
 
   async fetchAgentList(): Promise<void> {
@@ -393,6 +459,7 @@ class EvTransferCall extends RcModule {
       console.error(e);
     }
     if (this.stayOnCall) {
+      await this._holdBeforeWarmTransfer();
       await this.evClient.warmDirectAgentTransfer(this.transferAgentId);
     } else {
       await this.evClient.coldDirectAgentTransfer(this.transferAgentId);
@@ -465,10 +532,39 @@ class EvTransferCall extends RcModule {
     this._eventEmitter.on(transferEvents.SUCCESS, handler);
   }
 
+  /**
+   * Arm the unhold when a warm transfer to an agent completes and the account
+   * asks for it, so leaving the consult leg brings the customer back. Same as
+   * eag, which sets `unholdOnHangup` on a WARM/SUCCEEDED direct agent transfer
+   * and unholds from `CallService.hangup`.
+   */
+  private _handleDirectAgentTransferResponse(
+    data?: EvDirectAgentTransferResponse,
+  ): void {
+    if (
+      data?.type !== directTransferTypes.WARM ||
+      data.status !== directTransferStatues.SUCCEEDED ||
+      !this.evAuth.agentPermissions?.allowWarmXferAutoUnhold
+    ) {
+      return;
+    }
+    this.evActiveCallControl.setUnholdOnHangup(true);
+  }
+
   override onInitOnce() {
     this.evAgentSession.onTriggerConfig(() => {
       this.setTransferStatus(transferStatuses.idle);
     });
+    this.evSubscription
+      .subscribe(EvCallbackTypes.DIRECT_AGENT_TRANSFER, (data) => {
+        this._handleDirectAgentTransferResponse(data);
+      })
+      // The call ending is not the agent leaving a consult leg: there is
+      // nothing left to take off hold, and the armed unhold must not survive
+      // into the next call.
+      .subscribe(EvCallbackTypes.END_CALL, () => {
+        this.evActiveCallControl.setUnholdOnHangup(false);
+      });
   }
 }
 
