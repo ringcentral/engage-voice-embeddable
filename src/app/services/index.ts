@@ -12,6 +12,7 @@ export * from './Environment';
 export * from './EvCallDisposition';
 export * from './EvCallHistory';
 export * from './EvTransferCall';
+export * from './EvDirectorySearch';
 export * from './EvLeads';
 export * from './Adapter';
 export * from './Analytics';

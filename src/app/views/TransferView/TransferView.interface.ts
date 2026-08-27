@@ -1,6 +1,7 @@
 import type { EvTransferType } from '../../../enums';
 import type { EvDirectAgentListItem, EvTransferPhoneBookItem } from '../../services/EvTransferCall/EvTransferCall.interface';
 import type { EvAvailableRequeueQueue } from '../../services/EvClient';
+import type { DirectoryRecord } from '../../services/EvDirectorySearch';
 
 /**
  * Options for TransferView customization
@@ -41,6 +42,12 @@ interface TransferViewUIProps {
   selectedAgentId: string | null;
   selectedPhoneBookIndex: number | null;
   manualEntryNumber: string;
+  manualEntryDirectoryRecords: DirectoryRecord[];
+  selectedDirectoryRecordId: string | null;
+  matchedDirectoryName: string;
+  transferDestinationLabel: string;
+  isSearchingDirectory: boolean;
+  showManualEntryKeypad: boolean;
   queueGroups: EvAvailableRequeueQueue[];
   selectedQueueGroupId: string;
   selectedGateId: string;
@@ -55,6 +62,10 @@ interface TransferViewUIFunctions {
   onSelectAgent: (agentId: string) => void;
   onSelectPhoneBookContact: (index: number) => void;
   onManualEntryChange: (value: string) => void;
+  onManualEntryKeypadPress: (key: string) => void;
+  onManualEntryBackspace: () => void;
+  onManualEntryClear: () => void;
+  onSelectDirectoryRecord: (record: DirectoryRecord) => void;
   onQueueGroupChange: (groupId: string) => void;
   onGateChange: (gateId: string) => void;
   onTransfer: () => Promise<void>;

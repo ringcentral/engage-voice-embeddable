@@ -39,6 +39,16 @@ import type {
 } from './EvTransferCall.interface';
 
 /**
+ * countryId for a destination that is not a dialable phone number.
+ *
+ * `evAuth.availableCountries` always contains USA, so this reliably takes the
+ * domestic branch in warm/coldTransferCall. A country left over from an earlier
+ * manual-entry transfer would otherwise push the destination into
+ * warmTransferIntlCall (throws) or coldTransferIntlCall (silently no-ops).
+ */
+const NON_PHONE_DEST_COUNTRY_ID = 'USA';
+
+/**
  * EvTransferCall module - Call transfer management
  * Handles warm/cold transfer, internal transfer, and phone book transfers
  */
@@ -97,6 +107,17 @@ class EvTransferCall extends RcModule {
   @storage
   @state
   transferRecipientNumber = '';
+
+  /**
+   * Whether `transferRecipientNumber` is already a fully-qualified EV
+   * destination rather than a phone number -- a corporate directory pick is
+   * `<mainNumber>*<ext>@RC_EXT`, which `parseNumber` rejects for the `*` and
+   * `@`. Persisted alongside the number itself so a reload cannot leave the
+   * number set with the flag lost and send it through the parser.
+   */
+  @storage
+  @state
+  transferRecipientSkipParse = false;
 
   @storage
   @state
@@ -191,6 +212,7 @@ class EvTransferCall extends RcModule {
     this.transferAgentList = [];
     this.transferPhoneBookSelectedIndex = null;
     this.transferRecipientNumber = '';
+    this.transferRecipientSkipParse = false;
     this.transferRecipientCountryId = 'USA';
     this.stayOnCall = true;
     this.isTransferCancelable = false;
@@ -223,9 +245,18 @@ class EvTransferCall extends RcModule {
     this.transferAgentList = data;
   }
 
+  /**
+   * Set the manual-entry recipient. `skipParse` is written here rather than
+   * through its own setter so the number and the flag can never disagree: any
+   * caller that sets a plain phone number also clears the flag.
+   */
   @action
-  changeRecipientNumber(phoneNumber: string) {
+  changeRecipientNumber(
+    phoneNumber: string,
+    options?: { skipParse?: boolean },
+  ) {
     this.transferRecipientNumber = phoneNumber;
+    this.transferRecipientSkipParse = !!options?.skipParse;
   }
 
   @action
@@ -252,6 +283,12 @@ class EvTransferCall extends RcModule {
         type: transferErrors.RECIPIENT_NUMBER_ERROR,
         data: `Abnormal Transfer: this.transferRecipientNumber -> ${this.transferRecipientNumber}`,
       });
+    }
+    if (this.transferRecipientSkipParse) {
+      return {
+        dialDest: this.transferRecipientNumber,
+        countryId: NON_PHONE_DEST_COUNTRY_ID,
+      };
     }
     checkCountryCode(this.transferRecipientNumber, this.evAuth.availableCountries);
     const toNumber = parseNumber(this.transferRecipientNumber);

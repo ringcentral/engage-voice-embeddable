@@ -13,6 +13,7 @@ import type { EvTransferType } from '../../../enums';
 import { transferTypes } from '../../../enums';
 import type { EvDirectAgentListItem, EvTransferPhoneBookItem } from '../../services/EvTransferCall/EvTransferCall.interface';
 import type { EvAvailableRequeueQueue } from '../../services/EvClient';
+import type { DirectoryRecord } from '../../services/EvDirectorySearch';
 import { InternalTransferTab } from './InternalTransferTab';
 import { PhoneBookTransferTab } from './PhoneBookTransferTab';
 import { ManualEntryTransferTab } from './ManualEntryTransferTab';
@@ -36,6 +37,12 @@ interface TransferPanelProps {
   selectedAgentId: string | null;
   selectedPhoneBookIndex: number | null;
   manualEntryNumber: string;
+  manualEntryDirectoryRecords: DirectoryRecord[];
+  selectedDirectoryRecordId: string | null;
+  matchedDirectoryName: string;
+  transferDestinationLabel: string;
+  isSearchingDirectory: boolean;
+  showManualEntryKeypad: boolean;
   queueGroups: EvAvailableRequeueQueue[];
   selectedQueueGroupId: string;
   selectedGateId: string;
@@ -44,6 +51,10 @@ interface TransferPanelProps {
   onSelectAgent: (agentId: string) => void;
   onSelectPhoneBookContact: (index: number | null) => void;
   onManualEntryChange: (value: string) => void;
+  onManualEntryKeypadPress: (key: string) => void;
+  onManualEntryBackspace: () => void;
+  onManualEntryClear: () => void;
+  onSelectDirectoryRecord: (record: DirectoryRecord) => void;
   onQueueGroupChange: (groupId: string) => void;
   onGateChange: (gateId: string) => void;
   onTransfer: () => Promise<void>;
@@ -65,6 +76,12 @@ export const TransferPanel: FunctionComponent<TransferPanelProps> = ({
   selectedAgentId,
   selectedPhoneBookIndex,
   manualEntryNumber,
+  manualEntryDirectoryRecords,
+  selectedDirectoryRecordId,
+  matchedDirectoryName,
+  transferDestinationLabel,
+  isSearchingDirectory,
+  showManualEntryKeypad,
   queueGroups,
   selectedQueueGroupId,
   selectedGateId,
@@ -73,6 +90,10 @@ export const TransferPanel: FunctionComponent<TransferPanelProps> = ({
   onSelectAgent,
   onSelectPhoneBookContact,
   onManualEntryChange,
+  onManualEntryKeypadPress,
+  onManualEntryBackspace,
+  onManualEntryClear,
+  onSelectDirectoryRecord,
   onQueueGroupChange,
   onGateChange,
   onTransfer,
@@ -138,8 +159,16 @@ export const TransferPanel: FunctionComponent<TransferPanelProps> = ({
             ))}
           </Tabs>
         </div>
-        <div className="flex-1 px-4 pt-4 pb-2 overflow-auto">
-          <TabPanel value={transferTypes.internal}>
+        {/* A bounded flex column, not a scroller: the manual tab pins its
+            number field and scrolls only the keypad below it, which needs the
+            panel itself to be the height-bounded box. Each TabPanel therefore
+            owns its own scrolling. Inactive panels still render their root div,
+            but MUI marks them `hidden` (display:none) so they take no space. */}
+        <div className="flex-1 min-h-0 px-4 pt-4 pb-2 flex flex-col overflow-hidden">
+          <TabPanel
+            value={transferTypes.internal}
+            className="flex-1 min-h-0 overflow-y-auto"
+          >
             <InternalTransferTab
               isActive={activeTab === transferTypes.internal}
               agentList={agentList}
@@ -154,7 +183,10 @@ export const TransferPanel: FunctionComponent<TransferPanelProps> = ({
               }}
             />
           </TabPanel>
-          <TabPanel value={transferTypes.phoneBook}>
+          <TabPanel
+            value={transferTypes.phoneBook}
+            className="flex-1 min-h-0 overflow-y-auto"
+          >
             <PhoneBookTransferTab
               isActive={activeTab === transferTypes.phoneBook}
               phoneBook={phoneBook}
@@ -166,15 +198,36 @@ export const TransferPanel: FunctionComponent<TransferPanelProps> = ({
               }}
             />
           </TabPanel>
-          <TabPanel value={transferTypes.manualEntry}>
+          <TabPanel
+            value={transferTypes.manualEntry}
+            className="flex-1 min-h-0 flex flex-col"
+          >
             <ManualEntryTransferTab
               isActive={activeTab === transferTypes.manualEntry}
               value={manualEntryNumber}
+              directoryRecords={manualEntryDirectoryRecords}
+              selectedDirectoryRecordId={selectedDirectoryRecordId}
+              matchedDirectoryName={matchedDirectoryName}
+              isSearchingDirectory={isSearchingDirectory}
+              showKeypad={showManualEntryKeypad}
               onChange={onManualEntryChange}
-              labels={{ enterNumber: t('enterNumber') }}
+              onKeypadPress={onManualEntryKeypadPress}
+              onBackspace={onManualEntryBackspace}
+              onClear={onManualEntryClear}
+              onSelectDirectoryRecord={onSelectDirectoryRecord}
+              labels={{
+                enterNumber: t('enterNumber'),
+                searchingDirectory: t('searchingDirectory'),
+                corporateDirectory: t('corporateDirectory'),
+                extension: (extensionNumber: string) =>
+                  t('extension', { extensionNumber }),
+              }}
             />
           </TabPanel>
-          <TabPanel value={transferTypes.queue}>
+          <TabPanel
+            value={transferTypes.queue}
+            className="flex-1 min-h-0 overflow-y-auto"
+          >
             <QueueTransferTab
               queueGroups={queueGroups}
               selectedQueueGroupId={selectedQueueGroupId}
@@ -220,6 +273,18 @@ export const TransferPanel: FunctionComponent<TransferPanelProps> = ({
             disabled={isDisabled}
             loading={isTransferring}
             onClick={onTransfer}
+            // Names the destination on the manual tab, where a typed extension
+            // otherwise gives no sign of who is behind the digits. Empty on the
+            // other tabs, which spell their destination out themselves.
+            TooltipProps={
+              transferDestinationLabel
+                ? {
+                    title: t('transferToTip', {
+                      destination: transferDestinationLabel,
+                    }),
+                  }
+                : undefined
+            }
           >
             {t('transfer')}
           </Button>

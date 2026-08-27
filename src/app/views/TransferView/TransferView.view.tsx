@@ -25,6 +25,14 @@ import { EvTransferCall } from '../../services/EvTransferCall';
 import { EvRequeueCall } from '../../services/EvRequeueCall';
 import { EvCall } from '../../services/EvCall';
 import { EvAuth } from '../../services/EvAuth';
+import {
+  EvDirectorySearch,
+  directorySearchScopes,
+  formatDirectoryRecordName,
+  type DirectoryRecord,
+} from '../../services/EvDirectorySearch';
+import { isDialableNumberInput } from '../../../lib/isDialableNumberInput';
+import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber';
 import { TransferPanel } from '../../components/TransferPanel';
 import type {
   TransferViewOptions,
@@ -49,6 +57,7 @@ class TransferView extends RcViewModule {
     private _evRequeueCall: EvRequeueCall,
     private _evCall: EvCall,
     private _evAuth: EvAuth,
+    private _evDirectorySearch: EvDirectorySearch,
     private _router: RouterPlugin,
     @optional('TransferViewOptions')
     private _options?: TransferViewOptions,
@@ -56,12 +65,148 @@ class TransferView extends RcViewModule {
     super();
   }
 
+  private readonly _searchScope = directorySearchScopes.transferManualEntry;
+
   @state
   private _manualEntryNumber = '';
+
+  /**
+   * Only the id is kept, not the record: a selection is meaningful just while
+   * the record is still in the result list, so looking it up on read means a
+   * new search or a cleared list drops the selection with no extra bookkeeping.
+   */
+  @state
+  private _selectedDirectoryRecordId: string | null = null;
+
+  /**
+   * Whether the current input was entered on the keypad rather than typed.
+   * Decides whether directory results are allowed to take over the tab body.
+   */
+  @state
+  private _isInputFromKeypad = false;
+
+  @action
+  private _setInputFromKeypad(fromKeypad: boolean) {
+    this._isInputFromKeypad = fromKeypad;
+  }
 
   @action
   private _setManualEntryNumber(value: string) {
     this._manualEntryNumber = value;
+  }
+
+  @action
+  private _setSelectedDirectoryRecordId(id: string | null) {
+    this._selectedDirectoryRecordId = id;
+  }
+
+  get manualEntryDirectoryRecords(): DirectoryRecord[] {
+    return this._evDirectorySearch.getRecords(this._searchScope);
+  }
+
+  get selectedDirectoryRecordId(): string | null {
+    return this.selectedDirectoryRecord?.id ?? null;
+  }
+
+  get selectedDirectoryRecord(): DirectoryRecord | null {
+    if (!this._selectedDirectoryRecordId) return null;
+    return (
+      this.manualEntryDirectoryRecords.find(
+        (record) => record.id === this._selectedDirectoryRecordId,
+      ) ?? null
+    );
+  }
+
+  get isSearchingDirectory(): boolean {
+    return this._evDirectorySearch.isSearching(this._searchScope);
+  }
+
+  /**
+   * The keypad yields the tab body to directory results, except while the agent
+   * is entering on the pad itself: pad input searches now, so without that
+   * exception the list would appear mid-entry and pull the pad out from under
+   * the next keypress. Entering on the pad surfaces an exact extension match as
+   * a name above it instead, while typing keeps the full pickable list.
+   */
+  get showManualEntryKeypad(): boolean {
+    return (
+      this._isInputFromKeypad ||
+      !this._evDirectorySearch.hasResults(this._searchScope)
+    );
+  }
+
+  /**
+   * The directory member whose extension is exactly what has been typed. This
+   * is what makes a keypad-entered extension transferable: on its own it is not
+   * a routable destination.
+   */
+  get matchedDirectoryRecord(): DirectoryRecord | null {
+    return this._evDirectorySearch.findExactExtensionMatch(
+      this._searchScope,
+      this._manualEntryNumber,
+    );
+  }
+
+  get matchedDirectoryName(): string {
+    const record = this.matchedDirectoryRecord;
+    return record ? formatDirectoryRecordName(record) : '';
+  }
+
+  /**
+   * A name in the field means the agent is searching the directory rather than
+   * entering a destination. Transferring it would hand it to `parseNumber`,
+   * which throws, so the typed value only counts once it looks dialable.
+   */
+  get isManualEntryDialable(): boolean {
+    return isDialableNumberInput(this._manualEntryNumber);
+  }
+
+  /**
+   * What the manual tab would transfer to right now, or null if there is
+   * nothing usable.
+   *
+   * A record the agent picked from the list wins over the typed text, since the
+   * text is only the search query that produced it. Failing that, an extension
+   * typed on the keypad resolves through its exact directory match, because the
+   * digits alone are not a routable destination. A plain phone number is used
+   * as typed.
+   */
+  get manualEntryDestination(): { value: string; skipParse: boolean } | null {
+    const record = this.selectedDirectoryRecord ?? this.matchedDirectoryRecord;
+    if (record) {
+      const destination = this._evDirectorySearch.buildRecordDestination(
+        this._searchScope,
+        record,
+      );
+      if (destination) {
+        return { value: destination, skipParse: true };
+      }
+    }
+    return this.isManualEntryDialable
+      ? { value: this._manualEntryNumber, skipParse: false }
+      : null;
+  }
+
+  /**
+   * Who the Transfer button would transfer to, named where the directory knows
+   * them. Empty on the other tabs, whose destination is already spelled out in
+   * the tab itself, and empty when there is nothing transferable.
+   */
+  get transferDestinationLabel(): string {
+    if (this._evTransferCall.transferType !== transferTypes.manualEntry) {
+      return '';
+    }
+    // A record is labelled by name and extension rather than by the field,
+    // which for a name search holds the query text, not a number
+    const record = this.selectedDirectoryRecord ?? this.matchedDirectoryRecord;
+    if (record) {
+      return [formatDirectoryRecordName(record), record.extensionNumber]
+        .filter(Boolean)
+        .join(' ');
+    }
+    return this.isManualEntryDialable
+      ? formatPhoneNumber({ phoneNumber: this._manualEntryNumber.trim() })
+      : '';
   }
 
   /**
@@ -73,7 +218,62 @@ class TransferView extends RcViewModule {
   @delegate('server')
   async setManualEntryNumber(value: string): Promise<void> {
     this._setManualEntryNumber(value);
+    this._setSelectedDirectoryRecordId(null);
+    this._setInputFromKeypad(false);
     this._evTransferCall.changeTransferType(transferTypes.manualEntry);
+    this._evDirectorySearch.search(this._searchScope, value);
+  }
+
+  /**
+   * Pick a directory record as the transfer destination.
+   *
+   * Selecting only marks the row: the footer Transfer button issues the
+   * transfer, like the agent and phone book tabs. The pending search is
+   * cancelled so a late response cannot drop the record out of the list and
+   * silently unselect it.
+   */
+  @delegate('server')
+  async selectDirectoryRecord(record: DirectoryRecord): Promise<void> {
+    this._evDirectorySearch.cancel(this._searchScope);
+    this._setSelectedDirectoryRecordId(record.id);
+    this._evTransferCall.changeTransferType(transferTypes.manualEntry);
+  }
+
+  /**
+   * Append a keypad key to the manual entry field.
+   *
+   * Keypad input searches the directory just like typing does: an extension
+   * entered on the pad is only transferable once the search has resolved it to
+   * a member. Appending happens here rather than in the component so that rapid
+   * presses cannot drop a key while state syncs back to the client port.
+   */
+  @delegate('server')
+  async appendManualEntryKey(key: string): Promise<void> {
+    const value = this._manualEntryNumber + key;
+    this._setManualEntryNumber(value);
+    this._setSelectedDirectoryRecordId(null);
+    this._setInputFromKeypad(true);
+    this._evTransferCall.changeTransferType(transferTypes.manualEntry);
+    this._evDirectorySearch.search(this._searchScope, value);
+  }
+
+  /**
+   * Slicing runs on the server so it reads the authoritative value. The input
+   * source is deliberately left alone: correcting a keypad entry should not
+   * flip the tab over to the result list mid-correction.
+   */
+  @delegate('server')
+  async backspaceManualEntry(): Promise<void> {
+    const value = this._manualEntryNumber.slice(0, -1);
+    this._setManualEntryNumber(value);
+    this._setSelectedDirectoryRecordId(null);
+    this._evTransferCall.changeTransferType(transferTypes.manualEntry);
+    this._evDirectorySearch.search(this._searchScope, value);
+  }
+
+  @delegate('server')
+  async clearManualEntry(): Promise<void> {
+    await this.setManualEntryNumber('');
   }
 
   get callId(): string {
@@ -98,6 +298,15 @@ class TransferView extends RcViewModule {
     return this.isQueueTransfer
       ? this._evRequeueCall.stayOnCall
       : this._evTransferCall.stayOnCall;
+  }
+
+  /** Whether a transfer can be issued right now, regardless of destination */
+  private get _canTransferNow(): boolean {
+    return (
+      !this._evTransferCall.transferring &&
+      !this._evRequeueCall.requeuing &&
+      !this._evCall.currentCall?.endedCall
+    );
   }
 
   /** Whether the current call allows non-queue transfer actions */
@@ -155,23 +364,23 @@ class TransferView extends RcViewModule {
     that._evTransferCall.transferAgentId,
     that._evTransferCall.transferPhoneBookSelectedIndex,
     that._manualEntryNumber,
+    that._selectedDirectoryRecordId,
+    that.manualEntryDirectoryRecords,
     that._evRequeueCall.selectedGateId,
     that._evTransferCall.transferring,
     that._evRequeueCall.requeuing,
     that._evCall.currentCall,
   ])
   get isTransferDisabled(): boolean {
-    const { transferType, transferring } = this._evTransferCall;
-    const { requeuing } = this._evRequeueCall;
-    const isCallEnded = !!this._evCall.currentCall?.endedCall;
-    if (transferring || requeuing || isCallEnded) return true;
+    const { transferType } = this._evTransferCall;
+    if (!this._canTransferNow) return true;
     switch (transferType) {
       case transferTypes.internal:
         return !this._evTransferCall.transferAgentId;
       case transferTypes.phoneBook:
         return this._evTransferCall.transferPhoneBookSelectedIndex === null;
       case transferTypes.manualEntry:
-        return this._manualEntryNumber.trim().length === 0;
+        return !this.manualEntryDestination;
       case transferTypes.queue:
         return !this._evRequeueCall.selectedGateId;
       default:
@@ -186,14 +395,33 @@ class TransferView extends RcViewModule {
         await this._evRequeueCall.requeueCall();
       } else {
         if (this._evTransferCall.transferType === transferTypes.manualEntry) {
-          this._evTransferCall.changeRecipientNumber(this._manualEntryNumber);
+          const destination = this.manualEntryDestination;
+          if (!destination) return;
+          // A picked directory record is a fully-qualified EV destination and
+          // skips the parser; a typed number goes through it as before
+          this._evTransferCall.changeRecipientNumber(destination.value, {
+            skipParse: destination.skipParse,
+          });
+          this._evDirectorySearch.cancel(this._searchScope);
         }
         await this._evTransferCall.transfer();
       }
+      // Only on success: a failed transfer keeps the destination so the agent
+      // can retry it. Without this the number outlives the call, and the panel
+      // opened on the previous transfer's input for the next one.
+      this._resetManualEntry();
       this._returnToActiveCall();
     } catch (error) {
       this.logger.error('Transfer failed:', error);
     }
+  }
+
+  /** Drop the manual tab's destination: typed number, pick and search results */
+  private _resetManualEntry(): void {
+    this._setManualEntryNumber('');
+    this._setSelectedDirectoryRecordId(null);
+    this._setInputFromKeypad(false);
+    this._evDirectorySearch.clear(this._searchScope);
   }
 
   /**
@@ -214,7 +442,7 @@ class TransferView extends RcViewModule {
   @delegate('server')
   async cancelTransfer(): Promise<void> {
     this._evTransferCall.resetTransferStatus();
-    this._setManualEntryNumber('');
+    this._resetManualEntry();
     this._options?.onCancel?.();
     this._router.replace(`/activityCallLog/${this.callId}`);
   }
@@ -224,8 +452,15 @@ class TransferView extends RcViewModule {
     this._router.replace(`/activityCallLog/${this.callId}`);
   }
 
+  /**
+   * Also covers mount: TransferPanel reports its initially active tab through
+   * `onTabChange`, so opening the page always starts with an empty result list
+   * even though `_manualEntryNumber` survives between visits.
+   */
   @delegate('server')
   async handleTabChange(type: EvTransferType): Promise<void> {
+    this._setSelectedDirectoryRecordId(null);
+    this._evDirectorySearch.clear(this._searchScope);
     this._evTransferCall.changeTransferType(type);
     if (type === transferTypes.internal) {
       await this._evTransferCall.fetchAgentList();
@@ -288,6 +523,12 @@ class TransferView extends RcViewModule {
       selectedPhoneBookIndex:
         this._evTransferCall.transferPhoneBookSelectedIndex,
       manualEntryNumber: this._manualEntryNumber,
+      manualEntryDirectoryRecords: this.manualEntryDirectoryRecords,
+      selectedDirectoryRecordId: this.selectedDirectoryRecordId,
+      matchedDirectoryName: this.matchedDirectoryName,
+      transferDestinationLabel: this.transferDestinationLabel,
+      isSearchingDirectory: this.isSearchingDirectory,
+      showManualEntryKeypad: this.showManualEntryKeypad,
       queueGroups: this._evAuth.availableRequeueQueues,
       selectedQueueGroupId: this._evRequeueCall.selectedQueueGroupId,
       selectedGateId: this._evRequeueCall.selectedGateId,
@@ -301,6 +542,10 @@ class TransferView extends RcViewModule {
       onSelectAgent: (agentId) => this.selectAgent(agentId),
       onSelectPhoneBookContact: (index) => this.selectPhoneBookContact(index),
       onManualEntryChange: (value) => this.setManualEntryNumber(value),
+      onManualEntryKeypadPress: (key) => this.appendManualEntryKey(key),
+      onManualEntryBackspace: () => this.backspaceManualEntry(),
+      onManualEntryClear: () => this.clearManualEntry(),
+      onSelectDirectoryRecord: (record) => this.selectDirectoryRecord(record),
       onQueueGroupChange: (groupId) => this.handleQueueGroupChange(groupId),
       onGateChange: (gateId) => this.handleGateChange(gateId),
       onTransfer: () => this.executeTransfer(),
@@ -333,6 +578,12 @@ class TransferView extends RcViewModule {
           selectedAgentId={uiProps.selectedAgentId}
           selectedPhoneBookIndex={uiProps.selectedPhoneBookIndex}
           manualEntryNumber={uiProps.manualEntryNumber}
+          manualEntryDirectoryRecords={uiProps.manualEntryDirectoryRecords}
+          selectedDirectoryRecordId={uiProps.selectedDirectoryRecordId}
+          matchedDirectoryName={uiProps.matchedDirectoryName}
+          transferDestinationLabel={uiProps.transferDestinationLabel}
+          isSearchingDirectory={uiProps.isSearchingDirectory}
+          showManualEntryKeypad={uiProps.showManualEntryKeypad}
           queueGroups={uiProps.queueGroups}
           selectedQueueGroupId={uiProps.selectedQueueGroupId}
           selectedGateId={uiProps.selectedGateId}
@@ -341,6 +592,10 @@ class TransferView extends RcViewModule {
           onSelectAgent={uiFunctions.onSelectAgent}
           onSelectPhoneBookContact={uiFunctions.onSelectPhoneBookContact}
           onManualEntryChange={uiFunctions.onManualEntryChange}
+          onManualEntryKeypadPress={uiFunctions.onManualEntryKeypadPress}
+          onManualEntryBackspace={uiFunctions.onManualEntryBackspace}
+          onManualEntryClear={uiFunctions.onManualEntryClear}
+          onSelectDirectoryRecord={uiFunctions.onSelectDirectoryRecord}
           onQueueGroupChange={uiFunctions.onQueueGroupChange}
           onGateChange={uiFunctions.onGateChange}
           onTransfer={uiFunctions.onTransfer}
