@@ -11,6 +11,7 @@ import { EvTypeError } from './EvTypeError';
 
 interface AvailableCountry {
   countryId: string;
+  countryCode?: string;
 }
 
 /**
@@ -29,11 +30,22 @@ export const checkCountryCode = (
       input,
     });
     if (isValid && !hasInvalidChars && parsedNumber) {
-      const dialoutCountryCode = countries.alpha2ToAlpha3(parsedCountry);
+      const dialoutCountryId = countries.alpha2ToAlpha3(parsedCountry);
+      // the national number is the E164 number without `+` and dialing code
+      const dialoutCountryCode = cleanedNumber.endsWith(parsedNumber)
+        ? cleanedNumber.slice(1, cleanedNumber.length - parsedNumber.length)
+        : null;
       const isCountrySupported =
-        dialoutCountryCode === 'USA' ||
+        dialoutCountryId === 'USA' ||
         (availableCountries &&
-          availableCountries.some((c) => c.countryId === dialoutCountryCode));
+          availableCountries.some(
+            (c) =>
+              // `countryId` from agent config is not always ISO alpha-3,
+              // eg. Germany is `GER` there but `DEU` in ISO 3166-1,
+              // so match on the dialing code first and fall back to the id.
+              (!!dialoutCountryCode && c.countryCode === dialoutCountryCode) ||
+              c.countryId === dialoutCountryId,
+          ));
       if (!isCountrySupported) {
         throw new EvTypeError({
           type: messageTypes.NO_SUPPORT_COUNTRY,

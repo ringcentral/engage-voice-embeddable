@@ -415,6 +415,9 @@ export interface EvApplicationSettings {
 export interface EvAvailableCountry {
   countryId: string;
   countryName: string;
+  /** country dialing code, eg. `49` for Germany */
+  countryCode?: string;
+  rcCountryId?: string;
 }
 
 export interface EvAgentPermissions {
