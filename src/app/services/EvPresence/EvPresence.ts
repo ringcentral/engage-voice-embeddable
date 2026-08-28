@@ -297,6 +297,14 @@ class EvPresence extends RcModule {
     await this.evCallDataSource.limitCalls();
   }
 
+  /**
+   * Resolve the local call id for a server-side segment id, so server call
+   * history rows can be joined to locally tracked calls.
+   */
+  getCallIdBySegmentId(segmentId: string): string | undefined {
+    return this.evCallDataSource.getCallIdBySegmentId(segmentId);
+  }
+
   // --- Recording settings ---
 
   getRecordingSettings(record: EvAgentRecording): string {

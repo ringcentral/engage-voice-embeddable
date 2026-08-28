@@ -65,8 +65,9 @@ export const getWebpackConfig = (options: WebpackConfigOptions<AppConfig>) => {
       alias: {
         // Brand logo path alias for dynamic brand theming
         'brand-logo-path': projectConfig.themePath,
-        // Agent SDK alias - CommonJS module from vendor folder
-        '@SDK': path.resolve(__dirname, './vendor/agentLibrary.js'),
+        // No '@SDK' alias: the agent library is loaded as a global by app.html
+        // (window.AgentSDK, served from src/agentLibrary.js). The old alias
+        // pointed at a stale vendor/ copy that nothing imported.
         // Fix @ringcentral/juno path resolution issue
         // The package exports maps ./* to ./es6/*, so es6/ prefix in imports causes double path
         '@ringcentral/juno/es6': path.resolve(

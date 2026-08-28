@@ -20,6 +20,20 @@ interface CallHistoryViewUIProps {
   viewCallsFilter: ViewCallsFilterType;
   lastPosition: StateSnapshot | undefined;
   viewCallsFilterSelections: { label: string; value: string }[];
+  /** First request in flight with nothing to show yet. */
+  isLoading: boolean;
+  /** Always false: history is a single request. */
+  isLoadingMore: boolean;
+  /** More loaded rows remain to reveal. */
+  hasMore: boolean;
+  /** The last page request failed. */
+  error: boolean;
+  /**
+   * Included so `useConnector` re-renders rows when historical dialing
+   * permission or idle state changes (drives the hover `call` action).
+   */
+  canDial: boolean;
+  isDialDisabled: boolean;
 }
 
 /**
@@ -30,6 +44,8 @@ interface CallHistoryViewUIFunctions {
   setViewCallsFilter: (val: ViewCallsFilterType) => void;
   setLastPosition: (type: ViewCallsFilterType, val?: StateSnapshot) => void;
   onFocus: () => void;
+  onLoadMore: () => void;
+  onRetry: () => void;
   useCallHistoryItemInfo: (
     call: FormattedCall,
     options: { selectIndex: number; variant: 'list' | 'detail' },

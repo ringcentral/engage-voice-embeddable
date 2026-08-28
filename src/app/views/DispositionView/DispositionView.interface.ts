@@ -35,6 +35,26 @@ export interface DispositionViewUIProps {
   isInbound: boolean;
   isDisposed: boolean;
   isHistoryMode: boolean;
+  /** History row with no local call data; disposition saves via the activity. */
+  isServerOnlyHistoryCall: boolean;
+  /** True while the history activity request is in flight. */
+  isHistoryActivityLoading: boolean;
+  /**
+   * History row id whose activity is loaded. Differs from the route id while
+   * a fetch is pending or before the first load.
+   */
+  historyActivityRowId: string;
+  /** The RingCX activity behind a history row, when one was found. */
+  historyActivity: import('../../services/EvClient/interfaces').ActivityLog | null;
+  /** Pending edits to a server-only history row. */
+  historyActivityDraft: { agentNotes: string; agentSummary: string };
+  /**
+   * Disposition label for the history call-log form (activity, else history
+   * row).
+   */
+  historyDispositionName: string;
+  /** True when the history list still has a row for this route id. */
+  hasHistoryCall: boolean;
   showSubmitStep: boolean;
   hideCallNote: boolean;
   showSummary: boolean;
@@ -53,6 +73,11 @@ export interface DispositionViewUIProps {
  */
 export interface DispositionViewUIFunctions {
   setViewCallId: (id: string) => void;
+  loadHistoryActivity: (id: string) => void;
+  onUpdateHistoryActivityDraft: (
+    field: 'agentNotes' | 'agentSummary',
+    value: string,
+  ) => void;
   onBack: () => void;
   onUpdateCallLog: (field: string, value: string) => void;
   onUpdateSummary: (value: string) => void;

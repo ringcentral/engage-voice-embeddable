@@ -255,6 +255,23 @@ class ThirdParty extends RcModule {
   }
 
   /**
+   * Whether this client should talk to the host window.
+   *
+   * In shared mode only the active tab should send; if no active tab is recorded
+   * yet (common in iframes before a focus event), allow the request through so
+   * logging and call-log matching are not dropped.
+   */
+  private _canSendToHost(): boolean {
+    if (!this.portManager?.shared) {
+      return true;
+    }
+    if (!this.portManager.activeTabId) {
+      return true;
+    }
+    return this.portManager.isActiveTab;
+  }
+
+  /**
    * Log a call via parent window request/response.
    * Refreshes activity matches after successful logging.
    */
@@ -262,15 +279,15 @@ class ThirdParty extends RcModule {
   @delegate('clients')
   async logCall(data: any): Promise<void> {
     if (!this.service.callLoggerEnabled) return;
-    if (!this.portManager?.isActiveTab) return;
+    if (!this._canSendToHost()) return;
     await this.transport.request({
       payload: {
         requestType: this.messageTypes.logCall,
         data,
       },
     });
-    if (this.service.callLogMatcherEnabled && this.activityMatcher) {
-      this.activityMatcher.match({
+    if (this.service.callLogMatcherEnabled && this.activityMatcher && data?.sessionId) {
+      await this.activityMatcher.match({
         queries: [data.sessionId],
         ignoreCache: true,
       });
@@ -284,7 +301,7 @@ class ThirdParty extends RcModule {
   @delegate('clients')
   async viewLead(data: any): Promise<void> {
     if (!this.service.leadViewerEnabled) return;
-    if (!this.portManager?.isActiveTab) return;
+    if (!this._canSendToHost()) return;
     await this.transport.request({
       payload: {
         requestType: this.messageTypes.viewLead,

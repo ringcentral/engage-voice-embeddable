@@ -1,4 +1,4 @@
-import { formatAgentScriptResult } from './formatAgentScriptResult';
+import { formatAgentScriptResult } from 'src/app/services/EvAgentScript/formatAgentScriptResult';
 
 describe('formatAgentScriptResult', () => {
   it('normalizes raw and wrapped model values without mutating the input', () => {
@@ -26,4 +26,3 @@ describe('formatAgentScriptResult', () => {
     expect(input.model.raw).toBe('answer');
   });
 });
-

@@ -3,6 +3,8 @@ import type {
   EvEndedCall,
 } from '../app/services/EvClient/interfaces';
 import type { EvCallData } from '../app/services/EvCallMonitor/EvCallMonitor.interface';
+import type { FormattedCall } from '../app/services/EvCallHistory/EvCallHistory.interface';
+import { callDirection } from '../enums';
 import { getCallAni, getCallDnis } from './getEvCallNumbers';
 import { getEvServerTimestamp } from './getEvServerTimestamp';
 
@@ -103,4 +105,67 @@ export function formatEvCallForConnected(call: EvCallData): FormattedEvCall {
     recordingUrl: endedCall?.recordingUrl ?? call.session?.recordingUrl,
     segmentId: call.session?.segmentId ?? call.segmentContext?.segmentId,
   };
+}
+
+/**
+ * Map a server history row onto the same `FormattedEvCall` shape local calls
+ * use for `rc-ev-logCall`.
+ *
+ * History has no EV session id; `segmentId` stands in so the payload still
+ * carries a stable per-leg identifier CRMs can key on.
+ *
+ * Phone numbers come from the raw history fields (`dialableNumber` / `dnis`),
+ * not the display-formatted `from`/`to` values used in the list UI.
+ */
+export function formatEvCallFromHistory(
+  call: FormattedCall,
+  agentId: string,
+): FormattedEvCall | null {
+  if (!call.uii) {
+    return null;
+  }
+  const isOutbound = call.direction === callDirection.outbound;
+  const contactNumber = getRawHistoryContactNumber(call);
+  const agentNumber = call.dnis || '';
+  const durationSeconds =
+    call.durationMs != null
+      ? Math.round(call.durationMs / 1000)
+      : undefined;
+  return {
+    id: call.uii,
+    direction: isOutbound ? 'OUTBOUND' : 'INBOUND',
+    from: {
+      phoneNumber: isOutbound ? agentNumber : contactNumber,
+      name: isOutbound
+        ? agentNumber
+        : call.from.name || call.fromName || contactNumber,
+    },
+    to: {
+      phoneNumber: isOutbound ? contactNumber : agentNumber,
+      name: isOutbound
+        ? call.to.name || call.toName || contactNumber
+        : agentNumber,
+    },
+    telephonyStatus: 'CallConnected',
+    sessionId: call.segmentId,
+    telephonySessionId: call.uii,
+    partyId: agentId,
+    startTime: call.startTime || undefined,
+    duration: durationSeconds,
+    offset: 0,
+    fromMatches: [],
+    toMatches: [],
+    activityMatches: [],
+    recordingUrl: call.recordingUrl,
+    segmentId: call.segmentId,
+  };
+}
+
+/** Raw contact destination from history, without the dialing `@RC_EXT` suffix. */
+function getRawHistoryContactNumber(call: FormattedCall): string {
+  const dialableNumber = call.dialableNumber || '';
+  if (dialableNumber.endsWith('@RC_EXT')) {
+    return dialableNumber.slice(0, -'@RC_EXT'.length);
+  }
+  return dialableNumber;
 }

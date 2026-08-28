@@ -27,6 +27,7 @@ export default {
   // Toast messages
   callDispositionSuccess: 'Call disposition saved successfully.',
   callDispositionFailed: 'Failed to save call disposition.',
+  callLogNotFound: 'Call log not found',
 
   // Side widget - `widgets` is the list of what is waiting behind the toggle,
   // so the agent knows there is a script or an assistant to open.
