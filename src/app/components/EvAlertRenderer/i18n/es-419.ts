@@ -1,0 +1,31 @@
+/* eslint-disable */
+import { EvAlertMessageTypes } from '../EvAlertRenderer.interface';
+
+export default {
+  [EvAlertMessageTypes.NO_AGENT]: 'A esta cuenta RC no se le ha asignado ninguna cuenta de agente EV. Comuníquese con su administrador o supervisor.',
+  [EvAlertMessageTypes.CONNECT_ERROR]: 'Error de autenticación. Vuelva a intentarlo más tarde.',
+  [EvAlertMessageTypes.UNEXPECTED_AGENT]: 'A esta cuenta RC se le ha asignado una cuenta de agente EV inesperada. Comuníquese con su administrador o supervisor.',
+  [EvAlertMessageTypes.INVALID_BROWSER]: 'WebSocket NO es compatible con su navegador.',
+  [EvAlertMessageTypes.CONNECT_TIMEOUT]: 'Tiempo de espera de autorización. Vuelva a intentarlo más tarde.',
+  [EvAlertMessageTypes.OPEN_SOCKET_ERROR]: 'Error de conexión. Vuelva a intentarlo más tarde.',
+  [EvAlertMessageTypes.EXISTING_LOGIN_ENGAGED]: 'Inicio de sesión existente activado',
+  [EvAlertMessageTypes.FORCE_LOGOUT]: 'Su sesión ha sido terminada',
+  [EvAlertMessageTypes.FAIL_END_CALL]: 'No se pudo finalizar la llamada. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.FAIL_HOLD_CALL]: 'No se pudo retener o cancelar la llamada. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.FAIL_COLD_TRANSFER]: 'No se pudo transferir la llamada. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.FAIL_WARM_TRANSFER]: 'No se pudo completar la transferencia en caliente. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.FAIL_DIRECT_TRANSFER]: 'No se pudo dirigir la transferencia. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL_TRANSFER]: 'No se pudo transferir al correo de voz. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL]: 'No se pudo enviar al correo de voz. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.FAIL_START_WARM_TRANSFER]: 'No se pudo iniciar la transferencia en caliente. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.FAIL_CANCEL_WARM_TRANSFER]: 'No se pudo cancelar la transferencia en caliente. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.DISPOSITION_SUBMIT_ERROR]: 'No se pudo enviar la disposición. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.DISPOSITION_REQUIRED]: 'Seleccione una disposición antes de finalizar la llamada.',
+  [EvAlertMessageTypes.SESSION_CONFIG_ERROR]: 'No se pudo configurar la sesión. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.SESSION_UPDATE_ERROR]: 'No se pudo actualizar la sesión. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.WORKING_STATE_ERROR]: 'No se pudo cambiar el estado de funcionamiento. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.TRANSFER_ERROR]: 'Error en la transferencia. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.REQUEUE_ERROR]: 'No se pudo volver a poner en cola la llamada. Por favor inténtalo de nuevo.',
+  [EvAlertMessageTypes.WEBRTC_NOT_SUPPORTED]: 'WebRTC no es compatible con su navegador.',
+  [EvAlertMessageTypes.MICROPHONE_ACCESS_DENIED]: 'Acceso al micrófono denegado. Habilite los permisos del micrófono.',
+} as const;

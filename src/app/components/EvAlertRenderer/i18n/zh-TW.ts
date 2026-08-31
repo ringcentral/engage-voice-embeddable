@@ -1,0 +1,31 @@
+/* eslint-disable */
+import { EvAlertMessageTypes } from '../EvAlertRenderer.interface';
+
+export default {
+  [EvAlertMessageTypes.NO_AGENT]: '此 RC 帳戶尚未指派任何 EV 代理帳戶。請聯絡您的管理員或主管。',
+  [EvAlertMessageTypes.CONNECT_ERROR]: '身份驗證錯誤。請稍後重試。',
+  [EvAlertMessageTypes.UNEXPECTED_AGENT]: '此 RC 帳戶已被指派了意外的 EV 代理帳戶。請聯絡您的管理員或主管。',
+  [EvAlertMessageTypes.INVALID_BROWSER]: '您的瀏覽器不支援 WebSocket。',
+  [EvAlertMessageTypes.CONNECT_TIMEOUT]: '授權逾時。請稍後重試。',
+  [EvAlertMessageTypes.OPEN_SOCKET_ERROR]: '連線錯誤。請稍後重試。',
+  [EvAlertMessageTypes.EXISTING_LOGIN_ENGAGED]: '已使用現有登入',
+  [EvAlertMessageTypes.FORCE_LOGOUT]: '您的會話已終止',
+  [EvAlertMessageTypes.FAIL_END_CALL]: '無法結束通話。請再試一次。',
+  [EvAlertMessageTypes.FAIL_HOLD_CALL]: '無法保持/取消保留通話。請再試一次。',
+  [EvAlertMessageTypes.FAIL_COLD_TRANSFER]: '無法轉接通話。請再試一次。',
+  [EvAlertMessageTypes.FAIL_WARM_TRANSFER]: '無法完成熱傳輸。請再試一次。',
+  [EvAlertMessageTypes.FAIL_DIRECT_TRANSFER]: '直接轉帳失敗。請再試一次。',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL_TRANSFER]: '無法轉接到語音信箱。請再試一次。',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL]: '無法傳送到語音郵件。請再試一次。',
+  [EvAlertMessageTypes.FAIL_START_WARM_TRANSFER]: '無法啟動熱傳輸。請再試一次。',
+  [EvAlertMessageTypes.FAIL_CANCEL_WARM_TRANSFER]: '無法取消熱傳輸。請再試一次。',
+  [EvAlertMessageTypes.DISPOSITION_SUBMIT_ERROR]: '未能提交處置。請再試一次。',
+  [EvAlertMessageTypes.DISPOSITION_REQUIRED]: '請在結束通話前選擇一種處置。',
+  [EvAlertMessageTypes.SESSION_CONFIG_ERROR]: '配置會話失敗。請再試一次。',
+  [EvAlertMessageTypes.SESSION_UPDATE_ERROR]: '無法更新會話。請再試一次。',
+  [EvAlertMessageTypes.WORKING_STATE_ERROR]: '無法變更工作狀態。請再試一次。',
+  [EvAlertMessageTypes.TRANSFER_ERROR]: '傳輸失敗。請再試一次。',
+  [EvAlertMessageTypes.REQUEUE_ERROR]: '無法重新排隊呼叫。請再試一次。',
+  [EvAlertMessageTypes.WEBRTC_NOT_SUPPORTED]: '您的瀏覽器不支援 WebRTC。',
+  [EvAlertMessageTypes.MICROPHONE_ACCESS_DENIED]: '麥克風存取被拒絕。請啟用麥克風權限。',
+} as const;

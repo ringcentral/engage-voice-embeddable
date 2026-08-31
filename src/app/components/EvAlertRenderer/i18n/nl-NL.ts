@@ -1,0 +1,31 @@
+/* eslint-disable */
+import { EvAlertMessageTypes } from '../EvAlertRenderer.interface';
+
+export default {
+  [EvAlertMessageTypes.NO_AGENT]: 'Aan dit RC-account is geen EV-agentaccount toegewezen. Neem contact op met uw beheerder of supervisor.',
+  [EvAlertMessageTypes.CONNECT_ERROR]: 'Authenticatiefout. Probeer het later opnieuw.',
+  [EvAlertMessageTypes.UNEXPECTED_AGENT]: 'Aan dit RC-account is een onverwacht EV-agentaccount toegewezen. Neem contact op met uw beheerder of supervisor.',
+  [EvAlertMessageTypes.INVALID_BROWSER]: 'WebSocket wordt NIET ondersteund door uw browser.',
+  [EvAlertMessageTypes.CONNECT_TIMEOUT]: 'Time-out voor autorisatie. Probeer het later opnieuw.',
+  [EvAlertMessageTypes.OPEN_SOCKET_ERROR]: 'Verbindingsfout. Probeer het later opnieuw.',
+  [EvAlertMessageTypes.EXISTING_LOGIN_ENGAGED]: 'Bestaande login bezet',
+  [EvAlertMessageTypes.FORCE_LOGOUT]: 'Uw sessie is beëindigd',
+  [EvAlertMessageTypes.FAIL_END_CALL]: 'Kan oproep niet beëindigen. Probeer het opnieuw.',
+  [EvAlertMessageTypes.FAIL_HOLD_CALL]: 'Kan gesprek niet in de wachtstand zetten/uit de wachtstand halen. Probeer het opnieuw.',
+  [EvAlertMessageTypes.FAIL_COLD_TRANSFER]: 'Kan gesprek niet doorverbinden. Probeer het opnieuw.',
+  [EvAlertMessageTypes.FAIL_WARM_TRANSFER]: 'Kan warme overdracht niet voltooien. Probeer het opnieuw.',
+  [EvAlertMessageTypes.FAIL_DIRECT_TRANSFER]: 'Kan de overdracht niet rechtstreeks uitvoeren. Probeer het opnieuw.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL_TRANSFER]: 'Kan niet doorverbinden naar voicemail. Probeer het opnieuw.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL]: 'Kan niet naar voicemail verzenden. Probeer het opnieuw.',
+  [EvAlertMessageTypes.FAIL_START_WARM_TRANSFER]: 'Kan warme overdracht niet starten. Probeer het opnieuw.',
+  [EvAlertMessageTypes.FAIL_CANCEL_WARM_TRANSFER]: 'Kan warme overdracht niet annuleren. Probeer het opnieuw.',
+  [EvAlertMessageTypes.DISPOSITION_SUBMIT_ERROR]: 'Kan de beschikking niet indienen. Probeer het opnieuw.',
+  [EvAlertMessageTypes.DISPOSITION_REQUIRED]: 'Selecteer een dispositie voordat u het gesprek beëindigt.',
+  [EvAlertMessageTypes.SESSION_CONFIG_ERROR]: 'Kan sessie niet configureren. Probeer het opnieuw.',
+  [EvAlertMessageTypes.SESSION_UPDATE_ERROR]: 'Updaten van sessie is mislukt. Probeer het opnieuw.',
+  [EvAlertMessageTypes.WORKING_STATE_ERROR]: 'Kan de werkstatus niet wijzigen. Probeer het opnieuw.',
+  [EvAlertMessageTypes.TRANSFER_ERROR]: 'Overdracht mislukt. Probeer het opnieuw.',
+  [EvAlertMessageTypes.REQUEUE_ERROR]: 'Kan oproep niet opnieuw in de wachtrij plaatsen. Probeer het opnieuw.',
+  [EvAlertMessageTypes.WEBRTC_NOT_SUPPORTED]: 'WebRTC wordt niet ondersteund door uw browser.',
+  [EvAlertMessageTypes.MICROPHONE_ACCESS_DENIED]: 'Microfoontoegang geweigerd. Schakel microfoonrechten in.',
+} as const;

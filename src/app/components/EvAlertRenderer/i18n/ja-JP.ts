@@ -1,0 +1,31 @@
+/* eslint-disable */
+import { EvAlertMessageTypes } from '../EvAlertRenderer.interface';
+
+export default {
+  [EvAlertMessageTypes.NO_AGENT]: 'この RC アカウントには EV エージェント アカウントが割り当てられていません。管理者またはスーパーバイザーに問い合わせてください。',
+  [EvAlertMessageTypes.CONNECT_ERROR]: '認証エラー。後で再試行してください。',
+  [EvAlertMessageTypes.UNEXPECTED_AGENT]: 'この RC アカウントには、予期しない EV エージェント アカウントが割り当てられています。管理者またはスーパーバイザーに問い合わせてください。',
+  [EvAlertMessageTypes.INVALID_BROWSER]: 'WebSocket はお使いのブラウザではサポートされていません。',
+  [EvAlertMessageTypes.CONNECT_TIMEOUT]: '認証タイムアウト。後で再試行してください。',
+  [EvAlertMessageTypes.OPEN_SOCKET_ERROR]: '接続エラー。後で再試行してください。',
+  [EvAlertMessageTypes.EXISTING_LOGIN_ENGAGED]: '既存のログインが有効です',
+  [EvAlertMessageTypes.FORCE_LOGOUT]: 'セッションは終了しました',
+  [EvAlertMessageTypes.FAIL_END_CALL]: '通話を終了できませんでした。もう一度試してください。',
+  [EvAlertMessageTypes.FAIL_HOLD_CALL]: '通話の保留/保留解除に失敗しました。もう一度試してください。',
+  [EvAlertMessageTypes.FAIL_COLD_TRANSFER]: '通話の転送に失敗しました。もう一度試してください。',
+  [EvAlertMessageTypes.FAIL_WARM_TRANSFER]: 'ウォーム転送を完了できませんでした。もう一度試してください。',
+  [EvAlertMessageTypes.FAIL_DIRECT_TRANSFER]: '直接転送に失敗しました。もう一度試してください。',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL_TRANSFER]: 'ボイスメールへの転送に失敗しました。もう一度試してください。',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL]: 'ボイスメールへの送信に失敗しました。もう一度試してください。',
+  [EvAlertMessageTypes.FAIL_START_WARM_TRANSFER]: 'ウォーム転送の開始に失敗しました。もう一度試してください。',
+  [EvAlertMessageTypes.FAIL_CANCEL_WARM_TRANSFER]: 'ウォーム転送のキャンセルに失敗しました。もう一度試してください。',
+  [EvAlertMessageTypes.DISPOSITION_SUBMIT_ERROR]: '処理を送信できませんでした。もう一度試してください。',
+  [EvAlertMessageTypes.DISPOSITION_REQUIRED]: '通話を終了する前に処理を選択してください。',
+  [EvAlertMessageTypes.SESSION_CONFIG_ERROR]: 'セッションの構成に失敗しました。もう一度試してください。',
+  [EvAlertMessageTypes.SESSION_UPDATE_ERROR]: 'セッションを更新できませんでした。もう一度試してください。',
+  [EvAlertMessageTypes.WORKING_STATE_ERROR]: '動作状態の変更に失敗しました。もう一度試してください。',
+  [EvAlertMessageTypes.TRANSFER_ERROR]: '転送に失敗しました。もう一度試してください。',
+  [EvAlertMessageTypes.REQUEUE_ERROR]: '通話を再度キューに入れることができませんでした。もう一度試してください。',
+  [EvAlertMessageTypes.WEBRTC_NOT_SUPPORTED]: 'WebRTC はお使いのブラウザではサポートされていません。',
+  [EvAlertMessageTypes.MICROPHONE_ACCESS_DENIED]: 'マイクへのアクセスが拒否されました。マイクの許可を有効にしてください。',
+} as const;

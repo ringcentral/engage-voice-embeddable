@@ -103,13 +103,14 @@ export const TransferPanel: FunctionComponent<TransferPanelProps> = ({
   const { t } = useLocale(i18n);
   const [activeTab, setActiveTab] = useState<EvTransferType | null>(defaultTab);
 
-  const sortedTabs = useMemo(
-    () => [...allTabs].sort((a, b) => Number(a.disabled) - Number(b.disabled)),
+  const availableTabs = useMemo(
+    () => allTabs.filter((tab) => !tab.disabled),
     [allTabs],
   );
 
-  const disabledTabValues = new Set(
-    sortedTabs.filter((tab) => tab.disabled).map((tab) => tab.value),
+  const availableTabValues = useMemo(
+    () => new Set(availableTabs.map((tab) => tab.value)),
+    [availableTabs],
   );
 
   // Tracks the tab already reported to the parent, so the initially active tab
@@ -118,7 +119,7 @@ export const TransferPanel: FunctionComponent<TransferPanelProps> = ({
   const reportedTabRef = useRef<EvTransferType | null>(null);
 
   useEffect(() => {
-    const shouldReset = activeTab === null || disabledTabValues.has(activeTab);
+    const shouldReset = activeTab === null || !availableTabValues.has(activeTab);
     const nextTab = shouldReset ? defaultTab : activeTab;
     if (nextTab === null) return;
     if (nextTab !== activeTab) {
@@ -128,18 +129,18 @@ export const TransferPanel: FunctionComponent<TransferPanelProps> = ({
       reportedTabRef.current = nextTab;
       onTabChange(nextTab);
     }
-  }, [activeTab, defaultTab, disabledTabValues, onTabChange]);
+  }, [activeTab, defaultTab, availableTabValues, onTabChange]);
 
   const handleTabChange = useCallback(
     (_event: React.SyntheticEvent | null, value: string | number | null) => {
       if (value === null) return;
       const tabValue = value as EvTransferType;
-      if (disabledTabValues.has(tabValue)) return;
+      if (!availableTabValues.has(tabValue)) return;
       setActiveTab(tabValue);
       reportedTabRef.current = tabValue;
       onTabChange(tabValue);
     },
-    [onTabChange, disabledTabValues],
+    [onTabChange, availableTabValues],
   );
 
   return (
@@ -147,13 +148,12 @@ export const TransferPanel: FunctionComponent<TransferPanelProps> = ({
       <TabContext value={activeTab} onChange={handleTabChange}>
         <div className="px-4 pt-2 flex-shrink-0">
           <Tabs variant="moreMenu" data-sign="transferTabs">
-            {sortedTabs.map((tab) => (
+            {availableTabs.map((tab) => (
               <Tab
                 key={tab.value}
                 value={tab.value}
                 id={tab.value}
                 label={tab.label}
-                disabled={tab.disabled}
                 data-sign={`transferTab-${tab.value}`}
               />
             ))}

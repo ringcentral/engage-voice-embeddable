@@ -1,0 +1,31 @@
+/* eslint-disable */
+import { EvAlertMessageTypes } from '../EvAlertRenderer.interface';
+
+export default {
+  [EvAlertMessageTypes.NO_AGENT]: 'Tälle RC-tilille ei ole määritetty EV-agenttitiliä. Ota yhteyttä järjestelmänvalvojaan tai esimieheen.',
+  [EvAlertMessageTypes.CONNECT_ERROR]: 'Todennusvirhe. Yritä myöhemmin uudelleen.',
+  [EvAlertMessageTypes.UNEXPECTED_AGENT]: 'Tälle RC-tilille on määritetty odottamaton EV-agenttitili. Ota yhteyttä järjestelmänvalvojaan tai esimieheen.',
+  [EvAlertMessageTypes.INVALID_BROWSER]: 'WebSocket EI tue selaimesi.',
+  [EvAlertMessageTypes.CONNECT_TIMEOUT]: 'Valtuutuksen aikakatkaisu. Yritä myöhemmin uudelleen.',
+  [EvAlertMessageTypes.OPEN_SOCKET_ERROR]: 'Yhteysvirhe. Yritä myöhemmin uudelleen.',
+  [EvAlertMessageTypes.EXISTING_LOGIN_ENGAGED]: 'Olemassa oleva kirjautuminen käytössä',
+  [EvAlertMessageTypes.FORCE_LOGOUT]: 'Istuntosi on lopetettu',
+  [EvAlertMessageTypes.FAIL_END_CALL]: 'Puhelun lopettaminen epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.FAIL_HOLD_CALL]: 'Puhelun pitoon/pidosta poistaminen epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.FAIL_COLD_TRANSFER]: 'Puhelun siirto epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.FAIL_WARM_TRANSFER]: 'Lämmin siirto epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.FAIL_DIRECT_TRANSFER]: 'Suora siirto epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL_TRANSFER]: 'Siirtäminen vastaajaan epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL]: 'Lähetys vastaajaan epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.FAIL_START_WARM_TRANSFER]: 'Lämpimän siirron käynnistäminen epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.FAIL_CANCEL_WARM_TRANSFER]: 'Lämpimän siirron peruuttaminen epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.DISPOSITION_SUBMIT_ERROR]: 'Määräyksen lähettäminen epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.DISPOSITION_REQUIRED]: 'Valitse sijoitus ennen puhelun lopettamista.',
+  [EvAlertMessageTypes.SESSION_CONFIG_ERROR]: 'Istunnon määrittäminen epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.SESSION_UPDATE_ERROR]: 'Istunnon päivittäminen epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.WORKING_STATE_ERROR]: 'Toimintatilan muuttaminen epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.TRANSFER_ERROR]: 'Siirto epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.REQUEUE_ERROR]: 'Puhelun uudelleenjouttaminen epäonnistui. Yritä uudelleen.',
+  [EvAlertMessageTypes.WEBRTC_NOT_SUPPORTED]: 'Selaimesi ei tue WebRTC:tä.',
+  [EvAlertMessageTypes.MICROPHONE_ACCESS_DENIED]: 'Mikrofonin käyttö estetty. Ota mikrofonin käyttöoikeudet käyttöön.',
+} as const;

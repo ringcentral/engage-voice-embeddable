@@ -1,0 +1,31 @@
+/* eslint-disable */
+import { EvAlertMessageTypes } from '../EvAlertRenderer.interface';
+
+export default {
+  [EvAlertMessageTypes.NO_AGENT]: 'Esta conta RC não recebeu nenhuma conta de agente EV. Contacte o seu administrador ou supervisor.',
+  [EvAlertMessageTypes.CONNECT_ERROR]: 'Erro de autenticação. Tente novamente mais tarde.',
+  [EvAlertMessageTypes.UNEXPECTED_AGENT]: 'Esta conta RC recebeu uma conta de agente EV inesperada. Contacte o seu administrador ou supervisor.',
+  [EvAlertMessageTypes.INVALID_BROWSER]: 'O WebSocket NÃO é compatível com o seu browser.',
+  [EvAlertMessageTypes.CONNECT_TIMEOUT]: 'Tempo limite de autorização. Tente novamente mais tarde.',
+  [EvAlertMessageTypes.OPEN_SOCKET_ERROR]: 'Erro de ligação. Tente novamente mais tarde.',
+  [EvAlertMessageTypes.EXISTING_LOGIN_ENGAGED]: 'Login existente ativado',
+  [EvAlertMessageTypes.FORCE_LOGOUT]: 'A sua sessão foi encerrada',
+  [EvAlertMessageTypes.FAIL_END_CALL]: 'Falha ao terminar a chamada. Por favor, tente novamente.',
+  [EvAlertMessageTypes.FAIL_HOLD_CALL]: 'Falha ao reter/libertar chamada. Por favor, tente novamente.',
+  [EvAlertMessageTypes.FAIL_COLD_TRANSFER]: 'Falha ao transferir a chamada. Por favor, tente novamente.',
+  [EvAlertMessageTypes.FAIL_WARM_TRANSFER]: 'Falha ao concluir a transferência a quente. Por favor, tente novamente.',
+  [EvAlertMessageTypes.FAIL_DIRECT_TRANSFER]: 'Falha na transferência direta. Por favor, tente novamente.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL_TRANSFER]: 'Falha ao transferir para o correio de voz. Por favor, tente novamente.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL]: 'Falha ao enviar para o correio de voz. Por favor, tente novamente.',
+  [EvAlertMessageTypes.FAIL_START_WARM_TRANSFER]: 'Falha ao iniciar a transferência a quente. Por favor, tente novamente.',
+  [EvAlertMessageTypes.FAIL_CANCEL_WARM_TRANSFER]: 'Falha ao cancelar a transferência a quente. Por favor, tente novamente.',
+  [EvAlertMessageTypes.DISPOSITION_SUBMIT_ERROR]: 'Falha ao enviar a disposição. Por favor, tente novamente.',
+  [EvAlertMessageTypes.DISPOSITION_REQUIRED]: 'Selecione uma disposição antes de terminar a chamada.',
+  [EvAlertMessageTypes.SESSION_CONFIG_ERROR]: 'Falha ao configurar sessão. Por favor, tente novamente.',
+  [EvAlertMessageTypes.SESSION_UPDATE_ERROR]: 'Falha ao atualizar a sessão. Por favor, tente novamente.',
+  [EvAlertMessageTypes.WORKING_STATE_ERROR]: 'Falha ao alterar o estado de funcionamento. Por favor, tente novamente.',
+  [EvAlertMessageTypes.TRANSFER_ERROR]: 'Falha na transferência. Por favor, tente novamente.',
+  [EvAlertMessageTypes.REQUEUE_ERROR]: 'Falha ao recolocar a chamada na fila. Por favor, tente novamente.',
+  [EvAlertMessageTypes.WEBRTC_NOT_SUPPORTED]: 'O WebRTC não é compatível com o seu browser.',
+  [EvAlertMessageTypes.MICROPHONE_ACCESS_DENIED]: 'Acesso ao microfone negado. Ative as permissões do microfone.',
+} as const;

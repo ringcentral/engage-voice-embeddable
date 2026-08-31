@@ -95,7 +95,7 @@ function InboundQueuesPanel({
           data-sign="searchInput"
           value={searchText}
           onChange={handleSearchChange}
-          placeholder="Search"
+          placeholder={t('search')}
           variant="outlined"
           size="large"
           fullWidth
@@ -129,7 +129,7 @@ function InboundQueuesPanel({
       <div className="px-4 py-4 border-t border-neutral-b4">
         <div className="flex items-center justify-between mb-4">
           <FormLabel
-            label="Select all"
+            label={t('selectAll')}
             placement="end"
           >
             <Checkbox

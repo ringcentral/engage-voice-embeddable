@@ -1,0 +1,31 @@
+/* eslint-disable */
+import { EvAlertMessageTypes } from '../EvAlertRenderer.interface';
+
+export default {
+  [EvAlertMessageTypes.NO_AGENT]: '이 RC 계정에는 EV 에이전트 계정이 할당되지 않았습니다. 관리자나 감독자에게 문의하세요.',
+  [EvAlertMessageTypes.CONNECT_ERROR]: '인증 오류입니다. 나중에 다시 시도해 주세요.',
+  [EvAlertMessageTypes.UNEXPECTED_AGENT]: '이 RC 계정에 예상치 못한 EV 에이전트 계정이 할당되었습니다. 관리자나 감독자에게 문의하세요.',
+  [EvAlertMessageTypes.INVALID_BROWSER]: '귀하의 브라우저에서는 WebSocket이 지원되지 않습니다.',
+  [EvAlertMessageTypes.CONNECT_TIMEOUT]: '승인 시간이 초과되었습니다. 나중에 다시 시도해 주세요.',
+  [EvAlertMessageTypes.OPEN_SOCKET_ERROR]: '연결 오류입니다. 나중에 다시 시도해 주세요.',
+  [EvAlertMessageTypes.EXISTING_LOGIN_ENGAGED]: '기존 로그인이 사용되었습니다.',
+  [EvAlertMessageTypes.FORCE_LOGOUT]: '세션이 종료되었습니다.',
+  [EvAlertMessageTypes.FAIL_END_CALL]: '통화를 종료하지 못했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.FAIL_HOLD_CALL]: '통화를 보류/보류 해제하지 못했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.FAIL_COLD_TRANSFER]: '통화를 전환하지 못했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.FAIL_WARM_TRANSFER]: '웜 트랜스퍼를 완료하지 못했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.FAIL_DIRECT_TRANSFER]: '직접 전송에 실패했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL_TRANSFER]: '음성 메일로 전환하지 못했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL]: '음성 메일로 보내지 못했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.FAIL_START_WARM_TRANSFER]: '사전 안내 후 전달을 시작하지 못했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.FAIL_CANCEL_WARM_TRANSFER]: '웜 트랜스퍼를 취소하지 못했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.DISPOSITION_SUBMIT_ERROR]: '처분을 제출하지 못했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.DISPOSITION_REQUIRED]: '통화를 종료하기 전에 처분을 선택하세요.',
+  [EvAlertMessageTypes.SESSION_CONFIG_ERROR]: '세션을 구성하지 못했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.SESSION_UPDATE_ERROR]: '세션을 업데이트하지 못했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.WORKING_STATE_ERROR]: '작업 상태를 변경하지 못했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.TRANSFER_ERROR]: '전송에 실패했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.REQUEUE_ERROR]: '통화를 다시 대기열에 추가하지 못했습니다. 다시 시도해 주세요.',
+  [EvAlertMessageTypes.WEBRTC_NOT_SUPPORTED]: 'WebRTC는 귀하의 브라우저에서 지원되지 않습니다.',
+  [EvAlertMessageTypes.MICROPHONE_ACCESS_DENIED]: '마이크 액세스가 거부되었습니다. 마이크 권한을 활성화해 주세요.',
+} as const;

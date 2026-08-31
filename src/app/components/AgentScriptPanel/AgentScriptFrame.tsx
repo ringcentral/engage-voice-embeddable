@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 
 import type {
   AgentScriptHostMessage,
   AgentScriptRendererMessage,
 } from '../../services/EvAgentScript';
 import type { AgentScriptPanelProps } from './AgentScriptPanel.interface';
+import i18n from './i18n';
 
 const connectMessageType = 'ev-agent-script-connect';
 const resultDebounceTime = 250;
@@ -29,6 +31,7 @@ export function AgentScriptFrame({
   getKnowledgeBaseArticles,
   getScriptModel,
 }: AgentScriptFrameProps) {
+  const { t } = useLocale(i18n);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const portRef = useRef<MessagePort | null>(null);
   const resultTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -103,7 +106,7 @@ export function AgentScriptFrame({
             error:
               error instanceof Error
                 ? error.message
-                : 'Unable to load knowledge-base articles',
+                : t('unableToLoadKnowledgeBaseArticles'),
           });
         }
         break;
@@ -130,7 +133,7 @@ export function AgentScriptFrame({
     <iframe
       ref={frameRef}
       src="./agentScript.html"
-      title="Agent Script"
+      title={t('agentScript')}
       data-sign="agentScriptFrame"
       className="block h-full min-h-0 w-full min-w-0 flex-1 border-0 bg-neutral-base"
       onLoad={handleLoad}
