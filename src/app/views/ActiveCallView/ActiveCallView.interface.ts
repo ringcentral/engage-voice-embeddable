@@ -24,6 +24,24 @@ export interface ActiveCallPermissions {
 }
 
 /**
+ * The kind of an end call option, which decides how the call is ended.
+ */
+export type EndCallOptionType = 'everyone' | 'justMe' | 'cancelTransfer';
+
+/**
+ * One way to end a multi-party call, before it is given a translated label.
+ */
+export interface EndCallOptionData {
+  /** Stable id, unique across the transfer legs. */
+  id: string;
+  type: EndCallOptionType;
+  /** The leg to hang up. */
+  sessionId: string;
+  /** Transfer destination to name in the label, for `cancelTransfer` only. */
+  destination?: string;
+}
+
+/**
  * ActiveCallView external props
  */
 export interface ActiveCallViewProps {
@@ -48,6 +66,9 @@ export interface ActiveCallViewUIProps {
   timeStamp: number | null;
   basicInfo: BasicCallInfo | null;
   isMultipleCalls: boolean;
+  /** Parties on the call, including the agent, when it is a conference. */
+  participantCount: number;
+  endCallOptions: EndCallOptionData[];
   isInComingCall: boolean;
   isCallDisposed: boolean;
   allowTransfer: boolean;
@@ -71,6 +92,7 @@ export interface ActiveCallViewUIFunctions {
   onHold: () => void;
   onUnhold: () => void;
   onHangup: () => Promise<void>;
+  onEndCall: (optionId: string) => Promise<void>;
   onRecord: () => Promise<void>;
   onStopRecord: () => Promise<void>;
   onPauseRecord: () => Promise<void>;

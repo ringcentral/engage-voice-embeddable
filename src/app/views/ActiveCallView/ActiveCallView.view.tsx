@@ -22,7 +22,7 @@ import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import { AppFooterNav, AppHeaderNav, AppAnnouncement } from '@ringcentral-integration/micro-core/src/app/components';
 import { PageHeader } from '@ringcentral-integration/next-widgets/components';
 import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
-import { IconButton, Icon, Textarea, CallButton } from '@ringcentral/spring-ui';
+import { Chip, Icon, Textarea, CallButton, Tooltip } from '@ringcentral/spring-ui';
 import { ContactAvatar } from '@ringcentral-integration/micro-contacts/src/app/components';
 import {
   ActiveCallMd,
@@ -36,6 +36,7 @@ import {
   RecordMd,
   StopMd,
   DialpadMd,
+  TeamFilledMd,
 } from '@ringcentral/spring-icon';
 
 import { EvPresence } from '../../services/EvPresence';
@@ -60,10 +61,12 @@ import type { CallControlAction } from '../../components/CallControlGrid';
 import { IvrAlertPanel } from '../../components/IvrAlertPanel';
 import { DialpadPanel } from '../../components/DialpadPanel';
 import { SideWidgetToggleButton } from '../../components/SideWidgetToggleButton';
+import { EndCallDialog } from '../../components/EndCallDialog';
 import type {
   ActiveCallViewProps,
   ActiveCallViewUIProps,
   ActiveCallViewUIFunctions,
+  EndCallOptionData,
 } from './ActiveCallView.interface';
 import sideWidgetI18n from '../SideWidgetView/i18n';
 import i18n, { t as translate } from './i18n';
@@ -232,6 +235,41 @@ class ActiveCallView extends RcViewModule {
     return this.callList.length > 2;
   }
 
+  /**
+   * The ways a conference can be ended, in the order they are offered.
+   *
+   * `callList` is ordered [main call, own leg, ...transfer legs], the same
+   * shape ActiveCallListView renders its rows from.
+   */
+  @computed((that: ActiveCallView) => [that.callList])
+  get endCallOptions(): EndCallOptionData[] {
+    const [mainCall, ownCall, ...transferCalls] = this.callList;
+    if (!mainCall?.session || !ownCall?.session) return [];
+    const options: EndCallOptionData[] = [
+      {
+        id: 'everyone',
+        type: 'everyone',
+        sessionId: mainCall.session.sessionId,
+      },
+      {
+        id: 'justMe',
+        type: 'justMe',
+        sessionId: ownCall.session.sessionId,
+      },
+    ];
+    transferCalls.forEach((call: any) => {
+      const session = call?.session;
+      if (!session) return;
+      options.push({
+        id: `cancelTransfer:${session.sessionId}`,
+        type: 'cancelTransfer',
+        sessionId: session.sessionId,
+        destination: session.transferSessions?.[session.sessionId]?.destination,
+      });
+    });
+    return options;
+  }
+
   @computed((that: ActiveCallView) => [
     that.isMultipleCalls,
     that.callList,
@@ -332,6 +370,39 @@ class ActiveCallView extends RcViewModule {
     if (this.currentCall?.session?.sessionId) {
       await this.evActiveCallControl.hangUp(this.currentCall.session.sessionId);
     }
+  }
+
+  /**
+   * End the call for every party by hanging up the main leg, the same call the
+   * participant list makes from its "Everyone" row.
+   */
+  @delegate('server')
+  async hangupEveryone(sessionId: string) {
+    await this.evActiveCallControl.hangupSession({ sessionId });
+  }
+
+  /**
+   * Drop a transfer target. `hangUp` rather than `hangupSession` so the unhold
+   * a warm transfer armed takes the customer off hold once the consult leg is
+   * gone.
+   */
+  @delegate('server')
+  async hangupTransferLeg(sessionId: string) {
+    await this.evActiveCallControl.hangUp(sessionId);
+  }
+
+  async endCall(optionId: string) {
+    const option = this.endCallOptions.find(({ id }) => id === optionId);
+    if (!option) return;
+    if (option.type === 'everyone') {
+      await this.hangupEveryone(option.sessionId);
+      return;
+    }
+    if (option.type === 'cancelTransfer') {
+      await this.hangupTransferLeg(option.sessionId);
+      return;
+    }
+    await this.hangUp();
   }
 
   @delegate('server')
@@ -604,6 +675,8 @@ class ActiveCallView extends RcViewModule {
       timeStamp: this.evActiveCallControl.timeStamp,
       basicInfo: this.basicInfo,
       isMultipleCalls: this.isMultipleCalls,
+      participantCount: this.callList.length,
+      endCallOptions: this.endCallOptions,
       isInComingCall: this.isInComingCall,
       isCallDisposed,
       allowTransfer: this.allowTransfer,
@@ -625,6 +698,7 @@ class ActiveCallView extends RcViewModule {
       onHold: () => this.hold(),
       onUnhold: () => this.unhold(),
       onHangup: () => this.hangUp(),
+      onEndCall: (optionId) => this.endCall(optionId),
       onRecord: () => this.onRecord(),
       onStopRecord: () => this.onStopRecord(),
       onPauseRecord: () => this.onPauseRecord(),
@@ -724,6 +798,8 @@ class ActiveCallView extends RcViewModule {
       timeStamp,
       basicInfo,
       isMultipleCalls,
+      participantCount,
+      endCallOptions,
       isInComingCall,
       isCallDisposed,
       allowTransfer,
@@ -804,7 +880,49 @@ class ActiveCallView extends RcViewModule {
     );
 
     const showRecordButton = callControlPermissions.allowRecordControl || isDefaultRecord;
-    const isOnActive = isMultipleCalls;
+
+    // Which parties to drop is only a question once the warm transfer added a
+    // leg, so a plain call still hangs up straight from the button.
+    const [isEndCallDialogOpen, setEndCallDialogOpen] = useState(false);
+
+    const endCallDialogOptions = endCallOptions.map(
+      ({ id, type, destination }) => ({
+        id,
+        label: t(type),
+        description:
+          type === 'cancelTransfer'
+            ? formatPhoneNumber({ phoneNumber: destination ?? '' })
+            : undefined,
+      }),
+    );
+
+    const closeEndCallDialog = useCallback(() => {
+      setEndCallDialogOpen(false);
+    }, []);
+
+    // A leg dropping on its own leaves the dialog offering options that no
+    // longer exist.
+    useEffect(() => {
+      if (!isMultipleCalls) {
+        setEndCallDialogOpen(false);
+      }
+    }, [isMultipleCalls]);
+
+    const handleHangupClick = useCallback(() => {
+      if (isMultipleCalls) {
+        setEndCallDialogOpen(true);
+        return;
+      }
+      uiFunctions.onHangup();
+    }, [isMultipleCalls, uiFunctions]);
+
+    const handleEndCallConfirm = useCallback(
+      (optionId: string) => {
+        setEndCallDialogOpen(false);
+        uiFunctions.onEndCall(optionId);
+      },
+      [uiFunctions],
+    );
 
     // Countdown timer for paused recording (replaces record button during pause)
     const [countdownSeconds, setCountdownSeconds] = useState(0);
@@ -930,15 +1048,39 @@ class ActiveCallView extends RcViewModule {
             >
               {basicInfo?.subject}
             </h3>
-            {basicInfo?.followInfos?.filter(Boolean).map((info, idx) => (
+            {/* The number is already in the subject line, and a conference has
+                no single one to name below it. */}
+            {isMultipleCalls ? (
               <p
-                key={idx}
                 className="typography-descriptorMini text-neutral-b2 truncate"
-                data-sign="followInfo"
+                data-sign="conferenceLabel"
               >
-                {info}
+                {t('conferenceCall')}
               </p>
-            ))}
+            ) : (
+              basicInfo?.followInfos?.filter(Boolean).map((info, idx) => (
+                <p
+                  key={idx}
+                  className="typography-descriptorMini text-neutral-b2 truncate"
+                  data-sign="followInfo"
+                >
+                  {info}
+                </p>
+              ))
+            )}
+            {isMultipleCalls && (
+              <Tooltip title={t('viewParticipants')}>
+                <Chip
+                  className="mt-1"
+                  size="medium"
+                  clickable
+                  startSlot={<Icon symbol={TeamFilledMd} size="small" />}
+                  label={t('participants', { count: participantCount })}
+                  onClick={uiFunctions.onActiveCall}
+                  data-sign="participantsBadge"
+                />
+              </Tooltip>
+            )}
           </div>
         </div>
 
@@ -974,29 +1116,23 @@ class ActiveCallView extends RcViewModule {
 
         <div className="flex-shrink-0">
           <div className="flex justify-center py-4">
-            {isOnActive ? (
-              <IconButton
-                symbol={ActiveCallMd}
-                onClick={uiFunctions.onActiveCall}
-                disabled={isInComingCall}
-                size="large"
-                variant="inverted"
-                color="success"
-                data-sign="activeCallButton"
-                TooltipProps={{ title: 'Active Calls' }}
-              />
-            ) : (
-              <CallButton
-                variant="end"
-                onClick={uiFunctions.onHangup}
-                disabled={isInComingCall}
-                size="medium"
-                data-sign="hangupButton"
-                TooltipProps={{ title: t('hangUp') }}
-              />
-            )}
+            <CallButton
+              variant="end"
+              onClick={handleHangupClick}
+              disabled={isInComingCall}
+              size="medium"
+              data-sign="hangupButton"
+              TooltipProps={{ title: t('hangUp') }}
+            />
           </div>
         </div>
+
+        <EndCallDialog
+          open={isEndCallDialogOpen}
+          options={endCallDialogOptions}
+          onClose={closeEndCallDialog}
+          onConfirm={handleEndCallConfirm}
+        />
         <AppFooterNav />
       </div>
     );

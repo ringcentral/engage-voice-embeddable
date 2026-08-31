@@ -26,3 +26,4 @@ export * from './DispositionForm';
 export * from './RecordCountdown';
 export * from './CallHistoryDetailPanel';
 export * from './SideWidgetToggleButton';
+export * from './EndCallDialog';
