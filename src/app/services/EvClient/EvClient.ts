@@ -1231,8 +1231,8 @@ class EvClient extends RcModule {
    *
    * History rows have no live session data, so `segmentId` is the only handle
    * on the recorded disposition/notes for a call this browser never handled.
-   * Errors (including non-404 HTTP failures) resolve to `null` so the call-log
-   * page can leave its loading state.
+   * A 404 still resolves to `null`. Other HTTP failures throw so the call-log
+   * page can hide summary instead of treating the error as an empty activity.
    */
   @delegate('mainClient')
   async getActivityBySegmentId(segmentId: string): Promise<ActivityLog | null> {
@@ -1242,7 +1242,7 @@ class EvClient extends RcModule {
       return records[0] ?? null;
     } catch (error) {
       this.logger.error('getActivityBySegmentId fail', error);
-      return null;
+      throw error;
     }
   }
 

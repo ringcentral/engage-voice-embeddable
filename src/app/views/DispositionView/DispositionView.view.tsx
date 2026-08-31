@@ -51,6 +51,7 @@ import { CallInfoHeader } from '../../components/CallInfoHeader';
 import { DispositionForm } from '../../components/DispositionForm';
 import { SideWidgetToggleButton } from '../../components/SideWidgetToggleButton';
 import { getCallInfos } from '../../utils/getCallInfos';
+import { shouldShowCallLogSummary } from '../../utils/shouldShowCallLogSummary';
 import { shouldShowDispositionSubmitStep } from '../../utils/shouldShowDispositionSubmitStep';
 import type {
   DispositionViewProps,
@@ -172,6 +173,14 @@ class DispositionView extends RcViewModule {
   isHistoryActivityLoading = false;
 
   /**
+   * True after GET /activities succeeded for this history row. False when
+   * the agent lacks contact-management permission, the token refresh fails,
+   * or the request errors — summary is hidden in those cases.
+   */
+  @state
+  isActivitiesAccessible = false;
+
+  /**
    * Guards overlapping history-activity loads when the agent switches rows
    * before the previous request settles.
    */
@@ -215,8 +224,15 @@ class DispositionView extends RcViewModule {
   }
 
   @action
-  private _setHistoryActivity(activity: ActivityLog | null) {
+  private _setHistoryActivity({
+    activity,
+    isAccessible,
+  }: {
+    activity: ActivityLog | null;
+    isAccessible: boolean;
+  }) {
     this.historyActivity = activity;
+    this.isActivitiesAccessible = isAccessible;
     this.historyActivityDraft = {
       agentNotes: activity?.agentNotes || '',
       agentSummary: activity?.agentSummary || activity?.autoSummary || '',
@@ -269,14 +285,15 @@ class DispositionView extends RcViewModule {
     // Bind the row id immediately so pending UI keys off loading, not a stale
     // previous row, and so a failed request still settles this route.
     this._setHistoryActivityLoadState({ rowId, isLoading: true });
+    this._setHistoryActivity({ activity: null, isAccessible: false });
     try {
       if (!this.evAuth.agentPermissions?.allowContactManagement) {
-        this._setHistoryActivity(null);
+        this._setHistoryActivity({ activity: null, isAccessible: false });
         return;
       }
       const { segmentId } = parseHistoryCallId(rowId);
       if (!segmentId) {
-        this._setHistoryActivity(null);
+        this._setHistoryActivity({ activity: null, isAccessible: false });
         return;
       }
       const authorized = await this.evAuth.refreshEvToken();
@@ -284,18 +301,18 @@ class DispositionView extends RcViewModule {
         return;
       }
       if (!authorized) {
-        this._setHistoryActivity(null);
+        this._setHistoryActivity({ activity: null, isAccessible: false });
         return;
       }
       const activity = await this.evClient.getActivityBySegmentId(segmentId);
       if (requestId !== this._historyActivityRequestId) {
         return;
       }
-      this._setHistoryActivity(activity);
+      this._setHistoryActivity({ activity, isAccessible: true });
     } catch (error) {
       this.logger.warn('loadHistoryActivity failed', error);
       if (requestId === this._historyActivityRequestId) {
-        this._setHistoryActivity(null);
+        this._setHistoryActivity({ activity: null, isAccessible: false });
       }
     } finally {
       if (requestId === this._historyActivityRequestId) {
@@ -444,7 +461,13 @@ class DispositionView extends RcViewModule {
   }
 
   get showSummary(): boolean {
-    return this.isSummaryEnabled(this.currentCall);
+    return shouldShowCallLogSummary({
+      isHistoryMode: this.isHistoryMode,
+      isActivitiesAccessible: this.isActivitiesAccessible,
+      hasHistoryActivity: !!this.historyActivity,
+      isServerOnlyHistoryCall: this.isServerOnlyHistoryCall,
+      isSessionSummaryEnabled: this.isSummaryEnabled(this.currentCall),
+    });
   }
 
   private getSummarySegmentId(call?: {
@@ -983,7 +1006,7 @@ class DispositionView extends RcViewModule {
                   validated={{ dispositionId: true, notes: true }}
                   required={{ notes: false }}
                   hideCallNote={hideCallNote}
-                  showSummary
+                  showSummary={showSummary}
                   summary={historyActivityDraft.agentSummary}
                   isSummaryFinal
                   isSummaryLoading={false}
