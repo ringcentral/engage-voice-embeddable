@@ -17,6 +17,14 @@ export default {
   pauseRecord: 'Pause Rec',
   restartTimer: 'Restart',
 
+  // Conference / end call options
+  conferenceCall: 'Conference call',
+  participants: '{count} participants',
+  viewParticipants: 'View participants',
+  everyone: 'Everyone',
+  justMe: 'Just me',
+  cancelTransfer: 'Cancel transfer',
+
   // Recording
   recordPaused: 'Call recording paused.',
   recordResume: 'Call recording resumed.',
