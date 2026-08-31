@@ -21,7 +21,7 @@ import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 import { AppAnnouncement, AppFooterNav, AppHeaderNav } from '@ringcentral-integration/micro-core/src/app/components';
 import { PageHeader } from '@ringcentral-integration/next-widgets/components';
 import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
-import { Announcement, Button, Icon } from '@ringcentral/spring-ui';
+import { Announcement, Button, CircularProgressIndicator, Icon } from '@ringcentral/spring-ui';
 import { CheckMd } from '@ringcentral/spring-icon';
 
 import { EvPresence } from '../../services/EvPresence';
@@ -34,11 +34,14 @@ import { EvAgentScript } from '../../services/EvAgentScript';
 import { EvActiveCallControl } from '../../services/EvActiveCallControl';
 import { ThirdParty } from '../../services/ThirdParty';
 import { EvClient } from '../../services/EvClient';
+import type { ActivityLog } from '../../services/EvClient/interfaces';
+import { EvCallHistory } from '../../services/EvCallHistory';
+import { parseHistoryCallId } from '../../services/EvCallHistory/formatHistoryCall';
 import { SideWidget } from '../../services/SideWidget';
 import { dialoutStatuses } from '../../../enums';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
 import { getClockByTimestamp } from '../../../lib/getClockByTimestamp';
-import { formatEvCallForConnected } from '../../../lib/formatEvCall';
+import { formatEvCallForConnected, formatEvCallFromHistory } from '../../../lib/formatEvCall';
 import { getCallAni, getCallDnis } from '../../../lib/getEvCallNumbers';
 import type {
   EvCallDispositionData,
@@ -48,6 +51,7 @@ import { CallInfoHeader } from '../../components/CallInfoHeader';
 import { DispositionForm } from '../../components/DispositionForm';
 import { SideWidgetToggleButton } from '../../components/SideWidgetToggleButton';
 import { getCallInfos } from '../../utils/getCallInfos';
+import { shouldShowCallLogSummary } from '../../utils/shouldShowCallLogSummary';
 import { shouldShowDispositionSubmitStep } from '../../utils/shouldShowDispositionSubmitStep';
 import type {
   DispositionViewProps,
@@ -56,6 +60,12 @@ import type {
 } from './DispositionView.interface';
 import sideWidgetI18n from '../SideWidgetView/i18n';
 import i18n, { t as translate } from './i18n';
+
+/**
+ * Stands in for a disposition id on a history row, whose recorded disposition
+ * is displayed but not selectable.
+ */
+const RECORDED_DISPOSITION_ID = '__recorded__';
 
 /**
  * Save status enum
@@ -103,6 +113,7 @@ class DispositionView extends RcViewModule {
     private evActiveCallControl: EvActiveCallControl,
     private thirdParty: ThirdParty,
     private evClient: EvClient,
+    private evCallHistory: EvCallHistory,
     private sideWidget: SideWidget,
     private router: RouterPlugin,
     private toast: Toast,
@@ -141,6 +152,52 @@ class DispositionView extends RcViewModule {
   @state
   viewCallId = '';
 
+  /**
+   * The RingCX activity behind a history row.
+   *
+   * History rows carry no live session, so for a call this browser never
+   * handled the activity record is the only source of what was dispositioned.
+   */
+  @state
+  historyActivity: ActivityLog | null = null;
+
+  /**
+   * The history row id (`segmentId$$uii`) whose activity is currently loaded.
+   * Compared to the route id so the UI can show a spinner before the fetch
+   * effect runs, instead of flashing "No active call".
+   */
+  @state
+  historyActivityRowId = '';
+
+  @state
+  isHistoryActivityLoading = false;
+
+  /**
+   * True after GET /activities succeeded for this history row. False when
+   * the agent lacks contact-management permission, the token refresh fails,
+   * or the request errors — summary is hidden in those cases.
+   */
+  @state
+  isActivitiesAccessible = false;
+
+  /**
+   * Guards overlapping history-activity loads when the agent switches rows
+   * before the previous request settles.
+   */
+  private _historyActivityRequestId = 0;
+
+  /**
+   * Edits to a server-only history row.
+   *
+   * Held separately from `EvCallDisposition`, which is keyed by the local call
+   * id these rows do not have.
+   */
+  @state
+  historyActivityDraft: { agentNotes: string; agentSummary: string } = {
+    agentNotes: '',
+    agentSummary: '',
+  };
+
   @action
   setSaveStatus(status: SaveStatus) {
     this.saveStatus = status;
@@ -167,6 +224,104 @@ class DispositionView extends RcViewModule {
   }
 
   @action
+  private _setHistoryActivity({
+    activity,
+    isAccessible,
+  }: {
+    activity: ActivityLog | null;
+    isAccessible: boolean;
+  }) {
+    this.historyActivity = activity;
+    this.isActivitiesAccessible = isAccessible;
+    this.historyActivityDraft = {
+      agentNotes: activity?.agentNotes || '',
+      agentSummary: activity?.agentSummary || activity?.autoSummary || '',
+    };
+  }
+
+  @action
+  private _setHistoryActivityLoadState({
+    rowId,
+    isLoading,
+  }: {
+    rowId?: string;
+    isLoading: boolean;
+  }) {
+    this.isHistoryActivityLoading = isLoading;
+    if (rowId !== undefined) {
+      this.historyActivityRowId = rowId;
+    }
+  }
+
+  @action
+  private _setHistoryActivityDraft(
+    field: 'agentNotes' | 'agentSummary',
+    value: string,
+  ) {
+    this.historyActivityDraft = { ...this.historyActivityDraft, [field]: value };
+  }
+
+  @delegate('server')
+  async updateHistoryActivityDraft(
+    field: 'agentNotes' | 'agentSummary',
+    value: string,
+  ): Promise<void> {
+    this._setHistoryActivityDraft(field, value);
+  }
+
+  /**
+   * Load the activity for a history row, keyed by its segment id.
+   *
+   * Requires `allowContactManagement` (same gate eag uses for CM / activities).
+   * Runs for every history row, including ones with local data, so the form
+   * always reflects what the server actually recorded. Always clears the
+   * loading flag — including on 404 / permission miss / network errors — so
+   * the call-log page does not spin forever.
+   */
+  @delegate('server')
+  async loadHistoryActivity(rowId: string): Promise<void> {
+    const requestId = ++this._historyActivityRequestId;
+    this._setViewCallId(rowId);
+    // Bind the row id immediately so pending UI keys off loading, not a stale
+    // previous row, and so a failed request still settles this route.
+    this._setHistoryActivityLoadState({ rowId, isLoading: true });
+    this._setHistoryActivity({ activity: null, isAccessible: false });
+    try {
+      if (!this.evAuth.agentPermissions?.allowContactManagement) {
+        this._setHistoryActivity({ activity: null, isAccessible: false });
+        return;
+      }
+      const { segmentId } = parseHistoryCallId(rowId);
+      if (!segmentId) {
+        this._setHistoryActivity({ activity: null, isAccessible: false });
+        return;
+      }
+      const authorized = await this.evAuth.refreshEvToken();
+      if (requestId !== this._historyActivityRequestId) {
+        return;
+      }
+      if (!authorized) {
+        this._setHistoryActivity({ activity: null, isAccessible: false });
+        return;
+      }
+      const activity = await this.evClient.getActivityBySegmentId(segmentId);
+      if (requestId !== this._historyActivityRequestId) {
+        return;
+      }
+      this._setHistoryActivity({ activity, isAccessible: true });
+    } catch (error) {
+      this.logger.warn('loadHistoryActivity failed', error);
+      if (requestId === this._historyActivityRequestId) {
+        this._setHistoryActivity({ activity: null, isAccessible: false });
+      }
+    } finally {
+      if (requestId === this._historyActivityRequestId) {
+        this._setHistoryActivityLoadState({ rowId, isLoading: false });
+      }
+    }
+  }
+
+  @action
   private _reset() {
     this.saveStatus = SaveStatus.SUBMIT;
     this.validated = { dispositionId: true, notes: true };
@@ -188,8 +343,51 @@ class DispositionView extends RcViewModule {
     return this.router.currentPath?.startsWith('/history/') ?? false;
   }
 
+  /**
+   * History routes carry the server row id (`<segmentId>$$<uii>`), which is a
+   * different id space from the local `<uii>$<sessionId>` keys that
+   * `EvCallDisposition`, `EvPresence` and the `rc-ev-logCall` adapter contract
+   * all use. Resolve it back to the local id so none of them need to change;
+   * it is empty for a call this browser never handled.
+   */
   get callId(): string {
+    if (this.isHistoryMode && this.viewCallId) {
+      const { segmentId } = parseHistoryCallId(this.viewCallId);
+      return this.evPresence.getCallIdBySegmentId(segmentId) || '';
+    }
     return this.viewCallId || this.evCall.activityCallId;
+  }
+
+  /** A history row that only exists server-side, with no local call data. */
+  get isServerOnlyHistoryCall(): boolean {
+    return this.isHistoryMode && !this.callId;
+  }
+
+  /**
+   * Server history row for the open call-log route.
+   *
+   * Used when the activities API is unavailable or returns nothing, so the
+   * form can still show the disposition recorded on the history page.
+   */
+  get historyCall() {
+    if (!this.isHistoryMode || !this.viewCallId) {
+      return undefined;
+    }
+    return this.evCallHistory.getCallById(this.viewCallId);
+  }
+
+  /**
+   * Disposition label for a server-only history call-log form.
+   *
+   * Prefers the activity record when present; otherwise the history row's
+   * disposition field.
+   */
+  get historyDispositionName(): string {
+    return (
+      this.historyActivity?.dispositionName ||
+      this.historyCall?.disposition ||
+      ''
+    );
   }
 
   get hasCurrentCall(): boolean {
@@ -263,7 +461,13 @@ class DispositionView extends RcViewModule {
   }
 
   get showSummary(): boolean {
-    return this.isSummaryEnabled(this.currentCall);
+    return shouldShowCallLogSummary({
+      isHistoryMode: this.isHistoryMode,
+      isActivitiesAccessible: this.isActivitiesAccessible,
+      hasHistoryActivity: !!this.historyActivity,
+      isServerOnlyHistoryCall: this.isServerOnlyHistoryCall,
+      isSessionSummaryEnabled: this.isSummaryEnabled(this.currentCall),
+    });
   }
 
   private getSummarySegmentId(call?: {
@@ -276,7 +480,11 @@ class DispositionView extends RcViewModule {
     return call.session?.segmentId || call.segmentContext?.segmentId || '';
   }
 
-  private isSummaryEnabled(call?: { session?: { summary?: boolean } } | null): boolean {
+  // `summary` arrives from the agent library as a coerced flag: a real boolean
+  // when the wire value is TRUE/FALSE, and '' when the field is absent.
+  private isSummaryEnabled(
+    call?: { session?: { summary?: boolean | string } } | null,
+  ): boolean {
     if (!call) {
       return false;
     }
@@ -453,7 +661,72 @@ class DispositionView extends RcViewModule {
     return formatEvCallForConnected(call as any);
   }
 
+  /**
+   * Save a history row that only exists server-side.
+   *
+   * Updates the RingCX activity when one was loaded; always emits
+   * `rc-ev-logCall` with the same `{ call, task, sessionId }` shape local
+   * dispositions use so CRM logging still works when activities are
+   * unavailable. Top-level `sessionId` is the history `segmentId`.
+   */
+  private async doUpdateHistoryActivity() {
+    const activityId = this.historyActivity?.id;
+    if (
+      activityId &&
+      this.evAuth.agentPermissions?.allowContactManagement
+    ) {
+      const authorized = await this.evAuth.refreshEvToken();
+      if (authorized) {
+        await this.evClient.updateActivity(activityId, {
+          // The disposition itself is not editable here: the pick list only
+          // exists on the live call payload, which a server-only row has no
+          // access to.
+          dispositionName: this.historyDispositionName,
+          agentSummary: this.historyActivityDraft.agentSummary,
+          agentNotes: this.historyActivityDraft.agentNotes,
+        });
+      }
+    } else if (!activityId) {
+      this.logger.info(
+        'no activity to update; saving call log via third party only',
+      );
+    }
+    await this.logServerOnlyHistoryCall();
+  }
+
+  /**
+   * Emit `rc-ev-logCall` for a history row this browser never handled.
+   */
+  private async logServerOnlyHistoryCall(): Promise<void> {
+    const historyCall = this.historyCall;
+    const call = historyCall
+      ? formatEvCallFromHistory(historyCall, this.evAuth.agentId)
+      : null;
+    if (!call || !historyCall?.uii || !historyCall.segmentId) {
+      return;
+    }
+    try {
+      await this.thirdParty.logCall({
+        call,
+        task: {
+          dispositionId: this.historyDispositionName || null,
+          notes: this.historyActivityDraft.agentNotes,
+          summary: this.historyActivityDraft.agentSummary,
+        },
+        // Prefer the local call id when present so CRM match keys align with
+        // active-call logging; fall back to segmentId for server-only rows.
+        sessionId: historyCall.localCallId || historyCall.segmentId,
+      });
+    } catch (e) {
+      this.logger.error('thirdParty logCall error~~', e);
+    }
+  }
+
   private async doDisposeCall() {
+    if (this.isServerOnlyHistoryCall) {
+      await this.doUpdateHistoryActivity();
+      return;
+    }
     const call = this.currentCall;
     const disposition = this.evCallDisposition.getDisposition(this.callId);
     try {
@@ -509,6 +782,9 @@ class DispositionView extends RcViewModule {
     try {
       this.setSaveStatus(SaveStatus.SAVING);
       await this.doDisposeCall();
+      if (!this.isHistoryMode) {
+        void this.evCallHistory.refresh();
+      }
       this.setSaveStatus(SaveStatus.SAVED);
       this.toast.success({ message: translate('callDispositionSuccess') });
       await this.evWorkingState.setIsPendingDisposition(false);
@@ -553,6 +829,13 @@ class DispositionView extends RcViewModule {
       isInbound: this.isInbound,
       isDisposed: this.evCallDisposition.isDisposed(callId),
       isHistoryMode: this.isHistoryMode,
+      isServerOnlyHistoryCall: this.isServerOnlyHistoryCall,
+      isHistoryActivityLoading: this.isHistoryActivityLoading,
+      historyActivityRowId: this.historyActivityRowId,
+      historyActivity: this.historyActivity,
+      historyActivityDraft: this.historyActivityDraft,
+      historyDispositionName: this.historyDispositionName,
+      hasHistoryCall: !!this.historyCall,
       showSubmitStep: this.showSubmitStep,
       hideCallNote: this.dispositionViewOptions?.hideCallNote ?? false,
       showSummary: this.showSummary,
@@ -569,6 +852,11 @@ class DispositionView extends RcViewModule {
   getUIFunctions(): UIFunctions<DispositionViewUIFunctions> {
     return {
       setViewCallId: (id: string) => this.setViewCallId(id),
+      loadHistoryActivity: (id: string) => this.loadHistoryActivity(id),
+      onUpdateHistoryActivityDraft: (
+        field: 'agentNotes' | 'agentSummary',
+        value: string,
+      ) => this.updateHistoryActivityDraft(field, value),
       onBack: () => this.goBack(),
       onUpdateCallLog: (field, value) => this.onUpdateCallLog(field, value),
       onUpdateSummary: (value) => this.onUpdateSummary(value),
@@ -608,6 +896,13 @@ class DispositionView extends RcViewModule {
       isSummaryEdited,
       sideWidgets,
       sideWidgetVisible,
+      isServerOnlyHistoryCall,
+      isHistoryActivityLoading,
+      historyActivityRowId,
+      historyActivity,
+      historyActivityDraft,
+      historyDispositionName,
+      hasHistoryCall,
     } = uiProps;
 
     // The agent script stays available until the disposition is saved, so this
@@ -634,6 +929,14 @@ class DispositionView extends RcViewModule {
       void this.reset();
     }, [params.id]);
 
+    // A history row's recorded disposition lives on its activity record, which
+    // is the only source for a call this browser never handled.
+    useEffect(() => {
+      if (isHistoryMode && params.id) {
+        void uiFunctions.loadHistoryActivity(params.id);
+      }
+    }, [params.id, isHistoryMode]);
+
     useEffect(() => {
       const callId = params.id || this.callId;
       const canRequestSummary = !!callId &&
@@ -651,6 +954,112 @@ class DispositionView extends RcViewModule {
     const pageTitle = isHistoryMode
       ? (params.method === 'create' ? t('createCallLog') : t('updateCallLog'))
       : t('callLog');
+    const isHistoryActivityPending =
+      isHistoryMode &&
+      !!params.id &&
+      (historyActivityRowId !== params.id || isHistoryActivityLoading);
+
+    // A history row this browser never handled: there is no local call to
+    // disposition, but the RingCX activity still holds what was recorded.
+    if (!currentCall && (isServerOnlyHistoryCall || isHistoryActivityPending)) {
+      return (
+        <div className="flex flex-col h-full bg-neutral-base overflow-hidden">
+          <AppHeaderNav override resetImmediately>
+            <PageHeader
+              onBackClick={uiFunctions.onBack}
+              endAdornment={sideWidgetToggle}
+            >
+              {pageTitle}
+            </PageHeader>
+          </AppHeaderNav>
+          {isHistoryActivityPending ? (
+            <div
+              className="flex-1 flex items-center justify-center"
+              data-sign="historyActivityLoading"
+            >
+              <CircularProgressIndicator size="medium" />
+            </div>
+          ) : hasHistoryCall || historyActivity ? (
+            <>
+              <div className="flex-1 p-4 overflow-auto">
+                <DispositionForm
+                  // A single synthetic option renders the recorded disposition
+                  // in the usual place. The real pick list only exists on a
+                  // live call payload, so it stays disabled here. Falls back
+                  // to the history row when activities are unavailable.
+                  dispositionPickList={
+                    historyDispositionName
+                      ? [
+                          {
+                            dispositionId: RECORDED_DISPOSITION_ID,
+                            disposition: historyDispositionName,
+                          },
+                        ]
+                      : []
+                  }
+                  dispositionData={{
+                    dispositionId: historyDispositionName
+                      ? RECORDED_DISPOSITION_ID
+                      : undefined,
+                    notes: historyActivityDraft.agentNotes,
+                  }}
+                  validated={{ dispositionId: true, notes: true }}
+                  required={{ notes: false }}
+                  hideCallNote={hideCallNote}
+                  showSummary={showSummary}
+                  summary={historyActivityDraft.agentSummary}
+                  isSummaryFinal
+                  isSummaryLoading={false}
+                  disableDispositionSelect
+                  onFieldChange={(field, value) => {
+                    if (field === 'notes') {
+                      uiFunctions.onUpdateHistoryActivityDraft(
+                        'agentNotes',
+                        value,
+                      );
+                    }
+                  }}
+                  onSummaryChange={(value) =>
+                    uiFunctions.onUpdateHistoryActivityDraft(
+                      'agentSummary',
+                      value,
+                    )
+                  }
+                  selectPlaceholder={t('pleaseSelect')}
+                  dispositionErrorText={t('dispositionError')}
+                  notesErrorText={t('notesRequired')}
+                  dispositionLabel={t('disposition')}
+                  notesLabel={t('notes')}
+                  notesPlaceholder={t('enterNotes')}
+                  summaryLabel={t('summary')}
+                  summaryPlaceholder={t('summaryPlaceholder')}
+                  summaryLoadingText={t('summaryLoading')}
+                />
+              </div>
+              <div className="flex-shrink-0 p-4 border-t border-neutral-b4 shadow-[0_-2px_5px_0_rgba(0,0,0,0.15)]">
+                <Button
+                  data-sign="submitButton"
+                  fullWidth
+                  disabled={saveStatus === SaveStatus.SAVING}
+                  onClick={() => void uiFunctions.disposeCall()}
+                >
+                  {saveStatus === SaveStatus.SAVED ? (
+                    <Icon symbol={CheckMd} size="medium" />
+                  ) : (
+                    t('save')
+                  )}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-neutral-b2">
+              <p className="typography-mainText">{t('callLogNotFound')}</p>
+            </div>
+          )}
+          <AppFooterNav />
+        </div>
+      );
+    }
 
     if (!currentCall) {
       return (

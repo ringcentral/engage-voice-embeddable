@@ -8,10 +8,10 @@ import {
   RouterPlugin,
   state,
   useConnector,
+  watch,
 } from '@ringcentral-integration/next-core';
 import type { UIFunctions, UIProps } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
-import { CallsListPage } from '@ringcentral-integration/micro-phone/src/app/views/CallsListViewSpring/CallsListPage';
 import type { ViewCallsFilterType } from '@ringcentral-integration/micro-phone/src/app/views/CallsListViewSpring/CallsList.view.interface';
 import type { HistoryAction } from '@ringcentral-integration/next-widgets/components/ActionMenuList/useHistoryActionButtons';
 import {
@@ -24,10 +24,14 @@ import type { StateSnapshot } from 'react-virtuoso';
 import dayjs from 'dayjs';
 
 import { EvCallHistory } from '../../services/EvCallHistory';
+import { EvAuth } from '../../services/EvAuth';
+import { EvCall } from '../../services/EvCall';
 import { DispositionView } from '../DispositionView';
 import { callDirection } from '../../../enums';
 import { ContactAvatar } from '../../components/ContactAvatar';
+import { CallHistoryList } from '../../components/CallHistoryList';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
+import { canDialHistoryCall } from '../../services/EvCallHistory/can-dial-history-call';
 import type { FormattedCall } from '../../services/EvCallHistory/EvCallHistory.interface';
 import type {
   CallHistoryViewOptions,
@@ -35,6 +39,9 @@ import type {
   CallHistoryViewUIFunctions,
 } from './CallHistoryView.interface';
 import i18n from './i18n';
+
+/** Rows shown before the first scroll; further rows come from the loaded page. */
+const DISPLAY_BATCH_SIZE = 20;
 
 /**
  * CallHistoryView module - Call history display
@@ -46,6 +53,8 @@ import i18n from './i18n';
 class CallHistoryView extends RcViewModule {
   constructor(
     private evCallHistory: EvCallHistory,
+    private evAuth: EvAuth,
+    private evCall: EvCall,
     private dispositionView: DispositionView,
     private _router: RouterPlugin,
     @optional('CallHistoryViewOptions')
@@ -54,18 +63,84 @@ class CallHistoryView extends RcViewModule {
     super();
   }
 
+  override onInitOnce() {
+    // Match only revealed rows. Depend on stable query-key strings — not the
+    // `displayedCalls` array — so enriching from match results does not
+    // re-trigger matching.
+    watch(
+      this,
+      () =>
+        [
+          this.displayedContactMatchQueryKey,
+          this.evCallHistory.isContactMatcherEnabled,
+        ] as const,
+      ([queryKey, isEnabled]) => {
+        if (isEnabled && queryKey) {
+          this.evCallHistory.matchCalls(this.displayedCalls);
+        }
+      },
+      { multiple: true },
+    );
+    watch(
+      this,
+      () =>
+        [
+          this.displayedActivityMatchQueryKey,
+          this.evCallHistory.isCallLogMatcherEnabled,
+        ] as const,
+      ([queryKey, isEnabled]) => {
+        if (isEnabled && queryKey) {
+          this.evCallHistory.matchCallLogs(this.displayedCalls);
+        }
+      },
+      { multiple: true },
+    );
+  }
+
+  /**
+   * Sorted unique ContactMatcher keys for the currently revealed rows.
+   */
+  @computed((that: CallHistoryView) => [that.displayedCalls])
+  get displayedContactMatchQueryKey(): string {
+    const queries = this.displayedCalls
+      .map((call) => this.evCallHistory.getCallContactMatchIdentify(call))
+      .filter((query): query is string => !!query);
+    return Array.from(new Set(queries)).sort().join('|');
+  }
+
+  /**
+   * Sorted unique ActivityMatcher keys for the currently revealed rows.
+   */
+  @computed((that: CallHistoryView) => [that.displayedCalls])
+  get displayedActivityMatchQueryKey(): string {
+    const queries = this.displayedCalls.flatMap((call) =>
+      this.evCallHistory.getCallActivityMatchQueries(call),
+    );
+    return Array.from(new Set(queries)).sort().join('|');
+  }
+
   @state
   viewCallsFilter: ViewCallsFilterType = 'all';
 
   @state
   lastPositions: Record<string, StateSnapshot | undefined> = {};
 
+  /** How many filtered rows the list currently exposes. */
+  @state
+  visibleCount = DISPLAY_BATCH_SIZE;
+
   @action
   private _setViewCallsFilter(val: ViewCallsFilterType) {
     this.viewCallsFilter = val;
   }
 
+  @action
+  private _setVisibleCount(count: number) {
+    this.visibleCount = count;
+  }
+
   setViewCallsFilter = (val: ViewCallsFilterType) => {
+    this._setVisibleCount(DISPLAY_BATCH_SIZE);
     this._setViewCallsFilter(val);
   };
 
@@ -84,6 +159,7 @@ class CallHistoryView extends RcViewModule {
    */
   @computed((that: CallHistoryView) => [
     that.evCallHistory.latestCalls,
+    that.evCallHistory.formattedCalls,
     that.dispositionView.callStatus,
     that.dispositionView.callId,
   ])
@@ -91,7 +167,9 @@ class CallHistoryView extends RcViewModule {
     const calls = this.evCallHistory.latestCalls ?? [];
     if (calls.length === 0) return calls;
     const { callStatus, callId } = this.dispositionView;
-    if (callStatus === 'callEnd' && callId && calls[0]?.id === callId) {
+    // `DispositionView.callId` is a local `${uii}$${sessionId}` id, so it must
+    // be compared against the row's resolved local id, not its history row id.
+    if (callStatus === 'callEnd' && callId && calls[0]?.localCallId === callId) {
       const currentCall = this.dispositionView.currentCall;
       if (currentCall) {
         const firstCall = { ...calls[0] };
@@ -131,6 +209,42 @@ class CallHistoryView extends RcViewModule {
       default:
         return calls;
     }
+  }
+
+  @computed((that: CallHistoryView) => [that.viewCalls, that.visibleCount])
+  get displayedCalls(): FormattedCall[] {
+    return this.viewCalls.slice(0, this.visibleCount);
+  }
+
+  get hasMoreToShow(): boolean {
+    return this.visibleCount < this.viewCalls.length;
+  }
+
+  private _revealNextBatch(): void {
+    this._setVisibleCount(
+      Math.min(this.visibleCount + DISPLAY_BATCH_SIZE, this.viewCalls.length),
+    );
+  }
+
+  /** Reveal the next local batch. Does not fetch from the server. */
+  loadMore(): void {
+    this._revealNextBatch();
+  }
+
+  async dialHistoryCall(phoneNumber: string): Promise<void> {
+    if (
+      !canDialHistoryCall({
+        phoneNumber,
+        allowHistoricalDialing:
+          this.evAuth.agentPermissions?.allowHistoricalDialing,
+        isIdle: this.evCall.isIdle,
+      })
+    ) {
+      return;
+    }
+    await this.evCall.dialout(phoneNumber, {
+      skipParse: phoneNumber.endsWith('@RC_EXT'),
+    });
   }
 
   /**
@@ -241,14 +355,26 @@ class CallHistoryView extends RcViewModule {
         </span>
       );
     }, [call.isDisposed, t]);
+    const canDial =
+      !!this.evAuth.agentPermissions?.allowHistoricalDialing &&
+      !!call.dialableNumber;
+    const isDialDisabled = !this.evCall.isIdle;
     const actions: HistoryAction[] = useMemo(() => {
-      return [
-        {
-          type: call.isDisposed ? 'viewLog' : 'createLog',
-          label: call.isDisposed ? t('updateCallLog') : t('createCallLog'),
-        },
-      ];
-    }, [call.isDisposed, t]);
+      const nextActions: HistoryAction[] = [];
+      // Keep dial inside ActionMenuList's hover tray so it is not covered by
+      // the absolutely positioned create/update-log button.
+      if (canDial) {
+        nextActions.push({
+          type: 'call',
+          disabled: isDialDisabled,
+        });
+      }
+      nextActions.push({
+        type: call.isDisposed ? 'viewLog' : 'createLog',
+        label: call.isDisposed ? t('updateCallLog') : t('createCallLog'),
+      });
+      return nextActions;
+    }, [call.isDisposed, canDial, isDialDisabled, t]);
     const info = {
       Avatar,
       DisplayName,
@@ -285,6 +411,11 @@ class CallHistoryView extends RcViewModule {
   ) => {
     return async (actionType: string) => {
       switch (actionType) {
+        case 'call':
+          if (call.dialableNumber) {
+            void this.dialHistoryCall(call.dialableNumber);
+          }
+          break;
         case 'createLog':
           this.goToCallLogPage(call.id, 'create');
           break;
@@ -306,8 +437,14 @@ class CallHistoryView extends RcViewModule {
   getUIProps(t: (key: string) => string): UIProps<CallHistoryViewUIProps> {
     const index = this.viewCallsFilter || 'undefined';
     return {
-      viewCalls: this.viewCalls,
+      viewCalls: this.displayedCalls,
       searchInput: this.evCallHistory.searchInput,
+      isLoading: this.evCallHistory.isLoading,
+      isLoadingMore: false,
+      hasMore: this.hasMoreToShow,
+      error: this.evCallHistory.error,
+      canDial: !!this.evAuth.agentPermissions?.allowHistoricalDialing,
+      isDialDisabled: !this.evCall.isIdle,
       viewCallsFilter: this.viewCallsFilter,
       lastPosition: this.lastPositions[index],
       viewCallsFilterSelections: [
@@ -324,6 +461,7 @@ class CallHistoryView extends RcViewModule {
   getUIFunctions(): UIFunctions<CallHistoryViewUIFunctions> {
     return {
       onSearchInputChange: (value: string) => {
+        this._setVisibleCount(DISPLAY_BATCH_SIZE);
         this.evCallHistory.updateSearchInput(value);
         this.evCallHistory.debouncedSearch();
       },
@@ -331,6 +469,12 @@ class CallHistoryView extends RcViewModule {
       setLastPosition: this.setLastPosition,
       onFocus: () => {
         this.evCallHistory.updateLastCheckTimeStamp();
+      },
+      onLoadMore: () => {
+        this.loadMore();
+      },
+      onRetry: () => {
+        void this.evCallHistory.retry();
       },
       useCallHistoryItemInfo: this.useCallHistoryItemInfo as any,
       useActionsHandler: this.useActionsHandler as any,
@@ -347,11 +491,15 @@ class CallHistoryView extends RcViewModule {
       viewCallsFilter,
       lastPosition,
       viewCallsFilterSelections,
+      isLoading,
+      isLoadingMore,
+      hasMore,
+      error,
     } = useConnector(() => this.getUIProps(t));
 
     return (
       <div className="flex flex-col h-full bg-neutral-base">
-        <CallsListPage
+        <CallHistoryList
           calls={viewCalls as any}
           searchInput={searchInput}
           onSearchInputChange={uiFunctions.onSearchInputChange}
@@ -363,6 +511,12 @@ class CallHistoryView extends RcViewModule {
           setLastPosition={uiFunctions.setLastPosition}
           lastPosition={lastPosition}
           onFocus={uiFunctions.onFocus}
+          isLoading={isLoading}
+          isLoadingMore={isLoadingMore}
+          hasMore={hasMore}
+          error={error}
+          onLoadMore={uiFunctions.onLoadMore}
+          onRetry={uiFunctions.onRetry}
         />
       </div>
     );

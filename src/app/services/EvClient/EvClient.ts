@@ -16,6 +16,10 @@ import { EvTypeError } from '../../../lib/EvTypeError';
 import { _encodeSymbol } from '../../../lib/constant';
 import { evStatus, EvCallbackTypes } from './enums';
 import type {
+  ActivityDispositionInfo,
+  ActivityLog,
+  AgentHistoryParams,
+  AgentHistoryResponse,
   EvACKResponse,
   EvAddSessionNotification,
   EvAgentConfig,
@@ -1152,46 +1156,179 @@ class EvClient extends RcModule {
     };
   }
 
+  /**
+   * Shared plumbing for the contact-management activity API: resolves the
+   * account scope and the auth header, both of which only exist on the main
+   * client.
+   *
+   * Returns `undefined` when there is no RC account scope to query against.
+   * Callers should also gate on `allowContactManagement` before invoking.
+   */
+  private _getActivityRequestContext():
+    | { baseUrl: string; headers: Record<string, string> }
+    | undefined {
+    const fullUserDetails = this.getFullUserDetails();
+    const rcAccountId = fullUserDetails?.rcAccountId;
+    if (!rcAccountId) {
+      return undefined;
+    }
+    const rcxSubAccountId = this._sdk.getAgentSettings().accountId;
+    const authenticateRequest = this._sdk.getAuthenticateRequest();
+    return {
+      baseUrl: `${this._options.authHost}/api/cm/v1/accounts/${rcAccountId}/rcxSubaccounts/${rcxSubAccountId}/activities`,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${authenticateRequest.engageAccessToken}`,
+      },
+    };
+  }
+
+  /**
+   * Look up activities by any of the identifiers the API accepts
+   * (`dialogId`, `segmentId`, `contactId`, ...).
+   *
+   * A 404 is treated as "no activity" rather than a hard failure so history
+   * call-log UI can settle on the empty state instead of spinning forever.
+   */
+  private async _fetchActivities(
+    query: Record<string, string>,
+  ): Promise<ActivityLog[]> {
+    const context = this._getActivityRequestContext();
+    if (!context) {
+      return [];
+    }
+    const searchParams = new URLSearchParams({
+      ...query,
+      withDisplayInfo: 'false',
+    });
+    const response = await fetch(`${context.baseUrl}?${searchParams.toString()}`, {
+      headers: context.headers,
+    });
+    if (response.status === 404) {
+      return [];
+    }
+    if (!response.ok) {
+      throw new Error(`Failed to get activities: ${response.status}`);
+    }
+    const activities = await response.json();
+    return activities?.records ?? [];
+  }
+
+  @delegate('mainClient')
+  async getActivityByDialogId(dialogId: string): Promise<ActivityLog | null> {
+    if (!dialogId) return null;
+    try {
+      const records = await this._fetchActivities({ dialogId });
+      return records[0] ?? null;
+    } catch (error) {
+      this.logger.error('getActivityByDialogId fail', error);
+      return null;
+    }
+  }
+
+  /**
+   * Look up the activity behind a call-history row.
+   *
+   * History rows have no live session data, so `segmentId` is the only handle
+   * on the recorded disposition/notes for a call this browser never handled.
+   * A 404 still resolves to `null`. Other HTTP failures throw so the call-log
+   * page can hide summary instead of treating the error as an empty activity.
+   */
+  @delegate('mainClient')
+  async getActivityBySegmentId(segmentId: string): Promise<ActivityLog | null> {
+    if (!segmentId) return null;
+    try {
+      const records = await this._fetchActivities({ segmentId });
+      return records[0] ?? null;
+    } catch (error) {
+      this.logger.error('getActivityBySegmentId fail', error);
+      throw error;
+    }
+  }
+
+  @delegate('mainClient')
+  async updateActivity(
+    activityId: string,
+    params: ActivityDispositionInfo,
+  ): Promise<void> {
+    const context = this._getActivityRequestContext();
+    if (!context || !activityId) {
+      return;
+    }
+    try {
+      const response = await fetch(`${context.baseUrl}/${activityId}`, {
+        method: 'PUT',
+        headers: context.headers,
+        body: JSON.stringify(params),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to update activity: ${response.status}`);
+      }
+    } catch (error) {
+      this.logger.error('updateActivity fail', error);
+      throw error;
+    }
+  }
+
   @delegate('mainClient')
   async updateActivityDisposition({
     dialogId,
     params,
-  }): Promise<any | null> {
-    const fullUserDetails = this.getFullUserDetails();
-    const rcAccountId = fullUserDetails.rcAccountId;
-    if (!rcAccountId) {
-      return;
-    }
-    const rcxSubAccountId = this._sdk.getAgentSettings().accountId;
-    const authenticateRequest = this._sdk.getAuthenticateRequest();
-    const engageAccessToken = `Bearer ${authenticateRequest.engageAccessToken}`;
+  }: {
+    dialogId: string;
+    params: ActivityDispositionInfo;
+  }): Promise<void> {
     try {
-      const getResponse = await fetch(`${this._options.authHost}/api/cm/v1/accounts/${rcAccountId}/rcxSubaccounts/${rcxSubAccountId}/activities?dialogId=${dialogId}&withDisplayInfo=false`, {
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: engageAccessToken,
-        },
-      });
-      if (!getResponse.ok) {
-        throw new Error('Failed to get activity disposition');
-      }
-      const activities = await getResponse.json();
-      const activityId = activities?.records?.length > 0 ? activities.records[0]?.id : '';
-      if (!activityId) return;
-      const updateResponse = await fetch(`${this._options.authHost}/api/cm/v1/accounts/${rcAccountId}/rcxSubaccounts/${rcxSubAccountId}/activities/${activityId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: engageAccessToken,
-        },
-        body: JSON.stringify(params),
-      });
-      if (!updateResponse.ok) {
-        throw new Error('Failed to update activity disposition');
-      }
-      return updateResponse.json();
+      const activity = await this.getActivityByDialogId(dialogId);
+      if (!activity?.id) return;
+      await this.updateActivity(activity.id, params);
     } catch (error) {
       this.logger.error('updateActivityDisposition fail', error);
+      throw error;
+    }
+  }
+
+  /**
+   * GET - /platform/api/agent/v1/agent/:agentId/history
+   *
+   * Cursor-paged, newest first. `before` is the previous page's last
+   * `agentSegment.segmentStart`; it is sent empty for the first page, matching
+   * the web agent (an empty value is what the server is known to accept).
+   */
+  @delegate('mainClient')
+  async getAgentHistory({
+    agentId,
+    size = 500,
+    before = '',
+    archived = true,
+    channelClass = 'VOICE',
+  }: AgentHistoryParams): Promise<AgentHistoryResponse | undefined> {
+    if (!agentId) {
+      return;
+    }
+    const authenticateRequest = this._sdk.getAuthenticateRequest();
+    const searchParams = new URLSearchParams({
+      size: String(size),
+      before: before ?? '',
+      archived: String(archived),
+      channelClass: String(channelClass),
+    });
+    try {
+      const response = await fetch(
+        `${this._options.authHost}/platform/api/agent/v1/agent/${agentId}/history?${searchParams.toString()}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authenticateRequest.engageAccessToken}`,
+          },
+        },
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to get agent history: ${response.status}`);
+      }
+      return await response.json();
+    } catch (error) {
+      this.logger.error('getAgentHistory fail', error);
       throw error;
     }
   }

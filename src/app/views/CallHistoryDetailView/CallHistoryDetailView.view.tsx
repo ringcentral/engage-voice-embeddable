@@ -7,14 +7,16 @@ import {
   useConnector,
   useParams,
 } from '@ringcentral-integration/next-core';
-import React, { useRef } from 'react';
+import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
+import React, { useEffect, useRef } from 'react';
 
+import { EvAuth } from '../../services/EvAuth';
+import { EvCall } from '../../services/EvCall';
 import { EvCallHistory } from '../../services/EvCallHistory';
-import { EvCallMonitor } from '../../services/EvCallMonitor';
+import { canDialHistoryCall } from '../../services/EvCallHistory/can-dial-history-call';
 import { CallHistoryDetailPanel } from '../../components/CallHistoryDetailPanel';
 import { callDirection } from '../../../enums';
-import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
-import { getCallAni, getCallDnis } from '../../../lib/getEvCallNumbers';
+import { t as translate } from './i18n';
 
 import type {
   CallHistoryDetailViewOptions,
@@ -23,39 +25,34 @@ import type {
 } from './CallHistoryDetailView.interface';
 
 /**
- * Build a FormattedCall-like object from raw call data (active or ended)
+ * Display state for the history detail card.
+ *
+ * Mirrors eag's `getSelectedCallState`: completed / queued / dropped legs show
+ * as `CALL-ENDED`; otherwise the raw dialog state is shown.
  */
-function buildCallDetailFromRaw(rawCall: any, callId: string): any {
-  if (!rawCall) return undefined;
-  const isOutbound = rawCall.callType?.toLowerCase() === 'outbound';
-  const direction = isOutbound ? callDirection.outbound : callDirection.inbound;
-  const contactMatches: any[] = rawCall.contactMatches || [];
-  const contactName = contactMatches[0]?.name || '';
-  const phone = formatPhoneNumber({ phoneNumber: getCallAni(rawCall) });
-  const contact = { name: contactName || phone, phoneNumber: phone };
-  const agent = { name: rawCall.agentId || '', phoneNumber: rawCall.agentId || '' };
-  const from = isOutbound ? agent : contact;
-  const to = isOutbound ? contact : agent;
-  return {
-    id: callId,
-    direction,
-    agent,
-    contact,
-    from,
-    to,
-    fromName: from.name || from.phoneNumber,
-    toName: to.name || to.phoneNumber,
-    fromMatches: contactMatches,
-    toMatches: contactMatches,
-    startTime: rawCall.timestamp,
-    telephonySessionId: rawCall.session?.uii,
-    sessionId: rawCall.session?.sessionId,
-  };
+function getHistoryCallState(
+  dialogState?: string,
+  termReason?: string,
+): string | undefined {
+  if (!dialogState) {
+    return undefined;
+  }
+  if (
+    dialogState === 'QUEUED' ||
+    dialogState === 'COMPLETE' ||
+    (dialogState === 'ACTIVE' && termReason === 'DROP')
+  ) {
+    return 'CALL-ENDED';
+  }
+  return dialogState;
 }
 
 /**
  * CallHistoryDetailView - Read-only call detail view
- * Displays call details for both active calls and call history
+ *
+ * Every field comes from the server history record, so there is no local
+ * fallback to reconstruct: a row the endpoint does not return is genuinely not
+ * found.
  */
 @injectable({
   name: 'CallHistoryDetailView',
@@ -65,8 +62,10 @@ class CallHistoryDetailView extends RcViewModule {
 
   constructor(
     private _evCallHistory: EvCallHistory,
-    private _evCallMonitor: EvCallMonitor,
+    private _evAuth: EvAuth,
+    private _evCall: EvCall,
     private _router: RouterPlugin,
+    private _toast: Toast,
     @optional('CallHistoryDetailViewOptions')
     private _options?: CallHistoryDetailViewOptions,
   ) {
@@ -77,47 +76,97 @@ class CallHistoryDetailView extends RcViewModule {
     this._router.goBack();
   }
 
+  goToCallLogPage(method: 'create' | 'update') {
+    const callId = this._params.id;
+    if (!callId) {
+      return;
+    }
+    this._router.push(`/history/${callId}/callLog/${method}`);
+  }
+
+  /**
+   * Place a callback from a history detail, matching eag's
+   * `allowHistoricalDialing` gate and idle-call check.
+   */
+  async dialHistoryCall(phoneNumber: string): Promise<void> {
+    if (
+      !canDialHistoryCall({
+        phoneNumber,
+        allowHistoricalDialing:
+          this._evAuth.agentPermissions?.allowHistoricalDialing,
+        isIdle: this._evCall.isIdle,
+      })
+    ) {
+      return;
+    }
+    await this._evCall.dialout(phoneNumber, {
+      skipParse: phoneNumber.endsWith('@RC_EXT'),
+    });
+  }
+
+  copyNumber(phoneNumber: string): void {
+    if (!phoneNumber) {
+      return;
+    }
+    void navigator.clipboard.writeText(phoneNumber).then(
+      () => {
+        this._toast.success({ message: translate('numberCopied') });
+      },
+      () => {
+        this.logger.warn('copyNumber failed');
+      },
+    );
+  }
+
+  copyCallId(callId: string): void {
+    if (!callId) {
+      return;
+    }
+    void navigator.clipboard.writeText(callId).then(
+      () => {
+        this._toast.success({ message: translate('callIdCopied') });
+      },
+      () => {
+        this.logger.warn('copyCallId failed');
+      },
+    );
+  }
+
   /**
    * Returns reactive UI state for the view
    */
   getUIProps(callId?: string): UIProps<CallHistoryDetailViewUIProps> {
-    // 1. Try call history (ended calls) first
-    const callHistory = this._evCallHistory.formattedCalls;
-    let callDetail = callHistory.find(
-      (call) =>
-        call.id === callId ||
-        call.telephonySessionId === callId ||
-        call.sessionId === callId,
-    );
-    // 2. Try raw callsMapping (includes active + ended calls)
-    const rawCall = callId
-      ? (this._evCallHistory.callsMapping[callId] ??
-         this._evCallMonitor.callsMapping[callId])
-      : undefined;
-    // 3. If not found in formatted history, build from raw data
-    if (!callDetail && rawCall && callId) {
-      callDetail = buildCallDetailFromRaw(rawCall, callId);
-    }
+    const callDetail = this._evCallHistory.getCallById(callId);
     const isInbound = callDetail?.direction === callDirection.inbound;
-    const isActiveCall = !!callId && this._evCallMonitor.callIds.includes(callId);
-    // endedCall is typed as boolean in EvBaseCall but at runtime
-    // it holds the full EvEndedCall object with termParty/termReason
-    const endedCall = (rawCall?.endedCall as unknown) as
-      | { termParty?: string; termReason?: string }
-      | undefined;
-    const callMeta = {
-      dnis: getCallDnis(rawCall) || undefined,
-      queueName: rawCall?.queue?.name,
-      callId: rawCall?.uii,
-      termParty: endedCall?.termParty,
-      termReason: endedCall?.termReason,
-    };
+    const isLoading = this._evCallHistory.isLoading;
     return {
       callDetail,
-      callMeta,
+      callMeta: {
+        dnis: callDetail?.dnis,
+        queueName: callDetail?.queueName,
+        campaignName: callDetail?.campaignName,
+        callId: callDetail?.uii,
+        termParty: callDetail?.termParty,
+        termReason: callDetail?.termReason,
+        disposition: callDetail?.disposition,
+        durationMs: callDetail?.durationMs,
+        recordingUrl: callDetail?.recordingUrl,
+        outboundType: callDetail?.outboundType,
+        dialogState: callDetail?.dialogState,
+        callState: getHistoryCallState(
+          callDetail?.dialogState,
+          callDetail?.termReason,
+        ),
+      },
       isInbound,
-      isActiveCall,
-      callNotFound: !callDetail,
+      isActiveCall: !!callDetail?.isActive,
+      isLoading,
+      // Only a genuine miss, not a page that has yet to arrive.
+      callNotFound: !callDetail && !isLoading,
+      dialableNumber: callDetail?.dialableNumber,
+      canDial: !!this._evAuth.agentPermissions?.allowHistoricalDialing,
+      isDialDisabled: !this._evCall.isIdle,
+      isDisposed: !!callDetail?.isDisposed,
     };
   }
 
@@ -127,13 +176,38 @@ class CallHistoryDetailView extends RcViewModule {
   getUIFunctions(): UIFunctions<CallHistoryDetailViewUIFunctions> {
     return {
       onBack: () => this.goBack(),
+      onDial: (phoneNumber: string) => {
+        void this.dialHistoryCall(phoneNumber);
+      },
+      onCopyNumber: (phoneNumber: string) => {
+        this.copyNumber(phoneNumber);
+      },
+      onCopyCallId: (callId: string) => {
+        this.copyCallId(callId);
+      },
+      onOpenCallLog: () => {
+        const callDetail = this._evCallHistory.getCallById(this._params.id);
+        this.goToCallLogPage(callDetail?.isDisposed ? 'update' : 'create');
+      },
     };
   }
 
   component() {
     this._params = useParams<{ id?: string }>();
     const { current: uiFunctions } = useRef(this.getUIFunctions());
+    // Covers a deep link or a worker restart, where this view can mount before
+    // any page has been loaded. A no-op once the list is populated.
+    useEffect(() => {
+      void this._evCallHistory.fetchFirstPage();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
     const uiProps = useConnector(() => this.getUIProps(this._params.id));
+    useEffect(() => {
+      if (uiProps.callDetail) {
+        this._evCallHistory.matchCalls([uiProps.callDetail]);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [uiProps.callDetail?.id]);
     return <CallHistoryDetailPanel {...uiProps} {...uiFunctions} />;
   }
 }

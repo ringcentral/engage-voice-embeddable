@@ -28,6 +28,7 @@ import type {
   EvRequeueCallGate,
   CallDataState,
 } from './EvCallDataSource.interface';
+import { stripSessionId } from './strip-session-id';
 
 const DEFAULT_DATA: CallDataState = {
   callIds: [],
@@ -233,10 +234,7 @@ class EvCallDataSource extends RcModule {
 
     const fullCallLogsIds = this.callLogsIds
       .slice(0, 250)
-      .reduce<string[]>(
-        (acc, curr) => [...acc, curr.substring(0, curr.length - 2)],
-        [],
-      );
+      .reduce<string[]>((acc, curr) => [...acc, stripSessionId(curr)], []);
 
     // Valid rawCallsMapping
     storageCallData.rawCallsMapping = Object.keys(this.rawCallsMapping).reduce(
@@ -257,7 +255,7 @@ class EvCallDataSource extends RcModule {
     storageCallData.callsMapping = Object.keys(this.callsMapping).reduce(
       (acc, id) => {
         if (
-          fullCallLogsIds.includes(id.substring(0, id.length - 2)) &&
+          fullCallLogsIds.includes(stripSessionId(id)) &&
           getEvServerTimestamp(this.callsMapping[id].queueDts) >=
             lastWeekDayTimestamp
         ) {
@@ -273,6 +271,32 @@ class EvCallDataSource extends RcModule {
 
     this.data = storageCallData;
     this.changeCallsLimited(true);
+  }
+
+  /**
+   * Resolve the local call id (`${uii}$${sessionId}`) for a server-side
+   * segment id.
+   *
+   * Server call history keys interactions by `(uii, segmentId)` while local
+   * call data keys them by `(uii, sessionId)`, and neither component is
+   * derivable from the other. This index is the join between the two.
+   *
+   * The match is exact rather than best-effort: the agent library issues one
+   * segment id per session, so a call with several legs has a distinct segment
+   * id for each. `session.segmentId` is therefore the precise key; the
+   * `segmentContext` fallback covers records stored before their ADD-SESSION
+   * arrived, and identifies the agent's own leg.
+   */
+  getCallIdBySegmentId(segmentId: string): string | undefined {
+    if (!segmentId) {
+      return undefined;
+    }
+    return Object.keys(this.callsMapping).find((id) => {
+      const call = this.callsMapping[id];
+      const callSegmentId =
+        call?.session?.segmentId || call?.segmentContext?.segmentId;
+      return callSegmentId === segmentId;
+    });
   }
 
   /**

@@ -1,5 +1,5 @@
-import type { EvAgentSettings, EvBaseCall } from '../EvClient/interfaces';
-import { formatAgentScriptModel } from './formatAgentScriptModel';
+import type { EvAgentSettings, EvBaseCall } from 'src/app/services/EvClient/interfaces';
+import { formatAgentScriptModel } from 'src/app/services/EvAgentScript/formatAgentScriptModel';
 
 const agentSettings = {
   externalAgentId: 'ext-7',

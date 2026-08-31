@@ -1,16 +1,18 @@
-import { parseNumber } from './parseNumber';
+import { parseNumber } from 'src/lib/parseNumber';
 
+// `parseNumber` normalizes to E.164 because its callers feed the result
+// straight to the agent library as a dial/transfer destination.
 describe('parseNumber', () => {
-  it('should return result number if phoneNumber is valid local number', () => {
+  it('should return an e164 number if phoneNumber is a valid local number', () => {
     const phonenumber = '6508498195';
     const result = parseNumber(phonenumber);
-    expect(result).toEqual('6508498195');
+    expect(result).toEqual('+16508498195');
   });
 
-  it('should return local number if phoneNumber is valid e164 number', () => {
+  it('should return an e164 number if phoneNumber is already e164', () => {
     const phonenumber = '+16508498195';
     const result = parseNumber(phonenumber);
-    expect(result).toEqual('6508498195');
+    expect(result).toEqual('+16508498195');
   });
 
   it('should throw error if phoneNumber is invalid', () => {

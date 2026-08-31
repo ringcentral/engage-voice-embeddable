@@ -14,14 +14,28 @@ interface CallHistoryDetailViewProps {
 }
 
 /**
- * Extra metadata from the raw call / endedCall for the detail view
+ * Extra metadata from the history row for the detail view
  */
 interface CallDetailMeta {
   dnis?: string;
   queueName?: string;
+  campaignName?: string;
   callId?: string;
   termParty?: string;
   termReason?: string;
+  /** Disposition recorded on the server for this segment. */
+  disposition?: string;
+  durationMs?: number;
+  recordingUrl?: string;
+  /** Outbound dial type from history (`LEAD` / `MANUAL`). */
+  outboundType?: 'LEAD' | 'MANUAL';
+  /** Dialog state from the history endpoint. */
+  dialogState?: string;
+  /**
+   * Display state for the detail card (e.g. `CALL-ENDED` when the dialog is
+   * complete / dropped).
+   */
+  callState?: string;
 }
 
 /**
@@ -32,7 +46,17 @@ interface CallHistoryDetailViewUIProps {
   callMeta: CallDetailMeta;
   isInbound: boolean;
   isActiveCall: boolean;
+  /** The first page is still in flight, so absence is not yet a miss. */
+  isLoading: boolean;
   callNotFound: boolean;
+  /** Raw destination used for callback dialing from history. */
+  dialableNumber?: string;
+  /** Agent permission controlling callback actions from history. */
+  canDial: boolean;
+  /** Historical dialing is unavailable while another call is in progress. */
+  isDialDisabled: boolean;
+  /** Whether a disposition has already been recorded for this row. */
+  isDisposed: boolean;
 }
 
 /**
@@ -40,6 +64,10 @@ interface CallHistoryDetailViewUIProps {
  */
 interface CallHistoryDetailViewUIFunctions {
   onBack: () => void;
+  onDial: (phoneNumber: string) => void;
+  onCopyNumber: (phoneNumber: string) => void;
+  onCopyCallId: (callId: string) => void;
+  onOpenCallLog: () => void;
 }
 
 export type {

@@ -2,7 +2,7 @@ import {
   findAvailableCountry,
   formatCountryE164,
   parseNumberCountry,
-} from './availableCountry';
+} from 'src/lib/availableCountry';
 
 // `countryId` of Germany is `GER` in the agent config, ISO 3166-1 has `DEU`
 const availableCountries = [

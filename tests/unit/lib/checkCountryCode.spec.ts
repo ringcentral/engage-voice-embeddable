@@ -1,4 +1,4 @@
-import { checkCountryCode } from './checkCountryCode';
+import { checkCountryCode } from 'src/lib/checkCountryCode';
 
 describe('checkCountryCode', () => {
   it('should throw error when phonenumber is e164 of other country  expect US/CA', () => {
