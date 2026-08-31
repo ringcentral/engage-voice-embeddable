@@ -1,0 +1,31 @@
+/* eslint-disable */
+import { EvAlertMessageTypes } from '../EvAlertRenderer.interface';
+
+export default {
+  [EvAlertMessageTypes.NO_AGENT]: 'Diesem RC-Konto wurde kein EV-Agentenkonto zugewiesen. Bitte wenden Sie sich an Ihren Administrator oder Vorgesetzten.',
+  [EvAlertMessageTypes.CONNECT_ERROR]: 'Authentifizierungsfehler. Bitte versuchen Sie es später noch einmal.',
+  [EvAlertMessageTypes.UNEXPECTED_AGENT]: 'Diesem RC-Konto wurde ein unerwartetes EV-Agentenkonto zugewiesen. Bitte wenden Sie sich an Ihren Administrator oder Vorgesetzten.',
+  [EvAlertMessageTypes.INVALID_BROWSER]: 'WebSocket wird von Ihrem Browser NICHT unterstützt.',
+  [EvAlertMessageTypes.CONNECT_TIMEOUT]: 'Autorisierungszeitüberschreitung. Bitte versuchen Sie es später noch einmal.',
+  [EvAlertMessageTypes.OPEN_SOCKET_ERROR]: 'Verbindungsfehler. Bitte versuchen Sie es später noch einmal.',
+  [EvAlertMessageTypes.EXISTING_LOGIN_ENGAGED]: 'Vorhandener Login aktiviert',
+  [EvAlertMessageTypes.FORCE_LOGOUT]: 'Ihre Sitzung wurde beendet',
+  [EvAlertMessageTypes.FAIL_END_CALL]: 'Anruf konnte nicht beendet werden. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.FAIL_HOLD_CALL]: 'Anruf konnte nicht gehalten/aufgehoben werden. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.FAIL_COLD_TRANSFER]: 'Anruf konnte nicht weitergeleitet werden. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.FAIL_WARM_TRANSFER]: 'Die Warmübertragung konnte nicht abgeschlossen werden. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.FAIL_DIRECT_TRANSFER]: 'Direkte Übertragung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL_TRANSFER]: 'Die Übertragung zur Voicemail ist fehlgeschlagen. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL]: 'Senden an Voicemail fehlgeschlagen. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.FAIL_START_WARM_TRANSFER]: 'Die Warmübertragung konnte nicht gestartet werden. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.FAIL_CANCEL_WARM_TRANSFER]: 'Die Warmübertragung konnte nicht abgebrochen werden. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.DISPOSITION_SUBMIT_ERROR]: 'Disposition konnte nicht übermittelt werden. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.DISPOSITION_REQUIRED]: 'Bitte wählen Sie eine Disposition aus, bevor Sie den Anruf beenden.',
+  [EvAlertMessageTypes.SESSION_CONFIG_ERROR]: 'Sitzung konnte nicht konfiguriert werden. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.SESSION_UPDATE_ERROR]: 'Sitzung konnte nicht aktualisiert werden. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.WORKING_STATE_ERROR]: 'Der Arbeitsstatus konnte nicht geändert werden. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.TRANSFER_ERROR]: 'Übertragung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.REQUEUE_ERROR]: 'Anruf konnte nicht erneut in die Warteschlange gestellt werden. Bitte versuchen Sie es erneut.',
+  [EvAlertMessageTypes.WEBRTC_NOT_SUPPORTED]: 'WebRTC wird von Ihrem Browser nicht unterstützt.',
+  [EvAlertMessageTypes.MICROPHONE_ACCESS_DENIED]: 'Mikrofonzugriff verweigert. Bitte aktivieren Sie die Mikrofonberechtigungen.',
+} as const;

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 
 import type { AgentAssistantFrameProps } from './AgentAssistantPanel.interface';
+import i18n from './i18n';
 
 /** Message contract of the Agent Assistant app; the strings are its API. */
 const assistantMessageOrigin = 'Agent Assistant';
@@ -16,6 +18,7 @@ const initMessageType = 'INIT_SUBSCRIBE_SUGGESTION';
  * it the knowledge base contexts. Everything else it needs is in the page query.
  */
 export function AgentAssistantFrame({ params }: AgentAssistantFrameProps) {
+  const { t } = useLocale(i18n);
   const frameRef = useRef<HTMLIFrameElement>(null);
   const acknowledgedRef = useRef(false);
 
@@ -63,7 +66,7 @@ export function AgentAssistantFrame({ params }: AgentAssistantFrameProps) {
     <iframe
       ref={frameRef}
       src={src}
-      title="AI Assistant"
+      title={t('agentAssistant')}
       data-sign="agentAssistantFrame"
       className="block h-full min-h-0 w-full min-w-0 flex-1 border-0 bg-neutral-base"
       // Covers the case where the app is ready before we start listening; a

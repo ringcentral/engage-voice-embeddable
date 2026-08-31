@@ -1,7 +1,7 @@
 /* eslint-disable */
 export default {
   logout: 'Terminar sessão',
-  phone: 'Telefone',
+  phone: 'telefone',
 } as const;
 
 // @key: @#@"logout"@#@ @source: @#@"Sign out"@#@

@@ -1,0 +1,31 @@
+/* eslint-disable */
+import { EvAlertMessageTypes } from '../EvAlertRenderer.interface';
+
+export default {
+  [EvAlertMessageTypes.NO_AGENT]: 'Ce compte RC n\'a reçu aucun compte d\'agent EV. Veuillez contacter votre administrateur ou votre superviseur.',
+  [EvAlertMessageTypes.CONNECT_ERROR]: 'Erreur d\'authentification. Veuillez réessayer plus tard.',
+  [EvAlertMessageTypes.UNEXPECTED_AGENT]: 'Ce compte RC s\'est vu attribuer un compte d\'agent EV inattendu. Veuillez contacter votre administrateur ou votre superviseur.',
+  [EvAlertMessageTypes.INVALID_BROWSER]: 'WebSocket n\'est PAS pris en charge par votre navigateur.',
+  [EvAlertMessageTypes.CONNECT_TIMEOUT]: 'Expiration du délai d\'autorisation. Veuillez réessayer plus tard.',
+  [EvAlertMessageTypes.OPEN_SOCKET_ERROR]: 'Erreur de connexion. Veuillez réessayer plus tard.',
+  [EvAlertMessageTypes.EXISTING_LOGIN_ENGAGED]: 'Connexion existante activée',
+  [EvAlertMessageTypes.FORCE_LOGOUT]: 'Votre session a été terminée',
+  [EvAlertMessageTypes.FAIL_END_CALL]: 'Échec de la fin de l\'appel. Veuillez réessayer.',
+  [EvAlertMessageTypes.FAIL_HOLD_CALL]: 'Échec de la mise en attente/reprise de l\'appel. Veuillez réessayer.',
+  [EvAlertMessageTypes.FAIL_COLD_TRANSFER]: 'Échec du transfert de l\'appel. Veuillez réessayer.',
+  [EvAlertMessageTypes.FAIL_WARM_TRANSFER]: 'Échec du transfert à chaud. Veuillez réessayer.',
+  [EvAlertMessageTypes.FAIL_DIRECT_TRANSFER]: 'Échec du transfert direct. Veuillez réessayer.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL_TRANSFER]: 'Échec du transfert vers la messagerie vocale. Veuillez réessayer.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL]: 'Échec de l\'envoi à la messagerie vocale. Veuillez réessayer.',
+  [EvAlertMessageTypes.FAIL_START_WARM_TRANSFER]: 'Échec du démarrage du transfert à chaud. Veuillez réessayer.',
+  [EvAlertMessageTypes.FAIL_CANCEL_WARM_TRANSFER]: 'Échec de l\'annulation du transfert à chaud. Veuillez réessayer.',
+  [EvAlertMessageTypes.DISPOSITION_SUBMIT_ERROR]: 'Échec de la soumission de la décision. Veuillez réessayer.',
+  [EvAlertMessageTypes.DISPOSITION_REQUIRED]: 'Veuillez sélectionner une disposition avant de mettre fin à l\'appel.',
+  [EvAlertMessageTypes.SESSION_CONFIG_ERROR]: 'Échec de la configuration de la session. Veuillez réessayer.',
+  [EvAlertMessageTypes.SESSION_UPDATE_ERROR]: 'Échec de la mise à jour de la session. Veuillez réessayer.',
+  [EvAlertMessageTypes.WORKING_STATE_ERROR]: 'Échec du changement d\'état de fonctionnement. Veuillez réessayer.',
+  [EvAlertMessageTypes.TRANSFER_ERROR]: 'Échec du transfert. Veuillez réessayer.',
+  [EvAlertMessageTypes.REQUEUE_ERROR]: 'Échec de la remise en file d\'attente de l\'appel. Veuillez réessayer.',
+  [EvAlertMessageTypes.WEBRTC_NOT_SUPPORTED]: 'WebRTC n\'est pas pris en charge par votre navigateur.',
+  [EvAlertMessageTypes.MICROPHONE_ACCESS_DENIED]: 'Accès au microphone refusé. Veuillez activer les autorisations du microphone.',
+} as const;

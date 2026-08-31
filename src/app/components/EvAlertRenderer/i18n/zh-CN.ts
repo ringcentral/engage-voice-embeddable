@@ -1,0 +1,31 @@
+/* eslint-disable */
+import { EvAlertMessageTypes } from '../EvAlertRenderer.interface';
+
+export default {
+  [EvAlertMessageTypes.NO_AGENT]: '此 RC 帐户尚未分配任何 EV 代理帐户。请联系您的管理员或主管。',
+  [EvAlertMessageTypes.CONNECT_ERROR]: '身份验证错误。请稍后重试。',
+  [EvAlertMessageTypes.UNEXPECTED_AGENT]: '此 RC 帐户已被分配了意外的 EV 代理帐户。请联系您的管理员或主管。',
+  [EvAlertMessageTypes.INVALID_BROWSER]: '您的浏览器不支持 WebSocket。',
+  [EvAlertMessageTypes.CONNECT_TIMEOUT]: '授权超时。请稍后重试。',
+  [EvAlertMessageTypes.OPEN_SOCKET_ERROR]: '连接错误。请稍后重试。',
+  [EvAlertMessageTypes.EXISTING_LOGIN_ENGAGED]: '已使用现有登录',
+  [EvAlertMessageTypes.FORCE_LOGOUT]: '您的会话已终止',
+  [EvAlertMessageTypes.FAIL_END_CALL]: '无法结束通话。请再试一次。',
+  [EvAlertMessageTypes.FAIL_HOLD_CALL]: '无法保持/取消保持呼叫。请再试一次。',
+  [EvAlertMessageTypes.FAIL_COLD_TRANSFER]: '无法转接呼叫。请再试一次。',
+  [EvAlertMessageTypes.FAIL_WARM_TRANSFER]: '无法完成热传输。请再试一次。',
+  [EvAlertMessageTypes.FAIL_DIRECT_TRANSFER]: '直接转账失败。请再试一次。',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL_TRANSFER]: '无法转接到语音信箱。请再试一次。',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL]: '无法发送到语音邮件。请再试一次。',
+  [EvAlertMessageTypes.FAIL_START_WARM_TRANSFER]: '无法启动热传输。请再试一次。',
+  [EvAlertMessageTypes.FAIL_CANCEL_WARM_TRANSFER]: '无法取消热传输。请再试一次。',
+  [EvAlertMessageTypes.DISPOSITION_SUBMIT_ERROR]: '未能提交处置。请再试一次。',
+  [EvAlertMessageTypes.DISPOSITION_REQUIRED]: '请在结束通话之前选择一种处置。',
+  [EvAlertMessageTypes.SESSION_CONFIG_ERROR]: '配置会话失败。请再试一次。',
+  [EvAlertMessageTypes.SESSION_UPDATE_ERROR]: '无法更新会话。请再试一次。',
+  [EvAlertMessageTypes.WORKING_STATE_ERROR]: '无法更改工作状态。请再试一次。',
+  [EvAlertMessageTypes.TRANSFER_ERROR]: '传输失败。请再试一次。',
+  [EvAlertMessageTypes.REQUEUE_ERROR]: '无法重新排队呼叫。请再试一次。',
+  [EvAlertMessageTypes.WEBRTC_NOT_SUPPORTED]: '您的浏览器不支持 WebRTC。',
+  [EvAlertMessageTypes.MICROPHONE_ACCESS_DENIED]: '麦克风访问被拒绝。请启用麦克风权限。',
+} as const;

@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
 
 import type { EvAgentAssistantFrameParams } from '../../services/EvAgentAssistant';
 import type { AgentAssistantPanelProps } from './AgentAssistantPanel.interface';
 import { AgentAssistantFrame } from './AgentAssistantFrame';
+import i18n from './i18n';
 
 type FrameState =
   | { status: 'loading' }
@@ -14,6 +16,7 @@ export function AgentAssistantPanel({
   getParams,
   showTitle = true,
 }: AgentAssistantPanelProps) {
+  const { t } = useLocale(i18n);
   // The auth code in the params is single use, so they are resolved once per
   // mount and the frame is remounted (by call id) rather than re-configured.
   const [frameState, setFrameState] = useState<FrameState>({
@@ -41,13 +44,15 @@ export function AgentAssistantPanel({
 
   return (
     <section
-      aria-label="AI Assistant"
+      aria-label={t('agentAssistant')}
       data-sign="agentAssistantPanel"
       className="flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-neutral-base"
     >
       {showTitle && (
         <div className="flex h-12 flex-shrink-0 items-center border-b border-neutral-b4 px-4">
-          <h2 className="typography-title text-neutral-b0">AI Assistant</h2>
+          <h2 className="typography-title text-neutral-b0">
+            {t('agentAssistant')}
+          </h2>
         </div>
       )}
       <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden">
@@ -56,7 +61,9 @@ export function AgentAssistantPanel({
             className="flex h-full items-center justify-center text-neutral-b2"
             data-sign="agentAssistantLoading"
           >
-            <span className="typography-mainText">Loading AI Assistant…</span>
+            <span className="typography-mainText">
+              {t('loadingAgentAssistant')}
+            </span>
           </div>
         ) : frameState.status === 'ready' ? (
           <AgentAssistantFrame params={frameState.params} />
@@ -66,7 +73,7 @@ export function AgentAssistantPanel({
             data-sign="agentAssistantUnavailable"
           >
             <span className="typography-mainText">
-              AI Assistant is not available for this call
+              {t('agentAssistantUnavailable')}
             </span>
           </div>
         )}

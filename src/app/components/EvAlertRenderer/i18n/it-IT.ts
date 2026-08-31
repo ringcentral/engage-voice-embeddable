@@ -1,0 +1,31 @@
+/* eslint-disable */
+import { EvAlertMessageTypes } from '../EvAlertRenderer.interface';
+
+export default {
+  [EvAlertMessageTypes.NO_AGENT]: 'A questo account RC non è stato assegnato alcun account agente EV. Contatta il tuo amministratore o supervisore.',
+  [EvAlertMessageTypes.CONNECT_ERROR]: 'Errore di autenticazione. Per favore riprova più tardi.',
+  [EvAlertMessageTypes.UNEXPECTED_AGENT]: 'A questo account RC è stato assegnato un account agente EV imprevisto. Contatta il tuo amministratore o supervisore.',
+  [EvAlertMessageTypes.INVALID_BROWSER]: 'WebSocket NON è supportato dal tuo browser.',
+  [EvAlertMessageTypes.CONNECT_TIMEOUT]: 'Timeout autorizzazione. Per favore riprova più tardi.',
+  [EvAlertMessageTypes.OPEN_SOCKET_ERROR]: 'Errore di connessione. Per favore riprova più tardi.',
+  [EvAlertMessageTypes.EXISTING_LOGIN_ENGAGED]: 'Accesso esistente attivato',
+  [EvAlertMessageTypes.FORCE_LOGOUT]: 'La tua sessione è stata terminata',
+  [EvAlertMessageTypes.FAIL_END_CALL]: 'Impossibile terminare la chiamata. Per favore riprova.',
+  [EvAlertMessageTypes.FAIL_HOLD_CALL]: 'Impossibile mettere/riprendere la chiamata in attesa. Per favore riprova.',
+  [EvAlertMessageTypes.FAIL_COLD_TRANSFER]: 'Impossibile trasferire la chiamata. Per favore riprova.',
+  [EvAlertMessageTypes.FAIL_WARM_TRANSFER]: 'Impossibile completare il trasferimento a caldo. Per favore riprova.',
+  [EvAlertMessageTypes.FAIL_DIRECT_TRANSFER]: 'Trasferimento diretto non riuscito. Per favore riprova.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL_TRANSFER]: 'Impossibile trasferire alla segreteria. Per favore riprova.',
+  [EvAlertMessageTypes.FAIL_VOICEMAIL]: 'Impossibile inviare alla segreteria. Per favore riprova.',
+  [EvAlertMessageTypes.FAIL_START_WARM_TRANSFER]: 'Impossibile avviare il trasferimento a caldo. Per favore riprova.',
+  [EvAlertMessageTypes.FAIL_CANCEL_WARM_TRANSFER]: 'Impossibile annullare il trasferimento a caldo. Per favore riprova.',
+  [EvAlertMessageTypes.DISPOSITION_SUBMIT_ERROR]: 'Impossibile inviare la disposizione. Per favore riprova.',
+  [EvAlertMessageTypes.DISPOSITION_REQUIRED]: 'Seleziona una disposizione prima di terminare la chiamata.',
+  [EvAlertMessageTypes.SESSION_CONFIG_ERROR]: 'Impossibile configurare la sessione. Per favore riprova.',
+  [EvAlertMessageTypes.SESSION_UPDATE_ERROR]: 'Impossibile aggiornare la sessione. Per favore riprova.',
+  [EvAlertMessageTypes.WORKING_STATE_ERROR]: 'Impossibile modificare lo stato di funzionamento. Per favore riprova.',
+  [EvAlertMessageTypes.TRANSFER_ERROR]: 'Trasferimento non riuscito. Per favore riprova.',
+  [EvAlertMessageTypes.REQUEUE_ERROR]: 'Impossibile rimettere in coda la chiamata. Per favore riprova.',
+  [EvAlertMessageTypes.WEBRTC_NOT_SUPPORTED]: 'WebRTC non è supportato dal tuo browser.',
+  [EvAlertMessageTypes.MICROPHONE_ACCESS_DENIED]: 'Accesso al microfono negato. Abilita le autorizzazioni del microfono.',
+} as const;
