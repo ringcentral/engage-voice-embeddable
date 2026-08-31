@@ -19,7 +19,7 @@ interface TransferViewProps {
 
 /**
  * Tab definition for the transfer type tabs.
- * All tabs are always shown; unavailable ones are disabled.
+ * Unavailable tabs are omitted from the rendered tab list.
  */
 interface TransferTab {
   value: EvTransferType;
