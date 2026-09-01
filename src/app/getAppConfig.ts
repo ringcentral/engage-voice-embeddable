@@ -78,12 +78,14 @@ import {
   ThirdParty,
   TabManager,
   Redirect,
+  EvSessionRecovery,
   AnalyticsOptions,
   OAuth as OAuthWithJWT,
   EvTabManagerOptions,
   EvWorkingStateOptions,
   EvAgentAssistantOptions,
   EvAgentScriptOptions,
+  type EvSessionRecoveryOptions,
 } from './services';
 
 // Views
@@ -365,6 +367,11 @@ export const getAppConfig = ({
       useClass: OAuthWithJWT,
     },
     Redirect,
+    EvSessionRecovery,
+    {
+      provide: 'EvSessionRecoveryOptions',
+      useValue: {} satisfies EvSessionRecoveryOptions,
+    },
     {
       provide: 'EvClientOptions',
       useValue: {

@@ -82,6 +82,12 @@ class EvCall extends RcModule {
     }
   }
 
+  /**
+   * Persisted so a page reload can still point at the call being worked on.
+   * Without it the pointer is lost on refresh and the agent has no route back
+   * to a disposition the server is still waiting for.
+   */
+  @storage
   @state
   activityCallId = '';
 

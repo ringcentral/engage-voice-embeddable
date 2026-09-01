@@ -6,7 +6,9 @@ import type { ConnectivityType } from '@ringcentral-integration/micro-auth/src/a
 export type EvConnectivityType =
   | ConnectivityType
   | 'socketDisconnected'
+  | 'socketReconnecting'
   | 'sipUnstableConnection'
+  | 'sipReconnectFailed'
   | 'sipConnecting';
 
 /**

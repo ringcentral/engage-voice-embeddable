@@ -224,6 +224,29 @@ class EvWorkingState extends RcModule {
       this.logger.info('onCallEnded~~ setIsPendingDisposition(true)');
       this.setIsPendingDisposition(true, encodedCallId || mainCallId);
     });
+    // The server is the authority on pending disposition. Deriving it only
+    // from a locally observed call end misses the case where the call ended
+    // while the socket was down, which leaves the agent stuck as Engaged with
+    // no way to reach the disposition UI.
+    this.evSubscription.subscribe(
+      EvCallbackTypes.PENDING_DISP,
+      (data?: { agentId?: string | number; status?: boolean | string }) => {
+        if (!data) return;
+        const { agentId } = this.evAuth;
+        if (agentId && String(data.agentId) !== String(agentId)) {
+          return;
+        }
+        const isPending = data.status === true || data.status === 'true';
+        if (isPending === this.isPendingDisposition) {
+          return;
+        }
+        this.logger.info('PENDING_DISP~~', isPending);
+        this.setIsPendingDisposition(
+          isPending,
+          isPending ? this.pendingDispositionCallId : '',
+        );
+      },
+    );
     this.evSubscription.subscribe(
       EvCallbackTypes.AGENT_STATE,
       ({ currentState, currentAuxState }: {

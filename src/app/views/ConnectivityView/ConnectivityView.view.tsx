@@ -15,6 +15,8 @@ import { EvAuth } from '../../services/EvAuth';
 import { EvIntegratedSoftphone } from '../../services/EvIntegratedSoftphone';
 import { evStatus } from '../../services/EvClient/enums';
 
+import { resolveEvConnectivity } from '../../utils/resolveEvConnectivity';
+
 import type { EvConnectivityViewProps } from './ConnectivityView.interface';
 import { ConnectivityPanel } from './ConnectivityPanel';
 
@@ -22,10 +24,12 @@ import { ConnectivityPanel } from './ConnectivityPanel';
  * ConnectivityView - Extended connectivity view for Engage Voice
  * Shows network status, EvClient socket status, and SIP connection status
  *
- * Priority: base network mode > socket reconnecting > socket disconnected > SIP unstable > SIP connecting
+ * Priority: base network mode > reauthing > socket reconnecting > socket
+ * disconnected > SIP unstable > SIP connecting
  *
- * - socketDisconnected: socket closed/failed (error, shows Refresh button)
- * - socket reconnecting: newReconnect in progress (error, shows spinner)
+ * - socketReconnecting: socket dropped but the SDK is still retrying, or a
+ *   re-authentication is in flight (error, shows spinner, no Refresh)
+ * - socketDisconnected: the SDK has given up (error, shows Refresh button)
  * - sipUnstableConnection: was connected, then lost (error, shows spinner)
  * - sipConnecting: first-time SIP registration after session (info, shows spinner)
  */
@@ -49,52 +53,27 @@ export class ConnectivityView extends BaseConnectivityView {
    */
   override getUIProps(): UIProps<EvConnectivityViewProps> {
     const baseProps = super.getUIProps();
-    if (baseProps.mode) {
-      return { ...baseProps, severity: 'error' };
-    }
-    if (!this._auth.loggedIn) {
-      return {
-        ...baseProps, severity: 'error',
-      };
-    }
-    if (this._evAuth.isReauthing) {
-      return {
-        mode: 'socketDisconnected',
-        severity: 'error',
-        loading: true,
-        retry: false,
-      };
-    }
-    const isSocketDisconnected =
-      this._evClient.appStatus === evStatus.CLOSED ||
-      this._evClient.appStatus === evStatus.CONNECT_FAILURE;
-    if (isSocketDisconnected) {
-      return {
-        mode: 'socketDisconnected',
-        severity: 'error',
-        loading: false,
-        retry: true,
-      };
-    }
-    if (this._evIntegratedSoftphone?.isIntegratedSoftphone) {
-      if (this._evIntegratedSoftphone.sipUnstableConnection) {
-        return {
-          mode: 'sipUnstableConnection',
-          severity: 'error',
-          loading: true,
-          retry: false,
-        };
-      }
-      if (this._evIntegratedSoftphone.sipRegistering) {
-        return {
-          mode: 'sipConnecting',
-          severity: 'info',
-          loading: true,
-          retry: false,
-        };
-      }
-    }
-    return { ...baseProps, severity: 'error' };
+    return {
+      ...baseProps,
+      ...resolveEvConnectivity({
+        baseMode: baseProps.mode,
+        isLoggedIn: this._auth.loggedIn,
+        isReauthing: this._evAuth.isReauthing,
+        isReconnecting: this._evClient.appStatus === evStatus.RECONNECTING,
+        isSocketDisconnected:
+          this._evClient.appStatus === evStatus.CLOSED ||
+          this._evClient.appStatus === evStatus.CONNECT_FAILURE,
+        isIntegratedSoftphone:
+          !!this._evIntegratedSoftphone?.isIntegratedSoftphone,
+        sipUnstableConnection:
+          !!this._evIntegratedSoftphone?.sipUnstableConnection,
+        sipRegistering: !!this._evIntegratedSoftphone?.sipRegistering,
+        attemptingSoftphoneReconnect:
+          !!this._evIntegratedSoftphone?.attemptingSoftphoneReconnect,
+        manualSoftphoneReconnect:
+          !!this._evIntegratedSoftphone?.manualSoftphoneReconnect,
+      }),
+    };
   }
 
   /**
@@ -105,9 +84,15 @@ export class ConnectivityView extends BaseConnectivityView {
     return {
       onClick: async () => {
         const { mode } = this.getUIProps();
+        if (mode === 'sipReconnectFailed') {
+          await this._evIntegratedSoftphone?.retrySoftphoneSession();
+          return;
+        }
         if (mode === 'socketDisconnected') {
-          await this._evIntegratedSoftphone.resetSip();
-          await this._evAuth.newReconnect();
+          await this._evIntegratedSoftphone?.resetSip();
+          // Resume the existing session rather than forcing a fresh login, so
+          // a call the server still holds is handed back instead of orphaned.
+          await this._evAuth.retryConnection();
           return;
         }
         baseFunctions.onClick();

@@ -7,6 +7,8 @@ export default {
   connecting: '接続中',
   refresh: '更新',
   socketDisconnected: '接続が失われました。再試行してください。',
+  socketReconnecting: '接続が失われました。再接続しています...',
   sipUnstableConnection: '統合ソフトフォンが切断されました。再接続しようとしています...',
+  sipReconnectFailed: '統合ソフトフォンが切断されました。再試行してください。',
   sipConnecting: '統合ソフトフォン接続...',
 } as const;

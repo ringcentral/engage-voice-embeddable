@@ -7,6 +7,8 @@ export default {
   connecting: '正在连接',
   refresh: '刷新',
   socketDisconnected: '连接丢失。请重试。',
+  socketReconnecting: '连接丢失。正在重新连接...',
   sipUnstableConnection: '集成软件电话已断开连接。正在尝试重新连接...',
+  sipReconnectFailed: '集成软件电话已断开连接。请重试。',
   sipConnecting: '集成软件电话连接...',
 } as const;

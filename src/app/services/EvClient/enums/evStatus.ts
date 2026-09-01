@@ -8,5 +8,10 @@ export const evStatus = ObjectMap.fromKeys([
   'LOGIN',
   'LOGINED',
   'LOGIN_FAILURE',
+  /**
+   * The socket dropped but the Agent SDK is still retrying with the stored
+   * session hash code, so the session is recoverable and must not be cleared.
+   */
+  'RECONNECTING',
   'CLOSED',
 ]);

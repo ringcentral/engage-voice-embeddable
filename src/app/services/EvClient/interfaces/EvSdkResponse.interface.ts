@@ -297,6 +297,19 @@ export interface EvOpenSocketResult {
   error?: string;
 }
 
+/**
+ * Formatted LOGIN response from the Agent SDK.
+ *
+ * `isReconnect` is only present on a successful Layer 2 reconnect, which is
+ * also the only response that carries the server's session state
+ * (`is_on_call` / `active_call_uii` / `is_pending_disp`) into the SDK model.
+ */
+export interface EvLoginResponse {
+  status?: string;
+  message?: string;
+  isReconnect?: boolean;
+}
+
 export interface EvAgentInfo {
   type: string;
   data: EvAgentData;

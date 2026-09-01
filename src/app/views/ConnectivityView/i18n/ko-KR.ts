@@ -7,6 +7,8 @@ export default {
   connecting: '연결 중',
   refresh: '새로 고침',
   socketDisconnected: '연결이 끊겼습니다. 다시 시도해 주세요.',
+  socketReconnecting: '연결이 끊겼습니다. 다시 연결하는 중...',
   sipUnstableConnection: '통합 소프트폰 연결이 끊어졌습니다. 다시 연결을 시도하는 중...',
+  sipReconnectFailed: '통합 소프트폰 연결이 끊어졌습니다. 다시 시도하십시오.',
   sipConnecting: '통합 소프트폰 연결...',
 } as const;
