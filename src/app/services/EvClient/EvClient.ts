@@ -62,14 +62,24 @@ import type {
 import { Environment } from '../Environment';
 import type { ReconnectSnapshot as EvReconnectSnapshot } from '../../utils/reconcileReconnectState';
 import type { StoredEvSession } from '../../utils/canRejoinEvSession';
-import {
-  ICE_RESTART_GRACE_MS,
-  isHealthyIceState,
-  planIceRestart,
-} from '../../utils/planIceRestart';
 
 type ListenerType =
   (typeof EvCallbackTypes)['OPEN_SOCKET' | 'CLOSE_SOCKET' | 'LOGIN'];
+
+/** Snapshot of the SDK's socket bookkeeping, see {@link EvClient.getSocketDiagnostics}. */
+export interface EvSocketDiagnostics {
+  /** Epoch ms of the last server echo, or null before the first one. */
+  lastAlive: number | null;
+  msSinceLastAlive: number | null;
+  /** Null means the SDK's BEAT timer is not running at all. */
+  pingStatIntervalId: unknown;
+  statsIntervalId: unknown;
+  socketReadyState: number | null;
+  /** Growth here on a healthy socket means the SDK thinks it is offline. */
+  queuedMsgCount: number | null;
+  reconnectAttemptsCounter: number | null;
+  isLoggedIn: boolean;
+}
 
 /**
  * Mirrors `MAX_RECONNECTION_ATTEMPTS` in the Agent SDK's socket module. Used
@@ -102,12 +112,6 @@ type Listener<
 class EvClient extends RcModule {
   /** SDK instance */
   private _sdk: any;
-  /** Peer connection the ICE listener is already attached to. */
-  private _iceRestartArmedFor: RTCPeerConnection | null = null;
-  /** Kept so disarming can detach the listener from the peer connection. */
-  private _iceRestartListener: (() => void) | null = null;
-  private _iceRestartAttempts = 0;
-  private _iceRestartTimer: ReturnType<typeof setTimeout> | null = null;
 
   private _onOpen: (response: EvClientCallMapping['openResponse']) => void;
 
@@ -251,26 +255,25 @@ class EvClient extends RcModule {
   }
 
   /**
-   * TEMPORARY diagnostic. Read-only snapshot of the SDK's socket bookkeeping.
+   * Read-only snapshot of the SDK's socket bookkeeping.
    *
-   * `lastAlive` only advances when the backend sends an echo instruction, and
-   * the SDK treats a stale value as "offline": it queues every call-control
-   * request for replay and force-registers SIP. This samples the inputs to
-   * that decision so a healthy session can show whether echoes arrive at all.
-   * Remove once the question is settled.
+   * `lastAlive` only advances when the backend sends an echo instruction, so
+   * it is the liveness signal for the agent websocket: a network switch
+   * leaves the socket reporting OPEN while nothing gets through, and the
+   * SDK's reconnect only starts once the browser finally times the TCP
+   * connection out. The socket watchdog samples this snapshot to detect that
+   * zombie state and force the reconnect early.
    */
   @delegate('mainClient')
-  async getSocketDiagnostics(): Promise<Record<string, unknown>> {
+  async getSocketDiagnostics(): Promise<EvSocketDiagnostics> {
     const model = this._uiModel;
     const lastAlive = model?.lastAlive ?? null;
     return {
       lastAlive,
       msSinceLastAlive: lastAlive === null ? null : Date.now() - lastAlive,
-      // Null means the SDK's BEAT timer is not running at all.
       pingStatIntervalId: model?.pingStatIntervalId ?? null,
       statsIntervalId: model?.statsIntervalId ?? null,
       socketReadyState: this._sdk?.socket?.readyState ?? null,
-      // Growth here on a healthy socket means the SDK thinks it is offline.
       queuedMsgCount: this._sdk?._queuedMsgs?.length ?? null,
       reconnectAttemptsCounter: model?.reconnectAttemptsCounter ?? null,
       isLoggedIn: !!model?.agentSettings?.isLoggedIn,
@@ -457,6 +460,7 @@ class EvClient extends RcModule {
         this._sdk.authenticateAgentWithEngageAccessToken(
           engageAccessToken,
           (response: EvAuthenticateAgentWithEngageAccessTokenRes) => {
+            this._syncSoftphoneAuthToken();
             resolve(response);
           },
         );
@@ -707,6 +711,38 @@ class EvClient extends RcModule {
 
   get ifSocketExist(): boolean {
     return !!this._sdk.socket;
+  }
+
+  /**
+   * Abandon a socket that is already known dead, without waiting for the
+   * browser's closing handshake.
+   *
+   * `WebSocket.close()` is graceful: it sends a Close frame and waits for the
+   * peer's reply, and over a black-holed TCP path Chrome only gives up after
+   * its 60s closing-handshake timeout — the SDK's reconnect starts in
+   * `onclose`, so a plain close costs a full extra minute. The SDK's handler
+   * takes no event and only flips its own bookkeeping, so it can be driven
+   * directly; the orphaned browser socket is detached first so its eventual
+   * timeout cannot double-drive the SDK.
+   */
+  @delegate('mainClient')
+  async abandonSocket(): Promise<void> {
+    const socket = this._sdk?.socket;
+    if (!socket) {
+      return;
+    }
+    this.logger.info('abandonSocket~~');
+    const onclose = socket.onclose;
+    socket.onopen = null;
+    socket.onerror = null;
+    socket.onmessage = null;
+    socket.onclose = null;
+    try {
+      socket.close();
+    } catch (error) {
+      this.logger.info('abandonSocket~~ close failed', error);
+    }
+    onclose?.call(socket);
   }
 
   @delegate('mainClient')
@@ -1089,109 +1125,28 @@ class EvClient extends RcModule {
     settings.autoStartOH = autoStartOH;
   }
 
-  private get _webRtc(): any {
-    return this._sdk?._SoftphoneService?.getSoftphoneSettings?.()?.webRtc;
-  }
-
   /**
-   * Watch the current call's media path so a stalled one can be repaired.
+   * Keep the softphone SDK's private auth model aligned with the Agent SDK.
    *
-   * The softphone assigns `oniceconnectionstatechange` as a property, so this
-   * listens alongside it rather than replacing it; the softphone still owns
-   * ending the call if the repair does not land in time.
+   * The bundled SDK creates the softphone service before authentication and
+   * gives it a separate UIModel. Later authentication refreshes only the main
+   * model, so registrar rotation can otherwise fetch sipRegistrationInfo with
+   * the token captured by an earlier session even though configureAgent just
+   * fetched the same resource successfully with the current token.
    */
-  @delegate('mainClient')
-  async armIceRestart(): Promise<void> {
-    const session = this._webRtc?.session;
-    const pc = session?.sessionDescriptionHandler?.peerConnection;
-    if (!pc || this._iceRestartArmedFor === pc) {
+  private _syncSoftphoneAuthToken(): void {
+    const engageAccessToken =
+      this._sdk?.getAuthenticateRequest?.()?.engageAccessToken;
+    const softphoneAuthenticateRequest = this._sdk?._SoftphoneService
+      ?.getUIModel?.()
+      ?.getInstance?.()?.authenticateRequest;
+    if (
+      !softphoneAuthenticateRequest ||
+      typeof engageAccessToken !== 'string'
+    ) {
       return;
     }
-    await this.disarmIceRestart();
-    this._iceRestartArmedFor = pc;
-    this._iceRestartListener = () => {
-      this._onIceConnectionStateChange(pc);
-    };
-    pc.addEventListener('iceconnectionstatechange', this._iceRestartListener);
-  }
-
-  /** Drop the watch when the call ends so a pending repair cannot fire late. */
-  @delegate('mainClient')
-  async disarmIceRestart(): Promise<void> {
-    this._clearIceRestartTimer();
-    if (this._iceRestartArmedFor && this._iceRestartListener) {
-      this._iceRestartArmedFor.removeEventListener(
-        'iceconnectionstatechange',
-        this._iceRestartListener,
-      );
-    }
-    this._iceRestartArmedFor = null;
-    this._iceRestartListener = null;
-    this._iceRestartAttempts = 0;
-  }
-
-  private _onIceConnectionStateChange(pc: RTCPeerConnection): void {
-    // A late event from a disarmed call's peer connection must not schedule
-    // a repair: by the time the timer fired, `_webRtc.session` could already
-    // belong to the next call.
-    if (this._iceRestartArmedFor !== pc) {
-      return;
-    }
-    if (isHealthyIceState(pc.iceConnectionState)) {
-      this._clearIceRestartTimer();
-      return;
-    }
-    if (pc.iceConnectionState !== 'disconnected' || this._iceRestartTimer) {
-      return;
-    }
-    // Give the path a moment to recover on its own before renegotiating audio
-    // the agent may still be able to hear.
-    this._iceRestartTimer = setTimeout(() => {
-      this._iceRestartTimer = null;
-      void this._restartIceIfStalled(pc);
-    }, ICE_RESTART_GRACE_MS);
-  }
-
-  private _clearIceRestartTimer(): void {
-    if (!this._iceRestartTimer) {
-      return;
-    }
-    clearTimeout(this._iceRestartTimer);
-    this._iceRestartTimer = null;
-  }
-
-  private async _restartIceIfStalled(pc: RTCPeerConnection): Promise<void> {
-    if (this._iceRestartArmedFor !== pc) {
-      return;
-    }
-    const session = this._webRtc?.session;
-    const plan = planIceRestart({
-      iceConnectionState: pc.iceConnectionState,
-      attempts: this._iceRestartAttempts,
-      hasSession: !!session?.reinvite,
-      isSignalingConnected:
-        this._webRtc?.ua?.transport?.isConnected?.() ?? false,
-    });
-    this.logger.info('ice restart~~', {
-      reason: plan.reason,
-      state: pc.iceConnectionState,
-      attempts: this._iceRestartAttempts,
-    });
-    if (!plan.shouldRestart) {
-      return;
-    }
-    this._iceRestartAttempts += 1;
-    try {
-      session.reinvite({
-        sessionDescriptionHandlerOptions: {
-          RTCOfferOptions: { iceRestart: true },
-        },
-      });
-    } catch (error) {
-      // The softphone still ends the call on `failed`, so a failure here only
-      // means the call follows the path it would have taken anyway.
-      this.logger.error('ice restart failed', error);
-    }
+    softphoneAuthenticateRequest.engageAccessToken = engageAccessToken;
   }
 
   /**
@@ -1203,6 +1158,7 @@ class EvClient extends RcModule {
    */
   @delegate('mainClient')
   async switchSoftphoneRegistrar(maintainOH: boolean): Promise<void> {
+    this._syncSoftphoneAuthToken();
     await this._sdk.switchSoftphoneRegistrar(maintainOH);
   }
 

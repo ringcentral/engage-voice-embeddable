@@ -35,6 +35,7 @@ import type { EvPresenceOptions, EvAgentRecording } from './EvPresence.interface
 import { track } from '../Analytics/track';
 import { trackEvents } from '../../../lib/trackEvents';
 import { EvAgentSession } from '../EvAgentSession';
+import { resolveEndedCallSessions } from '../../utils/resolveEndedCallSessions';
 
 /**
  * EvPresence module - Call presence and offhook state management
@@ -412,13 +413,24 @@ class EvPresence extends RcModule {
         await this.addNewCall(data);
       })
       .subscribe(EvCallbackTypes.END_CALL, async (data: EvEndedCall) => {
-        const id = this.evClient.encodeUii(data);
-        if (!this.callsMapping[id]) return;
+        // A reconnect that finds the server off the call makes the SDK
+        // synthesise an END-CALL carrying only the uii, so the sessions it
+        // ends have to be recovered from the calls actually held.
+        const endedCalls = resolveEndedCallSessions({
+          endedCall: data,
+          callIds: this.callIds,
+        })
+          .map((sessionId) => ({ ...data, sessionId }))
+          .filter((call) => !!this.callsMapping[this.evClient.encodeUii(call)]);
+        if (!endedCalls.length) return;
         if (!this.isManualOffhook) {
           this.evClient.offhookTerm();
         }
-        await this.removeEndedCall(data);
-        await this._checkCallStateChange(this.callsMapping[id]);
+        for (const endedCall of endedCalls) {
+          const id = this.evClient.encodeUii(endedCall);
+          await this.removeEndedCall(endedCall);
+          await this._checkCallStateChange(this.callsMapping[id]);
+        }
       });
   }
 

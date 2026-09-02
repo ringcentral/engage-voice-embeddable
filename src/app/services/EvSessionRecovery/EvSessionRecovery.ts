@@ -7,8 +7,9 @@ import {
   delegate,
 } from '@ringcentral-integration/next-core';
 
-import { EvCallbackTypes } from '../EvClient/enums';
+import { EvCallbackTypes, evStatus } from '../EvClient/enums';
 import { EvClient } from '../EvClient';
+import { EvAuth } from '../EvAuth';
 import { EvCall } from '../EvCall';
 import { EvPresence } from '../EvPresence';
 import { EvWorkingState } from '../EvWorkingState';
@@ -17,10 +18,18 @@ import {
   reconnectActions,
 } from '../../utils/reconcileReconnectState';
 import type { ReconnectPlan } from '../../utils/reconcileReconnectState';
+import { shouldRecycleEvSocket } from '../../utils/shouldRecycleEvSocket';
 import type { EvSessionRecoveryOptions } from './EvSessionRecovery.interface';
 
-/** TEMPORARY. Sampling cadence for the read-only socket diagnostic. */
-const SOCKET_DIAGNOSTICS_INTERVAL_MS = 15 * 1000;
+/** Sampling cadence for the socket watchdog. */
+const SOCKET_WATCHDOG_INTERVAL_MS = 15 * 1000;
+
+/**
+ * Extra checks after the browser reports back online, so a socket that died
+ * with the old network is condemned as soon as the echo grace elapses rather
+ * than on the next sampling tick.
+ */
+const ONLINE_RECHECK_DELAYS_MS = [2 * 1000, 6 * 1000, 12 * 1000];
 
 /**
  * EvSessionRecovery - realigns the client with the server after the Agent SDK
@@ -42,8 +51,27 @@ const SOCKET_DIAGNOSTICS_INTERVAL_MS = 15 * 1000;
   name: 'EvSessionRecovery',
 })
 class EvSessionRecovery extends RcModule {
+  /** Epoch ms of the last forced socket close, for the recycle cooldown. */
+  private _lastSocketRecycleAt = 0;
+
+  /**
+   * Epoch ms of the last browser-reported network drop, cleared once an echo
+   * newer than it proves the socket survived.
+   */
+  private _networkDropAt: number | null = null;
+
+  /** Epoch ms when the browser reported back online after that drop. */
+  private _networkOnlineAt: number | null = null;
+
+  /**
+   * Pending post-online rechecks. Superseded on every network transition so
+   * flapping connectivity keeps at most one burst in flight.
+   */
+  private _onlineRecheckTimers: ReturnType<typeof setTimeout>[] = [];
+
   constructor(
     protected evClient: EvClient,
+    protected evAuth: EvAuth,
     protected evCall: EvCall,
     protected evPresence: EvPresence,
     protected evWorkingState: EvWorkingState,
@@ -58,27 +86,95 @@ class EvSessionRecovery extends RcModule {
       // tab, while the session state this module corrects lives on the server.
       this.portManager.onMainTab(() => {
         this._initReconnectListener();
-        this._initSocketDiagnostics();
+        this._initSocketWatchdog();
       });
     } else {
       this._initReconnectListener();
-      this._initSocketDiagnostics();
+      this._initSocketWatchdog();
     }
   }
 
   /**
-   * TEMPORARY diagnostic. Samples the SDK's socket bookkeeping and logs it.
+   * Watch for a zombie agent websocket and force its reconnect.
    *
-   * Purely observational: it never touches the socket. The question it answers
-   * is whether `lastAlive` advances on a healthy session, because the SDK
-   * treats a stale value as "offline" and queues all call control.
-   * Remove along with {@link EvClient.getSocketDiagnostics}.
+   * A network switch kills the socket's TCP path without the browser
+   * noticing: readyState stays OPEN, `onclose` fires only minutes later when
+   * TCP finally times out, and every message sent meanwhile is lost. The
+   * server's echoes (`lastAlive`) are the liveness signal, so a logged-in
+   * agent whose open socket has gone silent gets the socket closed by hand,
+   * which starts the SDK's own 5s reconnect loop immediately. The browser's
+   * `online` event triggers an extra check so a network switch is caught as
+   * soon as the new network is up rather than on the next sampling tick.
    */
-  private _initSocketDiagnostics(): void {
-    setInterval(async () => {
-      const diagnostics = await this.evClient.getSocketDiagnostics();
-      this.logger.info('socket diagnostics~~', diagnostics);
-    }, SOCKET_DIAGNOSTICS_INTERVAL_MS);
+  private _initSocketWatchdog(): void {
+    setInterval(() => {
+      void this._checkSocketHealth();
+    }, SOCKET_WATCHDOG_INTERVAL_MS);
+    if (typeof window !== 'undefined' && window.addEventListener) {
+      window.addEventListener('offline', () => {
+        // Witness the drop: any echo timestamp older than this predates it,
+        // which lets the check condemn the socket seconds after connectivity
+        // returns instead of waiting out the raw staleness threshold.
+        this._networkDropAt = Date.now();
+        this._clearOnlineRechecks();
+      });
+      window.addEventListener('online', () => {
+        this._networkOnlineAt = Date.now();
+        void this._checkSocketHealth();
+        // The echo grace has not elapsed the instant connectivity returns,
+        // and the next sampling tick could be 15s away; look again while the
+        // outage is fresh.
+        this._clearOnlineRechecks();
+        for (const delay of ONLINE_RECHECK_DELAYS_MS) {
+          this._onlineRecheckTimers.push(
+            setTimeout(() => {
+              void this._checkSocketHealth();
+            }, delay),
+          );
+        }
+      });
+    }
+  }
+
+  private _clearOnlineRechecks(): void {
+    for (const timer of this._onlineRecheckTimers) {
+      clearTimeout(timer);
+    }
+    this._onlineRecheckTimers = [];
+  }
+
+  private async _checkSocketHealth(): Promise<void> {
+    const diagnostics = await this.evClient.getSocketDiagnostics();
+    if (
+      this._networkDropAt !== null &&
+      diagnostics.lastAlive !== null &&
+      diagnostics.lastAlive > this._networkDropAt
+    ) {
+      // An echo arrived after the drop: the socket survived it.
+      this._networkDropAt = null;
+      this._networkOnlineAt = null;
+    }
+    const plan = shouldRecycleEvSocket({
+      isLoggedIn: diagnostics.isLoggedIn,
+      socketReadyState: diagnostics.socketReadyState,
+      lastAlive: diagnostics.lastAlive,
+      now: Date.now(),
+      lastRecycleAt: this._lastSocketRecycleAt,
+      networkDropAt: this._networkDropAt,
+      networkOnlineAt: this._networkOnlineAt,
+    });
+    if (!plan.shouldRecycle) {
+      return;
+    }
+    this.logger.warn('zombie socket~~ forcing reconnect', diagnostics);
+    this._lastSocketRecycleAt = Date.now();
+    // Surface the reconnect in the connectivity banner before touching the
+    // socket, so the agent sees it even if abandoning were to stall.
+    await this.evClient.setAppStatus(evStatus.RECONNECTING);
+    // Abandon rather than close: a graceful close of a black-holed socket
+    // waits out the browser's 60s closing-handshake timeout before the
+    // SDK's reconnect can start.
+    await this.evClient.abandonSocket();
   }
 
   private get _dispositionPathPrefix(): string {
@@ -95,7 +191,9 @@ class EvSessionRecovery extends RcModule {
       if (!response?.isReconnect) {
         return;
       }
-      void this.recoverSession();
+      this.recoverSession().catch((error) => {
+        this.logger.error('recoverSession failed~~', error);
+      });
     });
   }
 
@@ -105,6 +203,18 @@ class EvSessionRecovery extends RcModule {
    */
   @delegate('server')
   async recoverSession(): Promise<ReconnectPlan> {
+    // The Engage token can expire during the outage and nothing else renews
+    // it on reconnect, leaving every Engage HTTP call — including the SDK's
+    // own sipRegistrationInfo fetch during registrar rotation — failing with
+    // 401. EAG refreshes it in its reconnect callback for the same reason.
+    // A refresh that fails — the network is still settling when the socket
+    // comes back — must not abort the reconciliation: the stale call state it
+    // corrects is exactly what the agent is stuck on, and it needs no token.
+    try {
+      await this.evAuth.refreshEvToken();
+    } catch (error) {
+      this.logger.error('refreshEvToken failed~~', error);
+    }
     const snapshot = await this.evClient.getReconnectSnapshot();
     const plan = reconcileReconnectState({
       snapshot,

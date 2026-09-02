@@ -35,7 +35,14 @@ function createDeps() {
       activeCallUii: '',
       isPendingDisposition: false,
     }),
-    getSocketDiagnostics: jest.fn().mockResolvedValue({}),
+    getSocketDiagnostics: jest.fn().mockResolvedValue({
+      isLoggedIn: false,
+      socketReadyState: null,
+      lastAlive: null,
+      msSinceLastAlive: null,
+    }),
+    abandonSocket: jest.fn().mockResolvedValue(undefined),
+    setAppStatus: jest.fn().mockResolvedValue(undefined),
     loadCurrentCall: jest.fn().mockResolvedValue(undefined),
     forceClearPendingDisposition: jest.fn().mockResolvedValue(undefined),
   };
@@ -53,11 +60,15 @@ function createDeps() {
     pendingDispositionCallId: '',
     setIsPendingDisposition: jest.fn().mockResolvedValue(undefined),
   };
+  const evAuth = {
+    refreshEvToken: jest.fn().mockResolvedValue(true),
+  };
   const router = { replace: jest.fn() };
   const portManager = { shared: false };
   return {
     listeners,
     evClient,
+    evAuth,
     evCall,
     evPresence,
     evWorkingState,
@@ -69,6 +80,7 @@ function createDeps() {
 function createRecovery(deps: ReturnType<typeof createDeps>) {
   return new EvSessionRecovery(
     deps.evClient as any,
+    deps.evAuth as any,
     deps.evCall as any,
     deps.evPresence as any,
     deps.evWorkingState as any,
@@ -117,6 +129,13 @@ describe('EvSessionRecovery', () => {
       expect(deps.evWorkingState.setIsPendingDisposition).not.toHaveBeenCalled();
       expect(deps.evClient.loadCurrentCall).not.toHaveBeenCalled();
       expect(deps.router.replace).not.toHaveBeenCalled();
+    });
+
+    it('renews the Engage token, which may have expired during the outage', async () => {
+      const deps = createDeps();
+      const recovery = createRecovery(deps);
+      await recovery.recoverSession();
+      expect(deps.evAuth.refreshEvToken).toHaveBeenCalled();
     });
 
     it('restores a pending disposition and routes to the disposition page', async () => {
@@ -202,6 +221,97 @@ describe('EvSessionRecovery', () => {
 
       expect(plan.action).toBe('endStaleLocalCall');
       expect(deps.evCall.setActivityCallId).toHaveBeenCalledWith('');
+    });
+  });
+
+  describe('socket watchdog', () => {
+    it('abandons the socket when echoes have gone silent on an open socket', async () => {
+      const deps = createDeps();
+      deps.evClient.getSocketDiagnostics.mockResolvedValue({
+        isLoggedIn: true,
+        socketReadyState: 1,
+        lastAlive: Date.now() - 60 * 1000,
+        msSinceLastAlive: 60 * 1000,
+      });
+      const recovery = createRecovery(deps);
+
+      await (recovery as any)._checkSocketHealth();
+
+      expect(deps.evClient.abandonSocket).toHaveBeenCalledTimes(1);
+      // the banner must flip to "reconnecting" immediately: closing a dead
+      // TCP path can take the browser ~20s before CLOSE_SOCKET fires
+      expect(deps.evClient.setAppStatus).toHaveBeenCalledWith('RECONNECTING');
+
+      // the reopened socket keeps the stale lastAlive until the next echo;
+      // the cooldown keeps the watchdog from closing it again immediately
+      await (recovery as any)._checkSocketHealth();
+      expect(deps.evClient.abandonSocket).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves a healthy socket alone', async () => {
+      const deps = createDeps();
+      deps.evClient.getSocketDiagnostics.mockResolvedValue({
+        isLoggedIn: true,
+        socketReadyState: 1,
+        lastAlive: Date.now() - 500,
+        msSinceLastAlive: 500,
+      });
+      const recovery = createRecovery(deps);
+
+      await (recovery as any)._checkSocketHealth();
+
+      expect(deps.evClient.abandonSocket).not.toHaveBeenCalled();
+    });
+
+    it('condemns a witnessed network drop without waiting for raw staleness', async () => {
+      const deps = createDeps();
+      deps.evClient.getSocketDiagnostics.mockResolvedValue({
+        isLoggedIn: true,
+        socketReadyState: 1,
+        // fresh enough that staleness alone would say "alive"
+        lastAlive: Date.now() - 12_000,
+        msSinceLastAlive: 12_000,
+      });
+      const recovery = createRecovery(deps);
+      (recovery as any)._networkDropAt = Date.now() - 10_000;
+      (recovery as any)._networkOnlineAt = Date.now() - 6_000;
+
+      await (recovery as any)._checkSocketHealth();
+
+      expect(deps.evClient.abandonSocket).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops the network witness once an echo proves the socket survived', async () => {
+      const deps = createDeps();
+      deps.evClient.getSocketDiagnostics.mockResolvedValue({
+        isLoggedIn: true,
+        socketReadyState: 1,
+        lastAlive: Date.now() - 1000,
+        msSinceLastAlive: 1000,
+      });
+      const recovery = createRecovery(deps);
+      (recovery as any)._networkDropAt = Date.now() - 10_000;
+      (recovery as any)._networkOnlineAt = Date.now() - 6_000;
+
+      await (recovery as any)._checkSocketHealth();
+
+      expect(deps.evClient.abandonSocket).not.toHaveBeenCalled();
+      expect((recovery as any)._networkDropAt).toBeNull();
+    });
+
+    it('leaves an already closed socket to the SDK reconnect loop', async () => {
+      const deps = createDeps();
+      deps.evClient.getSocketDiagnostics.mockResolvedValue({
+        isLoggedIn: true,
+        socketReadyState: 3,
+        lastAlive: Date.now() - 60 * 1000,
+        msSinceLastAlive: 60 * 1000,
+      });
+      const recovery = createRecovery(deps);
+
+      await (recovery as any)._checkSocketHealth();
+
+      expect(deps.evClient.abandonSocket).not.toHaveBeenCalled();
     });
   });
 

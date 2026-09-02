@@ -22,6 +22,7 @@ import type {
   EvSipRingingData,
   EvSipSwitchRegistrarData,
 } from '../EvClient/interfaces/EvClientCallMapping.interface';
+import type { EvOffhookInitResponse } from '../EvClient/interfaces/EvSdkResponse.interface';
 import { EvClient } from '../EvClient';
 import { EvAuth } from '../EvAuth';
 import { EvSubscription } from '../EvSubscription';
@@ -121,14 +122,6 @@ class EvIntegratedSoftphone extends RcModule {
    */
   @state
   manualSoftphoneReconnect = false;
-
-  /**
-   * The audio leg was seen dying under an active call in this page session.
-   * Deliberately in-memory: call and offhook state are persisted, so after a
-   * reload they alone cannot distinguish a broken leg from stale storage, and
-   * restoring from stale storage would put a freshly loaded agent offhook.
-   */
-  private _offhookLostMidCall = false;
 
   get sipState(): SipState {
     if (this.sipRegistering) {
@@ -274,7 +267,6 @@ class EvIntegratedSoftphone extends RcModule {
 
   initialize() {
     this._bindingIntegratedSoftphone();
-    this._initOfflineHandler();
     this._initOffhookFlagSync();
     this.evAuth.beforeAgentLogout(async () => {
       this.logger.info('beforeAgentLogout~~');
@@ -313,25 +305,6 @@ class EvIntegratedSoftphone extends RcModule {
   }
 
   /**
-   * A network change leaves the existing SIP registration bound to an address
-   * that no longer exists, and the registrar only finds out when it expires.
-   * Re-registering as soon as the browser reports the drop shortens the window
-   * in which the agent looks reachable but cannot receive calls.
-   */
-  private _initOfflineHandler(): void {
-    if (typeof window === 'undefined' || !window.addEventListener) {
-      return;
-    }
-    window.addEventListener('offline', () => {
-      if (!this.isMainTab || !this.isIntegratedSoftphone) {
-        return;
-      }
-      this.logger.info('offline~~, force sip re-register');
-      void this.evClient.sipForceRegister();
-    });
-  }
-
-  /**
    * Keep the SDK's reconnect flags in step with the agent's offhook state.
    *
    * The SDK hands these back on `SIP_DIAL_DEST_CHANGED` after it rotates
@@ -354,6 +327,16 @@ class EvIntegratedSoftphone extends RcModule {
       },
       { multiple: true },
     );
+  }
+
+  /**
+   * IQ refuses an offhook init while it still believes the agent's previous
+   * audio leg is up ("Login Session is already off-hook available"). The
+   * platform exposes no dedicated error code for it, so the detail text is
+   * the only discriminator.
+   */
+  private _isStaleOffhookRefusal(data: Partial<EvOffhookInitResponse>): boolean {
+    return /already off-?hook/i.test(`${data.detail ?? ''} ${data.message ?? ''}`);
   }
 
   /**
@@ -392,12 +375,10 @@ class EvIntegratedSoftphone extends RcModule {
   }
 
   /**
-   * Rebuild the agent's audio leg after the softphone re-registers.
-   *
-   * Runs on both recovery shapes: a registrar rotation, where the SDK reports
-   * its offhook flags on `SIP_DIAL_DEST_CHANGED`, and a same-registrar
-   * re-registration after a network switch, where the SDK reports nothing and
-   * the only evidence of the dead leg is an active call with no offhook.
+   * Rebuild the agent's standing audio leg after the SDK rotated registrars,
+   * mirroring EAG's `dialDestChanged` handling. Mid-call audio is not
+   * recovered — EAG does not attempt it either; a call whose leg died ends in
+   * pending disposition and the agent completes it from there.
    */
   private async _recoverOffhookOnReconnect(
     data?: EvSipDialDestChangedData,
@@ -406,27 +387,14 @@ class EvIntegratedSoftphone extends RcModule {
       isServer: this.portManager.isServer,
       isIntegratedSoftphone: this.isIntegratedSoftphone,
       isOffhook: this.evPresence.isOffhook,
-      isOffhooking: this.evPresence.isOffhooking,
-      hasActiveCall:
-        this.evPresence.callIds.length > 0 ||
-        !!this.evPresence.currentCallUii,
-      offhookLostMidCall: this._offhookLostMidCall,
-      isManualOffhook: this.evPresence.isManualOffhook,
       flags: data,
     });
+    this.logger.info('SIP_DIAL_DEST_CHANGED~~ plan', plan.reason);
     if (!plan.shouldRestoreOffhook) {
-      // SIP_REGISTERED re-evaluates this on every registration refresh, so
-      // routine skips stay out of the logs; a rotation event is rare enough
-      // to record.
-      if (data) {
-        this.logger.info('offhook recovery skipped~~', plan.reason);
-      }
       return;
     }
-    this.logger.info('offhook recovery~~', plan.reason);
     try {
       await this.evClient.offhookInit();
-      this._offhookLostMidCall = false;
       if (plan.shouldMaintainOffhook) {
         await this.evPresence.setIsManualOffhook(true);
       }
@@ -449,11 +417,6 @@ class EvIntegratedSoftphone extends RcModule {
       this.setSipUnstableConnection(false);
       this.setSoftphoneReconnectState({ attempting: false, manual: false });
       this._emitRegistered();
-      // A network switch re-registers against the same registrar, so no
-      // SIP_DIAL_DEST_CHANGED follows; an active call whose leg died is then
-      // only repaired from here. Fires on every registration refresh, and
-      // no-ops unless a call is missing its audio leg.
-      void this._recoverOffhookOnReconnect();
     });
     this.evSubscription.subscribe(EvCallbackTypes.SIP_UNREGISTERED, () => {
       this.logger.info('SIP_UNREGISTERED~~');
@@ -497,8 +460,25 @@ class EvIntegratedSoftphone extends RcModule {
     );
     this.evSubscription.subscribe(
       EvCallbackTypes.OFFHOOK_INIT,
-      async (data?: { status?: string }) => {
-        if (!data || data.status === 'OK') {
+      async (data?: Partial<EvOffhookInitResponse>) => {
+        if (!data) {
+          return;
+        }
+        if (data.status === 'OK') {
+          return;
+        }
+        if (this._isStaleOffhookRefusal(data)) {
+          // IQ still holds a previous audio leg whose BYE was lost with the
+          // old network. The SIP side is healthy, so rotating the registrar
+          // cannot help; the server itself asks for a disconnect first, and
+          // terminating the orphaned leg lets the agent's next offhook
+          // attempt succeed.
+          if (!this.evPresence.isOffhook) {
+            this.logger.info(
+              'OFFHOOK_INIT refused~~ terminating stale server-side leg',
+            );
+            await this.evClient.offhookTerm();
+          }
           return;
         }
         await this._switchRegistrarAfterOffhookFailure();
@@ -528,19 +508,9 @@ class EvIntegratedSoftphone extends RcModule {
       await this.evPresence.setOffhook(true);
       await this._resetSdkMuteState();
       await this.resetController();
-      // The peer connection only exists once the call is up, so the media-path
-      // watch has to be attached per call rather than at registration.
-      await this.evClient.armIceRestart();
     });
     this.evSubscription.subscribe(EvCallbackTypes.SIP_ENDED, async () => {
       this.logger.info('SIP_ENDED~~');
-      // A leg ending while a call is still active did not end by intent; a
-      // normal call end clears the call state before the next registration,
-      // which makes a witness recorded here inert.
-      this._offhookLostMidCall =
-        this.evPresence.callIds.length > 0 ||
-        !!this.evPresence.currentCallUii;
-      await this.evClient.disarmIceRestart();
       await this.evPresence.setOffhook(false);
       await this.evPresence.removeBeforeunload();
       await this.evPresence.setDialoutStatus(dialoutStatuses.idle);
