@@ -7,10 +7,9 @@ import HtmlWebpackPlugin from 'html-webpack-plugin';
 import template from 'lodash/template';
 import path from 'path';
 import * as nodeUrl from 'url';
-import { AssetInfo, type Chunk, DefinePlugin, ProvidePlugin } from 'webpack';
+import { type Chunk, DefinePlugin, ProvidePlugin } from 'webpack';
 import { merge } from 'webpack-merge';
 
-import { getFilenameMap as getFileUrlMap } from '@ringcentral-integration/next-builder/src/getFilenameMap';
 import { getPrimaryColor } from '@ringcentral-integration/next-builder/src/getPrimaryColor';
 import type { ProjectConfig } from '@ringcentral-integration/next-builder/src/getProjectConfig';
 import { getLoadWorkerTemplate } from '@ringcentral-integration/next-builder/src/scriptsLoadFail/getLoadWorkerTemplate';
@@ -22,9 +21,80 @@ import { getBaseWebpackConfig as getWebpackConfig } from './widgets.webpack';
 const DEFAULT_FILENAME = '[name].js';
 const DEFAULT_CHUNK_FILENAME = '[name].js';
 /**
+ * Per-build output folder for every chunk that takes part in the webpack module
+ * registry.
+ *
+ * Chunk filenames carry no content hash (`enableHash: false` below), so each
+ * deploy overwrites them in place at the same CDN URLs. When a browser or a CDN
+ * edge then serves a mix of files from two builds, the runtime looks up a module
+ * id that was never registered and throws
+ * `Cannot read properties of undefined (reading 'call')`.
+ *
+ * Emitting each build into its own folder makes those URLs immutable, so a
+ * cached `app.html` keeps loading the exact build it was generated against.
+ *
+ * `[fullhash]` covers the whole compilation, so an unchanged rebuild reuses the
+ * same folder and a redeploy adds nothing new.
+ *
+ * Chunks reference each other through this folder (`publicPath` is empty, so the
+ * folder is part of every chunk URL). That resolves correctly for anything the
+ * document loads, but `importScripts` in a worker resolves against the worker
+ * script's own directory — a worker placed inside the folder would request
+ * `<hash>/<hash>/zh-CN.js`. The worker is therefore pinned to the output root
+ * via `chunkFilenames` in project.config.json.
+ */
+const args = getArgs();
+
+/**
+ * Resolved once, at config time, so it is a literal path segment.
+ *
+ * It deliberately does NOT use webpack's `[fullhash]`: webpack only injects the
+ * `__webpack_require__.h` runtime module when it can statically see that
+ * placeholder, and `output.chunkFilename` here is a function. The placeholder
+ * still compiles to `h().slice(0, 8)` inside the chunk-URL helper, so the bundle
+ * builds cleanly and then dies at runtime with `h is not a function` before it
+ * can load a single chunk.
+ *
+ * Defaults to the build's UTC timestamp: unique per build, so a folder is never
+ * reused (two builds of the same commit can differ if dependencies drift), and
+ * lexicographically sortable, so pruning old folders off the CDN is just a sort.
+ *
+ * Pass `--build-hash` to override it with a pipeline id or release tag.
+ */
+const getBuildId = (): string => {
+  if (args.buildHash) return String(args.buildHash);
+
+  // 2026-09-02T07:15:23.456Z -> 20260902-071523456
+  return new Date()
+    .toISOString()
+    .replace(/[-:.]/g, '')
+    .replace('T', '-')
+    .replace('Z', '');
+};
+
+const BUILD_DIR = getBuildId();
+/**
+ * `[buildid]` in a `chunkFilenames` entry expands to the build id.
+ *
+ * Used to keep the shared worker at the deploy root while still making it
+ * immutable per build. It cannot live in BUILD_DIR: framework code resolves the
+ * app's base URL from the worker's own `location.href` (OAuthBase's
+ * `redirectUri`, `getHostPath()`), so a worker one directory down resolves
+ * `./redirect.html` to `HOST/<build>/redirect.html`.
+ */
+const applyBuildId = (filename: string) =>
+  filename.replace(/\[buildid\]/g, BUILD_DIR);
+const HASHED_FILENAME = `${BUILD_DIR}/${DEFAULT_FILENAME}`;
+const HASHED_CHUNK_FILENAME = `${BUILD_DIR}/${DEFAULT_CHUNK_FILENAME}`;
+/**
  * default vendor chunk name
  */
 const VENDOR_KEY = 'vendor';
+/**
+ * Chunk name of the shared worker, set by the `webpackChunkName` magic comment
+ * in app.ts.
+ */
+const WORKER_KEY = 'worker';
 
 export interface WebpackConfigOptions<T extends BaseAppConfig> {
   projectConfig: ProjectConfig<T>;
@@ -54,9 +124,9 @@ export const getFinalFilePathMap = <T extends BaseAppConfig>(
   const filenameMap = projectConfig.projectConfig.pages.reduce(
     (acc, { main, index, filename }) => {
       const chunkName = path.parse(main).name;
-      acc[chunkName] =
-        filename ??
-        DEFAULT_FILENAME;
+      // Pages with an explicit `filename` (adapter.js, agentScript.js) are
+      // embedded by consumers at a fixed URL and stay at the output root.
+      acc[chunkName] = filename ?? HASHED_FILENAME;
 
       return acc;
     },
@@ -66,7 +136,6 @@ export const getFinalFilePathMap = <T extends BaseAppConfig>(
   return filenameMap;
 };
 
-const args = getArgs();
 
 export const getBaseWebpackConfig = <T extends BaseAppConfig>({
   projectConfig,
@@ -173,8 +242,18 @@ export const getBaseWebpackConfig = <T extends BaseAppConfig>({
     env: args.buildEnv,
   });
 
-  const chunkInfoMap = new Map<string, AssetInfo>();
   const isProd = projectConfig.mode === 'production';
+  const getWorkerFilename = () => {
+    // Development output is flat, so the worker keeps its plain chunk name.
+    if (!(isProd || outputAlwaysUseProdFileName)) return 'worker.js';
+
+    const configured = projectConfig.projectConfig.chunkFilenames;
+    const template =
+      (typeof configured === 'string' ? configured : configured?.[WORKER_KEY]) ??
+      HASHED_CHUNK_FILENAME;
+
+    return applyBuildId(template).replace('[name]', WORKER_KEY);
+  };
   // In MFE mode, exported files are typically split separately.
   const outputUsePropsMode = isProd || outputAlwaysUseProdFileName;
 
@@ -205,6 +284,15 @@ export const getBaseWebpackConfig = <T extends BaseAppConfig>({
         // TODO: processDefaultDarkAndHighContactTheme
         'process.env.APP_CONFIG': JSON.stringify(appConfig),
         'process.env.THEME_SYSTEM': JSON.stringify(themeSystem),
+        /**
+         * The file the worker chunk is emitted as, relative to the page.
+         *
+         * app.ts builds the SharedWorker URL from this so it can append the
+         * page's query params; it must therefore match what `output.chunkFilename`
+         * produces for the `worker` chunk, which is why it is read from the same
+         * `chunkFilenames` config rather than spelled out a second time.
+         */
+        'process.env.WORKER_URL': JSON.stringify(getWorkerFilename()),
         'process.env.BLOCK_PENDO_SOURCE_CODE':
           JSON.stringify(blockPendoSourceCode),
         'process.env.BLOCK_SEGMENT_SOURCE_CODE': JSON.stringify(
@@ -222,7 +310,18 @@ export const getBaseWebpackConfig = <T extends BaseAppConfig>({
             chunks: [mainChunk],
             ...params,
             templateParameters: (compilation, assets, assetTags, options) => {
-              const fileUrlMap = getFileUrlMap(compilation, chunkInfoMap);
+              // Resolve chunk names against the filenames webpack actually
+              // emitted. Matching on `AssetInfo` hashes does not work here:
+              // `[fullhash]` is compilation-wide, so every asset reports the
+              // same hash and every chunk name resolves to the first one.
+              const fileUrlMap = new Map<string, string>();
+              compilation.chunks.forEach((chunk) => {
+                if (!chunk.name) return;
+                const file = Array.from(chunk.files).find((name) =>
+                  name.endsWith('.js'),
+                );
+                if (file) fileUrlMap.set(chunk.name, file);
+              });
               const compilationHash = compilation.hash ?? '';
               const workerVersionQuery = compilationHash
                 ? `?_v=${compilationHash}`
@@ -343,30 +442,39 @@ export const getBaseWebpackConfig = <T extends BaseAppConfig>({
       throw new Error('MFE with module federation should not use splitChunks');
     }
     if (enabledAutoSplitChunks) {
-      // find all pure entry files
-      const pureEntryFiles = projectConfig.projectConfig.pages
-        .filter((x) => !x.index)
+      // Entries served from a fixed URL at the output root: pages with an
+      // explicit `filename`, plus pure entries that have no page at all.
+      const rootPinnedEntries = projectConfig.projectConfig.pages
+        .filter((x) => !x.index || x.filename)
         .map((x) => path.basename(x.main).split('.')[0]);
 
       const chunks = (chunk: Chunk) => {
-        const notBePureEntryFile = Boolean(
-          chunk.name && !pureEntryFiles.includes(chunk.name),
+        // Never split a root-pinned entry. Its siblings would be injected into
+        // the HTML as <script> tags, which pins them by name, and the entry
+        // would then have to be versioned together with them — exactly what
+        // BUILD_DIR exists to avoid. These entries stay self-contained and pull
+        // anything else at runtime instead.
+        const isRootPinned = Boolean(
+          chunk.name && rootPinnedEntries.includes(chunk.name),
         );
-        // only non pure entry files should be split
-        return notBePureEntryFile;
+        return Boolean(chunk.name) && !isRootPinned;
       };
 
       const isString = typeof chunkFilenames === 'string';
       const vendorFilename =
         (isString ? chunkFilenames : chunkFilenames?.[VENDOR_KEY]) ||
         DEFAULT_CHUNK_FILENAME;
+      // The build folder has to be prepended outside the `modules-`/`commons-`
+      // concatenation, otherwise the folder itself is named `modules-[fullhash]`.
+      const splitChunkFilename = (prefix = '') =>
+        `${BUILD_DIR}/${prefix}${vendorFilename}`;
 
       // always optimize vendor and commons chunk to separate file into small size
       // otherwise, the main chunk will be too large to host on CDN
       developmentConfig.optimization = {
         splitChunks: {
           chunks,
-          filename: vendorFilename, // Ensure hash is included
+          filename: splitChunkFilename(), // Ensure hash is included
           minSize: 1_000_000, // 1MB
           maxSize: 9_000_000,
           /**
@@ -380,13 +488,13 @@ export const getBaseWebpackConfig = <T extends BaseAppConfig>({
             vendor: {
               // import file path containing node_modules
               test: /[\\/]node_modules[\\/]/,
-              filename: `modules-${vendorFilename}`, // Ensure hash is included
+              filename: splitChunkFilename('modules-'), // Ensure hash is included
               reuseExistingChunk: true,
             },
             commons: {
               // import file path containing ringcentral-js-widgets
               test: /[\\/]ringcentral-js-widgets[\\/]/,
-              filename: `commons-${vendorFilename}`, // Ensure hash is included
+              filename: splitChunkFilename('commons-'), // Ensure hash is included
               reuseExistingChunk: true,
             },
           },
@@ -396,6 +504,13 @@ export const getBaseWebpackConfig = <T extends BaseAppConfig>({
 
     return merge(developmentConfig, {
       output: {
+        /**
+         * Chunks resolve against the HTML document, not against the directory of
+         * the executing script. `auto` derives the public path from
+         * `document.currentScript.src` — which already points inside BUILD_DIR —
+         * and would request `<hash>/<hash>/zh-CN.js`.
+         */
+        publicPath: publicPath ?? '',
         filename: (pathData) => {
           const chunkName = pathData?.chunk?.name;
 
@@ -403,21 +518,18 @@ export const getBaseWebpackConfig = <T extends BaseAppConfig>({
             return filenameMap[chunkName];
           }
 
-          return DEFAULT_FILENAME;
+          return HASHED_FILENAME;
         },
-        chunkFilename: (pathData, assetInfo) => {
+        chunkFilename: (pathData) => {
           const isString = typeof chunkFilenames === 'string';
 
-          if (isString) return chunkFilenames;
+          if (isString) return applyBuildId(chunkFilenames);
 
           const chunkName = pathData.chunk?.name;
-          if (!chunkName) return DEFAULT_CHUNK_FILENAME;
+          if (!chunkName) return HASHED_CHUNK_FILENAME;
 
-          if (assetInfo) {
-            chunkInfoMap.set(chunkName, assetInfo);
-          }
-
-          return chunkFilenames?.[chunkName] || DEFAULT_CHUNK_FILENAME;
+          const configured = chunkFilenames?.[chunkName];
+          return configured ? applyBuildId(configured) : HASHED_CHUNK_FILENAME;
         },
       },
     });
