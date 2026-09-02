@@ -38,6 +38,7 @@ import type {
   EvDispositionManualPassOptions,
   EvLogoutAgentResponse,
   EvMessageRes,
+  EvOffhookFlags,
   EvOpenSocketResult,
   EvRequeueCallResponse,
   EvRequeueOption,
@@ -59,8 +60,42 @@ import type {
   EvClientManualOutdialParams,
 } from './EvClient.interface';
 import { Environment } from '../Environment';
+import type { ReconnectSnapshot as EvReconnectSnapshot } from '../../utils/reconcileReconnectState';
+import type { StoredEvSession } from '../../utils/canRejoinEvSession';
 
-type ListenerType = (typeof EvCallbackTypes)['OPEN_SOCKET' | 'CLOSE_SOCKET'];
+type ListenerType =
+  (typeof EvCallbackTypes)['OPEN_SOCKET' | 'CLOSE_SOCKET' | 'LOGIN'];
+
+/** Snapshot of the SDK's socket bookkeeping, see {@link EvClient.getSocketDiagnostics}. */
+export interface EvSocketDiagnostics {
+  /** Epoch ms of the last server echo, or null before the first one. */
+  lastAlive: number | null;
+  msSinceLastAlive: number | null;
+  /** Null means the SDK's BEAT timer is not running at all. */
+  pingStatIntervalId: unknown;
+  statsIntervalId: unknown;
+  socketReadyState: number | null;
+  /** Growth here on a healthy socket means the SDK thinks it is offline. */
+  queuedMsgCount: number | null;
+  reconnectAttemptsCounter: number | null;
+  isLoggedIn: boolean;
+}
+
+/**
+ * Mirrors `MAX_RECONNECTION_ATTEMPTS` in the Agent SDK's socket module. Used
+ * to predict whether the SDK will keep retrying so the UI can distinguish a
+ * recoverable drop from a dead connection.
+ */
+const MAX_RECONNECTION_ATTEMPTS = 72;
+
+/** Local storage namespace the Agent SDK persists its session token under. */
+const SDK_STORAGE_PREFIX = 'agentSDK:';
+
+/**
+ * The SDK stores `hash_code` without a timestamp, so the age of the session is
+ * tracked alongside it to decide whether a rejoin after reload is worthwhile.
+ */
+const SESSION_SAVED_AT_KEY = '__evSessionSavedAt__';
 
 type Listener<
   T extends keyof EvClientCallMapping,
@@ -103,15 +138,35 @@ class EvClient extends RcModule {
     this._options = this.evClientOptions.options;
     const { closeResponse, openResponse } = this.evClientOptions.callbacks;
     this._onOpen = async (res) => {
+      // The SDK reuses this callback to report a failed connect attempt, so a
+      // response carrying an error must not be mistaken for a live socket.
+      if (res?.error) {
+        this.logger.info('OPEN_SOCKET error~', res.error);
+        await this.setAppStatus(
+          res.reconnect ? evStatus.RECONNECTING : evStatus.CONNECT_FAILURE,
+        );
+        openResponse(res);
+        this._eventEmitter.emit(EvCallbackTypes.OPEN_SOCKET, res);
+        return;
+      }
       await this.setAppStatus(evStatus.CONNECTED);
+      this._rememberSessionTimestamp();
       openResponse(res);
       this._eventEmitter.emit(EvCallbackTypes.OPEN_SOCKET, res);
       // ensure for WebSocket keep-alive connection
       this._sdk.terminateStats();
     };
     this._onClose = async () => {
-      this.logger.info('EvCallbackTypes.CLOSE_SOCKET~');
-      await this.setAppStatus(evStatus.CLOSED);
+      // The SDK fires this on every failed reconnect attempt, not just on a
+      // final give-up, so the two cases are separated here. Reporting a
+      // recoverable drop as CLOSED invites the agent to force a fresh login,
+      // which discards the session hash code the SDK needs to resume and
+      // strands the call in pending disposition server-side.
+      const willRetry = this.willAutoReconnect;
+      this.logger.info('EvCallbackTypes.CLOSE_SOCKET~', { willRetry });
+      await this.setAppStatus(
+        willRetry ? evStatus.RECONNECTING : evStatus.CLOSED,
+      );
       closeResponse();
       this._eventEmitter.emit(EvCallbackTypes.CLOSE_SOCKET);
     };
@@ -162,6 +217,148 @@ class EvClient extends RcModule {
     return new Promise<EvBaseCall | void>((resolve) => {
       this._sdk.loadCurrentCall(resolve);
     });
+  }
+
+  private get _uiModel(): any {
+    return this._sdk?._getUIModel?.().getInstance();
+  }
+
+  /**
+   * Whether the Agent SDK will keep retrying the socket on its own.
+   *
+   * Mirrors the SDK's own guard: it only auto-reconnects while the agent is
+   * still logged in and it has attempts left.
+   */
+  get willAutoReconnect(): boolean {
+    const model = this._uiModel;
+    if (!model?.agentSettings?.isLoggedIn) {
+      return false;
+    }
+    const attempts = model.reconnectAttemptsCounter ?? 0;
+    return attempts <= MAX_RECONNECTION_ATTEMPTS;
+  }
+
+  /**
+   * The server's authoritative view of the agent, captured from the most
+   * recent reconnect login response.
+   */
+  @delegate('mainClient')
+  async getReconnectSnapshot(): Promise<EvReconnectSnapshot> {
+    const model = this._uiModel;
+    const connectionSettings = model?.connectionSettings ?? {};
+    return {
+      isOnCall: !!model?.agentSettings?.onCall,
+      activeCallUii: connectionSettings.activeCallUii || '',
+      isPendingDisposition: connectionSettings.isPendingDisp === true ||
+        connectionSettings.isPendingDisp === 'true',
+    };
+  }
+
+  /**
+   * Read-only snapshot of the SDK's socket bookkeeping.
+   *
+   * `lastAlive` only advances when the backend sends an echo instruction, so
+   * it is the liveness signal for the agent websocket: a network switch
+   * leaves the socket reporting OPEN while nothing gets through, and the
+   * SDK's reconnect only starts once the browser finally times the TCP
+   * connection out. The socket watchdog samples this snapshot to detect that
+   * zombie state and force the reconnect early.
+   */
+  @delegate('mainClient')
+  async getSocketDiagnostics(): Promise<EvSocketDiagnostics> {
+    const model = this._uiModel;
+    const lastAlive = model?.lastAlive ?? null;
+    return {
+      lastAlive,
+      msSinceLastAlive: lastAlive === null ? null : Date.now() - lastAlive,
+      pingStatIntervalId: model?.pingStatIntervalId ?? null,
+      statsIntervalId: model?.statsIntervalId ?? null,
+      socketReadyState: this._sdk?.socket?.readyState ?? null,
+      queuedMsgCount: this._sdk?._queuedMsgs?.length ?? null,
+      reconnectAttemptsCounter: model?.reconnectAttemptsCounter ?? null,
+      isLoggedIn: !!model?.agentSettings?.isLoggedIn,
+    };
+  }
+
+  private _rememberSessionTimestamp(): void {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return;
+    }
+    window.localStorage.setItem(SESSION_SAVED_AT_KEY, String(Date.now()));
+  }
+
+  /**
+   * Read back the session token the SDK persisted on login, together with the
+   * timestamp of the last successful socket open. Used to judge whether the
+   * server-side session is still fresh enough for a socket-level rejoin to be
+   * worth attempting.
+   */
+  @delegate('mainClient')
+  async getStoredSession(): Promise<StoredEvSession | null> {
+    if (typeof window === 'undefined' || !window.localStorage) {
+      return null;
+    }
+    const read = (key: string): string => {
+      const raw = window.localStorage.getItem(`${SDK_STORAGE_PREFIX}${key}`);
+      if (!raw) return '';
+      try {
+        return String(JSON.parse(raw));
+      } catch {
+        return raw;
+      }
+    };
+    const hashCode = read('hash_code');
+    const agentId = read('agent_id');
+    if (!hashCode || !agentId) {
+      return null;
+    }
+    const savedAt = Number(
+      window.localStorage.getItem(SESSION_SAVED_AT_KEY) ?? 0,
+    );
+    return { agentId, hashCode, savedAt };
+  }
+
+  /**
+   * Prime the SDK to send a Layer 2 reconnect on the next `openSocket()`
+   * instead of a fresh login, so the server hands back the existing session
+   * along with its call and pending-disposition state.
+   *
+   * Only possible on an instance that has completed a login in this page:
+   * the SDK builds the reconnect message from the in-memory `loginRequest`
+   * and routes the response into its Layer 2 branch only while
+   * `agentSettings.isLoggedIn` is set. Priming a freshly created instance
+   * (a page reload) would make the SDK dereference a null `loginRequest`
+   * inside its socket message handler.
+   *
+   * Returns false when a fresh login is the only option.
+   */
+  @delegate('mainClient')
+  async prepareSessionRejoin(hashCode: string): Promise<boolean> {
+    const model = this._uiModel;
+    if (!model || !hashCode) {
+      return false;
+    }
+    if (!model.agentSettings?.isLoggedIn || !model.loginRequest) {
+      return false;
+    }
+    model.connectionSettings.hashCode = hashCode;
+    model.connectionSettings.reconnect = true;
+    this._sdk._isReconnect = true;
+    return true;
+  }
+
+  /**
+   * Drop a call the server still holds and cancel its pending disposition.
+   *
+   * This is the SDK's own escape hatch for an irreconcilable reconnect: the
+   * hangup carries `cancel_pending_disp`, which is the only way to release an
+   * agent the server has parked in pending disposition with no call the client
+   * can dispose.
+   */
+  @delegate('mainClient')
+  async forceClearPendingDisposition(sessionId = 1): Promise<void> {
+    this.logger.warn('forceClearPendingDisposition~~', { sessionId });
+    await this._sdk.hangup(sessionId, true);
   }
 
   get currentCall(): EvBaseCall {
@@ -220,6 +417,14 @@ class EvClient extends RcModule {
         [EvCallbackTypes.ACK]: (res: EvACKResponse) => {
           this._eventEmitter.emit(EvCallbackTypes.ACK, res);
         },
+        // The SDK holds exactly one callback per type and reuses the LOGIN
+        // slot for the reconnect login it sends on its own after a socket
+        // drop. `configureAgent` replaces this slot with its per-call
+        // callback, so that callback re-emits here too; anything else that
+        // claims the LOGIN slot would cut this bridge off.
+        [EvCallbackTypes.LOGIN]: (res: EvClientCallMapping['loginResponse']) => {
+          this._eventEmitter.emit(EvCallbackTypes.LOGIN, res);
+        },
       },
       ...options,
     });
@@ -255,6 +460,7 @@ class EvClient extends RcModule {
         this._sdk.authenticateAgentWithEngageAccessToken(
           engageAccessToken,
           (response: EvAuthenticateAgentWithEngageAccessTokenRes) => {
+            this._syncSoftphoneAuthToken();
             resolve(response);
           },
         );
@@ -286,6 +492,12 @@ class EvClient extends RcModule {
         loginType,
         (res: any) => {
           this.logger.info('configureAgent response~~');
+          // loginAgent() installed this callback as THE SDK LOGIN callback,
+          // displacing the bridge set up in initSDK. The SDK fires the same
+          // slot for the reconnect login it sends after a socket drop, so the
+          // bridge has to be kept alive from here (a settled promise ignores
+          // the extra resolve).
+          this._eventEmitter.emit(EvCallbackTypes.LOGIN, res);
           resolve({
             type: messageTypes.CONFIGURE_AGENT,
             data: res,
@@ -499,6 +711,38 @@ class EvClient extends RcModule {
 
   get ifSocketExist(): boolean {
     return !!this._sdk.socket;
+  }
+
+  /**
+   * Abandon a socket that is already known dead, without waiting for the
+   * browser's closing handshake.
+   *
+   * `WebSocket.close()` is graceful: it sends a Close frame and waits for the
+   * peer's reply, and over a black-holed TCP path Chrome only gives up after
+   * its 60s closing-handshake timeout — the SDK's reconnect starts in
+   * `onclose`, so a plain close costs a full extra minute. The SDK's handler
+   * takes no event and only flips its own bookkeeping, so it can be driven
+   * directly; the orphaned browser socket is detached first so its eventual
+   * timeout cannot double-drive the SDK.
+   */
+  @delegate('mainClient')
+  async abandonSocket(): Promise<void> {
+    const socket = this._sdk?.socket;
+    if (!socket) {
+      return;
+    }
+    this.logger.info('abandonSocket~~');
+    const onclose = socket.onclose;
+    socket.onopen = null;
+    socket.onerror = null;
+    socket.onmessage = null;
+    socket.onclose = null;
+    try {
+      socket.close();
+    } catch (error) {
+      this.logger.info('abandonSocket~~ close failed', error);
+    }
+    onclose?.call(socket);
   }
 
   @delegate('mainClient')
@@ -850,6 +1094,96 @@ class EvClient extends RcModule {
   @delegate('mainClient')
   async sipRegister() {
     await this._sdk.sipRegister();
+  }
+
+  /**
+   * Re-register the softphone without tearing the session down, used when the
+   * network changed underneath an established registration.
+   */
+  @delegate('mainClient')
+  async sipForceRegister() {
+    await this._sdk.sipForceRegister();
+  }
+
+  /**
+   * Mirror the app's offhook state onto the softphone SDK's reconnect flags.
+   *
+   * Both flags default to false and the SDK only ever copies them forward, so
+   * without this the SDK reports `autoStartOH: false` after every registrar
+   * rotation and the agent's audio leg is never rebuilt.
+   */
+  @delegate('mainClient')
+  async setOffhookFlags({
+    maintainOH,
+    autoStartOH,
+  }: EvOffhookFlags): Promise<void> {
+    const settings = this._sdk?._SoftphoneService?.getSoftphoneSettings?.();
+    if (!settings) {
+      return;
+    }
+    settings.maintainOH = maintainOH;
+    settings.autoStartOH = autoStartOH;
+  }
+
+  /**
+   * Keep the softphone SDK's private auth model aligned with the Agent SDK.
+   *
+   * The bundled SDK creates the softphone service before authentication and
+   * gives it a separate UIModel. Later authentication refreshes only the main
+   * model, so registrar rotation can otherwise fetch sipRegistrationInfo with
+   * the token captured by an earlier session even though configureAgent just
+   * fetched the same resource successfully with the current token.
+   */
+  private _syncSoftphoneAuthToken(): void {
+    const engageAccessToken =
+      this._sdk?.getAuthenticateRequest?.()?.engageAccessToken;
+    const softphoneAuthenticateRequest = this._sdk?._SoftphoneService
+      ?.getUIModel?.()
+      ?.getInstance?.()?.authenticateRequest;
+    if (
+      !softphoneAuthenticateRequest ||
+      typeof engageAccessToken !== 'string'
+    ) {
+      return;
+    }
+    softphoneAuthenticateRequest.engageAccessToken = engageAccessToken;
+  }
+
+  /**
+   * Ask the SDK to rotate the SIP registrar.
+   *
+   * Depending on whether a reconnect is already under way the SDK either just
+   * updates the offhook flags or tears the session down and rebuilds it, and
+   * reports which it chose on `SIP_SWITCH_REGISTRAR`.
+   */
+  @delegate('mainClient')
+  async switchSoftphoneRegistrar(maintainOH: boolean): Promise<void> {
+    this._syncSoftphoneAuthToken();
+    await this._sdk.switchSoftphoneRegistrar(maintainOH);
+  }
+
+  /**
+   * Rebuild the SIP stack from scratch against the next available registrar.
+   *
+   * SIP.js is configured with `maxReconnectionAttempts: 0`, so once its
+   * transport closes it stays closed; this is the only way back.
+   */
+  @delegate('mainClient')
+  async resetSoftphoneSession({
+    maintainOH,
+    autoStartOH,
+  }: EvOffhookFlags): Promise<void> {
+    // The SDK silently refuses the reset unless `isRegistered` is set and no
+    // reconnect is marked in flight — states that no longer hold once the
+    // transport is dead, which is exactly when a manual retry is offered.
+    // Force the entry conditions the same way the SDK's own registration
+    // timeout handler does before it rotates the registrar.
+    const settings = this._sdk?._SoftphoneService?.getSoftphoneSettings?.();
+    if (settings) {
+      settings.isRegistered = true;
+      settings.attemptingSoftphoneReconnect = false;
+    }
+    await this._sdk.resetSoftphoneSession({ maintainOH, autoStartOH });
   }
 
   @delegate('mainClient')

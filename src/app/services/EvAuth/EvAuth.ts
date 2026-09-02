@@ -34,11 +34,13 @@ import { TabManager } from '../EvTabManager';
 import type {
   EvAuthOptions,
   AuthenticateWithTokenParams,
+  LoginAgentParams,
   OpenSocketParams,
 } from './EvAuth.interface';
 import i18n, { t } from './i18n';
 import { track } from '../Analytics/track';
 import { trackEvents } from '../../../lib/trackEvents';
+import { canRejoinEvSession } from '../../utils/canRejoinEvSession';
 
 const DEFAULT_COUNTRIES = ['USA', 'CAN'];
 const AGENT_CONFIG_TIMEOUT_MS = 10 * 1000;
@@ -356,6 +358,11 @@ class EvAuth extends RcModule {
     await this.block.next(async () => {
       this.logger.info('connectOrReauthenticate~~, agentId', this.agentId);
       if (this.agentId) {
+        // A reload lands here. A socket-level rejoin is not possible on a
+        // freshly created SDK instance (its Layer 2 reconnect needs the
+        // in-memory login state), so this is always a fresh login. A call or
+        // disposition the server still holds is recovered through the
+        // persisted activity call id and the server's PENDING_DISP push.
         await this.loginAgent();
       } else {
         await this.authenticateWithToken();
@@ -419,6 +426,14 @@ class EvAuth extends RcModule {
     this._eventEmitter.on(evAuthEvent.LOGOUT_BEFORE, callback);
   }
 
+  /**
+   * Full re-authentication. Clearing the EV session wipes the SDK's session
+   * hash code, so the next login is a fresh one and any call the server still
+   * holds is orphaned in pending disposition.
+   *
+   * Prefer {@link retryConnection} for connection problems; reserve this for
+   * cases where the session is genuinely invalid, such as a forced logout.
+   */
   @delegate('server')
   async newReconnect(isBlock = true) {
     this.logger.info('newReconnect~~');
@@ -427,6 +442,47 @@ class EvAuth extends RcModule {
     await this.evClient.closeSocket();
     const fn = () => this.loginAgent();
     return isBlock ? this.block.next(fn) : fn();
+  }
+
+  /**
+   * Re-establish the socket while keeping the SDK session intact, so the
+   * server resumes the existing session and reports back whether the agent is
+   * still on a call or owes a disposition.
+   *
+   * Rejoining is only attempted while the stored session is fresh enough to
+   * still exist server-side; otherwise, and when the rejoin attempt itself
+   * fails before the socket opens, a full re-authentication runs instead.
+   */
+  @delegate('server')
+  async retryConnection(): Promise<void> {
+    this.logger.info('retryConnection~~');
+    if (!(await this._canRejoinStoredSession())) {
+      await this.newReconnect();
+      return;
+    }
+    this._setLoginStatus(EvLoginStatus.REAUTHING);
+    await this.block.next(async () => {
+      try {
+        await this.evClient.closeSocket();
+        await this.loginAgent({ tryRejoin: true, retryOpenSocket: true });
+      } catch (error) {
+        this.logger.error('retryConnection~~ failed, reauthenticating', error);
+        await this.newReconnect(false);
+      }
+    });
+  }
+
+  private async _canRejoinStoredSession(): Promise<boolean> {
+    const stored = await this.evClient.getStoredSession();
+    const { canRejoin, reason } = canRejoinEvSession({
+      stored,
+      agentId: this.agentId,
+      now: Date.now(),
+    });
+    if (!canRejoin) {
+      this.logger.info('retryConnection~~ rejoin not possible', reason);
+    }
+    return canRejoin;
   }
 
   @delegate('server')
@@ -575,15 +631,49 @@ class EvAuth extends RcModule {
     }
   }
 
+  /**
+   * @param tryRejoin Resume the stored server session rather than starting a
+   * new one. Leave it off when the caller has deliberately invalidated the
+   * session, such as after a forced logout.
+   * @param retryOpenSocket On a failed socket open, re-authenticate and try
+   * one more time instead of logging the agent out immediately.
+   */
   @delegate('server')
-  async loginAgent(): Promise<void> {
-    this.logger.info('loginAgent~~');
+  async loginAgent({
+    tryRejoin = false,
+    retryOpenSocket = false,
+  }: LoginAgentParams = {}): Promise<void> {
+    this.logger.info('loginAgent~~', { tryRejoin });
     const authenticateRes = await this.authenticateWithToken({
       shouldEmitAuthSuccess: false,
     });
     if (!authenticateRes) return;
-    await this.openSocketWithSelectedAgentId();
+    if (tryRejoin) {
+      await this._prepareSessionRejoin();
+    }
+    await this.openSocketWithSelectedAgentId({ retryOpenSocket });
   };
+
+  /**
+   * Hand the SDK the stored session token so the next socket open is a Layer 2
+   * reconnect. A no-op when the token is missing, stale, belongs to a
+   * different agent, or the SDK instance has not completed a login in this
+   * page, in which case the caller falls through to a fresh login.
+   */
+  private async _prepareSessionRejoin(): Promise<boolean> {
+    const stored = await this.evClient.getStoredSession();
+    const { canRejoin, reason } = canRejoinEvSession({
+      stored,
+      agentId: this.agentId,
+      now: Date.now(),
+    });
+    if (!canRejoin) {
+      this.logger.info('prepareSessionRejoin~~ skipped', reason);
+      return false;
+    }
+    this.logger.info('prepareSessionRejoin~~ resuming session');
+    return this.evClient.prepareSessionRejoin(stored!.hashCode);
+  }
 
   onceLoginSuccess(callback: () => void) {
     this._eventEmitter.once(evAuthEvent.LOGIN_SUCCESS, callback);

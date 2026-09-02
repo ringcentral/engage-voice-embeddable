@@ -28,3 +28,4 @@ export * from './EvCallMonitor';
 export * from './Auth';
 export * from './OAuth';
 export * from './Redirect';
+export * from './EvSessionRecovery';

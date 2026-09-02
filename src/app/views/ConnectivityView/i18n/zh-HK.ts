@@ -7,6 +7,8 @@ export default {
   connecting: '正在連線',
   refresh: '重新整理',
   socketDisconnected: '連線遺失。請重試。',
+  socketReconnecting: '連線遺失。正在重新連線...',
   sipUnstableConnection: '整合式軟體電話已中斷連線。正在嘗試重新連線...',
+  sipReconnectFailed: '整合式軟體電話已中斷連線。請重試。',
   sipConnecting: '整合軟體電話連線...',
 } as const;

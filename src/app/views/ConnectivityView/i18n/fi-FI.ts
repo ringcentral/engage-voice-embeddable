@@ -7,6 +7,8 @@ export default {
   connecting: 'Yhdistetään',
   refresh: 'Päivitä',
   socketDisconnected: 'Yhteys katkesi. Yritä uudelleen.',
+  socketReconnecting: 'Yhteys katkesi. Yhdistetään uudelleen...',
   sipUnstableConnection: 'Integroitu ohjelmistopuhelin irti. Yritetään muodostaa yhteys uudelleen...',
+  sipReconnectFailed: 'Integroitu ohjelmistopuhelin irti. Yritä uudelleen.',
   sipConnecting: 'Integroitu softphone-liitäntä...',
 } as const;

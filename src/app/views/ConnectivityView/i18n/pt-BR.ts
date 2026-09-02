@@ -7,6 +7,8 @@ export default {
   connecting: 'Conectando',
   refresh: 'Recarregar',
   socketDisconnected: 'Conexão perdida. Por favor, tente novamente.',
+  socketReconnecting: 'Conexão perdida. Reconectando...',
   sipUnstableConnection: 'Softphone integrado desconectado. Tentando reconectar...',
+  sipReconnectFailed: 'Softphone integrado desconectado. Tente novamente.',
   sipConnecting: 'Conexão de softphone integrado...',
 } as const;

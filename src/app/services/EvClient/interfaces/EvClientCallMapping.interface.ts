@@ -10,7 +10,9 @@ import type {
   EvDropSessionNotification,
   EvEndedCall,
   EvHoldResponse,
+  EvLoginResponse,
   EvOffhookInitResponse,
+  EvOpenSocketResult,
   EvReceivedTransferCall,
 } from './EvSdkResponse.interface';
 
@@ -18,6 +20,26 @@ export type EvSipRingingData = {
   message: string;
   // This type from sip.js => IncomingRequest
   data: string;
+};
+
+/**
+ * Reports which repair the SDK chose when asked to rotate the SIP registrar:
+ * `RESET` rebuilds the session, `UPDATE` only refreshes the offhook flags.
+ */
+export type EvSipSwitchRegistrarData = {
+  message: string;
+  status: 'RESET' | 'UPDATE';
+};
+
+/**
+ * Fired once the softphone has re-registered, carrying the offhook flags the
+ * SDK was holding when the registration dropped.
+ */
+export type EvSipDialDestChangedData = {
+  message: string;
+  dialDest: string;
+  maintainOH: boolean;
+  autoStartOH: boolean;
 };
 
 export interface EvClientCallMapping {
@@ -64,7 +86,7 @@ export interface EvClientCallMapping {
   leadInsertResponse: any;
   leadSearchResponse: any;
   leadUpdateResponse: any;
-  loginResponse: any;
+  loginResponse: EvLoginResponse;
   loginPhase1Response: EvAgentConfig;
   multiSocketResponse: any;
   logoutResponse: any;
@@ -73,7 +95,8 @@ export interface EvClientCallMapping {
   newCallNotification: EvBaseCall;
   offhookInitResponse: EvOffhookInitResponse;
   offhookTermNotification: any;
-  openResponse: { reconnect: boolean };
+  /** `error` is present when the SDK reuses this callback for a failed connect. */
+  openResponse: EvOpenSocketResult;
   pauseRecordResponse: any;
   pendingChatDispNotification: any;
   pendingDispNotification: any;
@@ -101,13 +124,13 @@ export interface EvClientCallMapping {
   searchDirectoryResponse: any;
   extensionPresenceInfo: any;
   sipConnectedNotification: any;
-  sipDialDestChangedNotification: any;
+  sipDialDestChangedNotification: EvSipDialDestChangedData;
   sipEndedNotification: any;
   sipMuteResponse: any;
   sipRegisteredNotification: any;
   sipRegistrationFailedNotification: any;
   sipRingingNotification: EvSipRingingData;
-  sipSwitchRegistrarNotification: any;
+  sipSwitchRegistrarNotification: EvSipSwitchRegistrarData;
   sipUnmuteResponse: any;
   sipUnregisteredNotification: any;
   sipUnstableConnectionNotification: any;

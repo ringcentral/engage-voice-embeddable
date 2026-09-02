@@ -7,6 +7,8 @@ export default {
   connecting: 'Verbinding maken',
   refresh: 'Vernieuwen',
   socketDisconnected: 'Verbinding verbroken. Probeer het opnieuw.',
+  socketReconnecting: 'Verbinding verbroken. Opnieuw verbinden...',
   sipUnstableConnection: 'Geïntegreerde softphone losgekoppeld. Proberen opnieuw verbinding te maken...',
+  sipReconnectFailed: 'Geïntegreerde softphone losgekoppeld. Probeer het opnieuw.',
   sipConnecting: 'Geïntegreerde softphone-verbinding...',
 } as const;

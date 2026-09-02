@@ -17,7 +17,12 @@ import { EvSoftphoneEvents } from '../../../enums';
 import { dialoutStatuses } from '../../../enums/dialoutStatus';
 import { sleep } from '../../../lib/utils';
 import { EvCallbackTypes } from '../EvClient/enums';
-import type { EvSipRingingData } from '../EvClient/interfaces/EvClientCallMapping.interface';
+import type {
+  EvSipDialDestChangedData,
+  EvSipRingingData,
+  EvSipSwitchRegistrarData,
+} from '../EvClient/interfaces/EvClientCallMapping.interface';
+import type { EvOffhookInitResponse } from '../EvClient/interfaces/EvSdkResponse.interface';
 import { EvClient } from '../EvClient';
 import { EvAuth } from '../EvAuth';
 import { EvSubscription } from '../EvSubscription';
@@ -30,6 +35,7 @@ import type {
   SipState,
 } from './EvIntegratedSoftphone.interface';
 import { audios } from './audios';
+import { planOffhookRecovery } from '../../utils/planOffhookRecovery';
 
 const SECOND = 1000;
 const RECONNECT_DEBOUNCE_TIME = SECOND * 5;
@@ -104,6 +110,18 @@ class EvIntegratedSoftphone extends RcModule {
 
   @state
   sipUnstableConnection = false;
+
+  /** The SDK is rebuilding the SIP session against another registrar. */
+  @state
+  attemptingSoftphoneReconnect = false;
+
+  /**
+   * Automatic recovery has been exhausted, so the agent is offered a retry.
+   * SIP.js will not reconnect its own transport, so without this the softphone
+   * stays down with no way back.
+   */
+  @state
+  manualSoftphoneReconnect = false;
 
   get sipState(): SipState {
     if (this.sipRegistering) {
@@ -185,6 +203,26 @@ class EvIntegratedSoftphone extends RcModule {
   }
 
   @action
+  _setSoftphoneReconnectState({
+    attempting,
+    manual,
+  }: {
+    attempting: boolean;
+    manual: boolean;
+  }) {
+    this.attemptingSoftphoneReconnect = attempting;
+    this.manualSoftphoneReconnect = manual;
+  }
+
+  @delegate('server')
+  async setSoftphoneReconnectState(state: {
+    attempting: boolean;
+    manual: boolean;
+  }) {
+    this._setSoftphoneReconnectState(state);
+  }
+
+  @action
   _resetController() {
     this.muteActive = false;
   }
@@ -200,6 +238,8 @@ class EvIntegratedSoftphone extends RcModule {
     this.sipRegistering = false;
     this.sipRegisterSuccess = false;
     this.sipUnstableConnection = false;
+    this.attemptingSoftphoneReconnect = false;
+    this.manualSoftphoneReconnect = false;
   }
 
   @delegate('server')
@@ -227,6 +267,7 @@ class EvIntegratedSoftphone extends RcModule {
 
   initialize() {
     this._bindingIntegratedSoftphone();
+    this._initOffhookFlagSync();
     this.evAuth.beforeAgentLogout(async () => {
       this.logger.info('beforeAgentLogout~~');
       await this._resetAllState();
@@ -264,6 +305,105 @@ class EvIntegratedSoftphone extends RcModule {
   }
 
   /**
+   * Keep the SDK's reconnect flags in step with the agent's offhook state.
+   *
+   * The SDK hands these back on `SIP_DIAL_DEST_CHANGED` after it rotates
+   * registrars, and that is the only point at which the app learns whether the
+   * agent had an audio leg before the drop. Pushing them on every change keeps
+   * the answer correct no matter when the network fails.
+   */
+  private _initOffhookFlagSync(): void {
+    watch(
+      this,
+      () => [this.evPresence.isOffhook, this.evPresence.isManualOffhook] as const,
+      async ([isOffhook, isManualOffhook]) => {
+        if (!this.isIntegratedSoftphone) {
+          return;
+        }
+        await this.evClient.setOffhookFlags({
+          autoStartOH: isOffhook,
+          maintainOH: isManualOffhook,
+        });
+      },
+      { multiple: true },
+    );
+  }
+
+  /**
+   * IQ refuses an offhook init while it still believes the agent's previous
+   * audio leg is up ("Login Session is already off-hook available"). The
+   * platform exposes no dedicated error code for it, so the detail text is
+   * the only discriminator.
+   */
+  private _isStaleOffhookRefusal(data: Partial<EvOffhookInitResponse>): boolean {
+    return /already off-?hook/i.test(`${data.detail ?? ''} ${data.message ?? ''}`);
+  }
+
+  /**
+   * A failed offhook is the first hard evidence that the SIP session is gone,
+   * because nothing watches the transport itself. Rotating the registrar is
+   * the SDK's own repair for that, so it is driven from here.
+   */
+  private async _switchRegistrarAfterOffhookFailure(): Promise<void> {
+    if (!this.portManager.isServer || !this.isIntegratedSoftphone) {
+      return;
+    }
+    this.logger.info('OFFHOOK_INIT failed~~ switching registrar');
+    try {
+      await this.evClient.switchSoftphoneRegistrar(
+        this.evPresence.isManualOffhook,
+      );
+    } catch (error) {
+      this.logger.error('switchSoftphoneRegistrar failed', error);
+    }
+  }
+
+  /**
+   * Rebuild the SIP session at the agent's request.
+   *
+   * `autoStartOH` is always set so the audio leg comes back with the session
+   * rather than leaving the agent registered but silent.
+   */
+  @delegate('server')
+  async retrySoftphoneSession(): Promise<void> {
+    this.logger.info('retrySoftphoneSession~~');
+    await this.setSoftphoneReconnectState({ attempting: true, manual: false });
+    await this.evClient.resetSoftphoneSession({
+      maintainOH: this.evPresence.isManualOffhook,
+      autoStartOH: true,
+    });
+  }
+
+  /**
+   * Rebuild the agent's standing audio leg after the SDK rotated registrars,
+   * mirroring EAG's `dialDestChanged` handling. Mid-call audio is not
+   * recovered — EAG does not attempt it either; a call whose leg died ends in
+   * pending disposition and the agent completes it from there.
+   */
+  private async _recoverOffhookOnReconnect(
+    data?: EvSipDialDestChangedData,
+  ): Promise<void> {
+    const plan = planOffhookRecovery({
+      isServer: this.portManager.isServer,
+      isIntegratedSoftphone: this.isIntegratedSoftphone,
+      isOffhook: this.evPresence.isOffhook,
+      flags: data,
+    });
+    this.logger.info('SIP_DIAL_DEST_CHANGED~~ plan', plan.reason);
+    if (!plan.shouldRestoreOffhook) {
+      return;
+    }
+    try {
+      await this.evClient.offhookInit();
+      if (plan.shouldMaintainOffhook) {
+        await this.evPresence.setIsManualOffhook(true);
+      }
+    } catch (error) {
+      this.logger.error('offhook restore after reconnect failed', error);
+    }
+  }
+
+  /**
    * Subscribe to all SIP events from EvSubscription
    */
   private _bindingIntegratedSoftphone() {
@@ -275,6 +415,7 @@ class EvIntegratedSoftphone extends RcModule {
       this.setSipRegisterSuccess(true);
       this.setSipRegistering(false);
       this.setSipUnstableConnection(false);
+      this.setSoftphoneReconnectState({ attempting: false, manual: false });
       this._emitRegistered();
     });
     this.evSubscription.subscribe(EvCallbackTypes.SIP_UNREGISTERED, () => {
@@ -288,12 +429,68 @@ class EvIntegratedSoftphone extends RcModule {
         this.logger.info('SIP_REGISTRATION_FAILED~~');
         await this.setSipRegistering(false);
         await this._resetAllState();
+        // The SDK fires this when its reset/rotation budget is exhausted.
+        // `_resetAllState` returns early when SIP never connected in this
+        // cycle, so a reconnect attempt that dies here must be resolved to
+        // the manual retry or the spinner never ends.
+        if (this.attemptingSoftphoneReconnect || this.manualSoftphoneReconnect) {
+          await this.setSoftphoneReconnectState({
+            attempting: false,
+            manual: true,
+          });
+        }
       },
     );
     this.evSubscription.subscribe(EvCallbackTypes.SIP_UNSTABLE_CONNECTION, () => {
       this.logger.info('SIP_UNSTABLE_CONNECTION~~');
       this.setSipUnstableConnection(true);
     });
+    this.evSubscription.subscribe(
+      EvCallbackTypes.SIP_SWITCH_REGISTRAR,
+      async (data?: EvSipSwitchRegistrarData) => {
+        this.logger.info('SIP_SWITCH_REGISTRAR~~', data);
+        // 'RESET' means the SDK is rebuilding the session, 'UPDATE' means it
+        // declined to and only refreshed its flags, which leaves the agent
+        // stuck until they ask for a retry.
+        await this.setSoftphoneReconnectState({
+          attempting: data?.status === 'RESET',
+          manual: data?.status === 'UPDATE',
+        });
+      },
+    );
+    this.evSubscription.subscribe(
+      EvCallbackTypes.OFFHOOK_INIT,
+      async (data?: Partial<EvOffhookInitResponse>) => {
+        if (!data) {
+          return;
+        }
+        if (data.status === 'OK') {
+          return;
+        }
+        if (this._isStaleOffhookRefusal(data)) {
+          // IQ still holds a previous audio leg whose BYE was lost with the
+          // old network. The SIP side is healthy, so rotating the registrar
+          // cannot help; the server itself asks for a disconnect first, and
+          // terminating the orphaned leg lets the agent's next offhook
+          // attempt succeed.
+          if (!this.evPresence.isOffhook) {
+            this.logger.info(
+              'OFFHOOK_INIT refused~~ terminating stale server-side leg',
+            );
+            await this.evClient.offhookTerm();
+          }
+          return;
+        }
+        await this._switchRegistrarAfterOffhookFailure();
+      },
+    );
+    this.evSubscription.subscribe(
+      EvCallbackTypes.SIP_DIAL_DEST_CHANGED,
+      async (data?: EvSipDialDestChangedData) => {
+        this.logger.info('SIP_DIAL_DEST_CHANGED~~', data);
+        await this._recoverOffhookOnReconnect(data);
+      },
+    );
     this.evSubscription.subscribe(
       EvCallbackTypes.SIP_RINGING,
       (ringingCall?: EvSipRingingData) => {
@@ -578,6 +775,15 @@ class EvIntegratedSoftphone extends RcModule {
           ? RECONNECT_DEBOUNCE_TIME_WHEN_CONNECTED
           : RECONNECT_DEBOUNCE_TIME;
         await sleep(debounceTime);
+      }
+      // `sip/sipRegistrationInfo` is authenticated with the Engage token,
+      // which has no refresh token and expires on its own schedule. The socket
+      // reconnect only renews the separate WebSocket token, so after an outage
+      // long enough to outlive the Engage token this registration would fail
+      // with a 401. Re-exchange it first, as every other Engage HTTP call does.
+      const authorized = await this.evAuth.refreshEvToken();
+      if (!authorized) {
+        throw new Error('Engage token is expired, cannot register softphone');
       }
       this.logger.info('sipInitAndRegister~~');
       await this.evClient.sipInitAndRegister({

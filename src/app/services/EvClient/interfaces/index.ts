@@ -3,3 +3,4 @@ export * from './EvClientCallMapping.interface';
 export * from './EvRequeueOption.interface';
 export * from './EvSdkResponse.interface';
 export * from './EvAgentHistory.interface';
+export * from './EvOffhookFlags.interface';

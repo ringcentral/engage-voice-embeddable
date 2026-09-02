@@ -34,7 +34,7 @@ function formatSipRequest(data: any) {
   };
 }
 
-const SIP_REQUEST_EVENTS = [
+const SIP_REQUEST_EVENTS: readonly EvClientCallBackValueType[] = [
   EvCallbackTypes.SIP_ENDED,
   EvCallbackTypes.SIP_MUTE,
   EvCallbackTypes.SIP_RINGING,
