@@ -5,7 +5,8 @@
   "pages": [
     {
       "index": "src/app.html",
-      "main": "src/app.ts"
+      "main": "src/app.ts",
+      "filename": "app.js"
     },
     {
       "main": "src/adapter.ts",
@@ -13,7 +14,8 @@
     },
     {
       "index": "src/redirect.html",
-      "main": "src/redirect.ts"
+      "main": "src/redirect.ts",
+      "filename": "redirect.js"
     },
     {
       "index": "src/agentScript.html",
@@ -24,6 +26,9 @@
       }
     }
   ],
+  "chunkFilenames": {
+    "worker": "worker.[buildid].js"
+  },
   "assets": [
     { "from": "src/favicon.ico", "to": "favicon.ico" },
     { "from": "src/icon.svg", "to": "icon.svg" },

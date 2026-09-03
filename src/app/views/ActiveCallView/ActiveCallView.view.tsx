@@ -113,7 +113,12 @@ class ActiveCallView extends RcViewModule {
         this.initialize();
       });
     } else {
-      this.initialize();
+      const initialize = () => {
+        // Port callbacks can run synchronously while the module is still being
+        // constructed. Defer actions until Reactant has attached the store.
+        void Promise.resolve().then(() => this.initialize());
+      };
+      initialize();
     }
   }
 
