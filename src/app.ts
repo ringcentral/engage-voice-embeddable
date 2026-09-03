@@ -19,7 +19,7 @@ const loadWorker = () => {
   if (localStorage.getItem(DISABLE_SHARED_WORKER_KEY)) return;
   if (!window.SharedWorker) return;
   // Safari is excluded, as it was by the inline template.
-  if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) return;
+  // if (/^((?!chrome|android).)*safari/i.test(navigator.userAgent)) return;
 
   // The worker reads its configuration out of `self.location.search`
   // (`readUrlParams` in createApp), so the page's params have to be forwarded
