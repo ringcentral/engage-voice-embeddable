@@ -5,12 +5,17 @@ const worker = global.__rc_shared_worker__?.worker;
 
 async function runApp() {
   const app = await createApp(
-    {
-      name: 'cx-embeddable',
-      port: 'client',
-      type: 'SharedWorker',
-      worker,
-    },
+    worker
+      ? {
+          name: 'cx-embeddable',
+          port: 'client',
+          type: 'SharedWorker',
+          worker,
+        }
+      : {
+          name: 'cx-embeddable',
+          type: 'SharedTab',
+        },
     [],
   );
 

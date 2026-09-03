@@ -62,7 +62,12 @@ class ThirdParty extends RcModule {
         this.initialize();
       });
     } else {
-      this.initialize();
+      const initialize = () => {
+        // The host can answer the init message before Reactant finishes wiring
+        // this module to its store, so start the transport on the next microtask.
+        void Promise.resolve().then(() => this.initialize());
+      };
+      initialize();
     }
   }
 
