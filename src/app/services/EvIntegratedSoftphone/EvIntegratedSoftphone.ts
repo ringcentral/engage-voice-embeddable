@@ -20,6 +20,7 @@ import { EvCallbackTypes } from '../EvClient/enums';
 import type {
   EvSipDialDestChangedData,
   EvSipRingingData,
+  EvSipSuspectRegistrationData,
   EvSipSwitchRegistrarData,
 } from '../EvClient/interfaces/EvClientCallMapping.interface';
 import type { EvOffhookInitResponse } from '../EvClient/interfaces/EvSdkResponse.interface';
@@ -54,6 +55,31 @@ class EvIntegratedSoftphone extends RcModule {
   private _audio: HTMLAudioElement | null = null;
   private _sipConnected = false;
   private _isCloseWhenCallConnected = false;
+
+  /**
+   * State of the current SIP recovery, used to decide whether a superseded
+   * user agent's clean close wiped the live registration.
+   *
+   * `path` is how the session came back: `quick-reinit` means the SDK
+   * re-registered on the same registration info straight from its
+   * `_unregistered` handler (the vulnerable path); `registrar-switch` means it
+   * went through `resetSoftphoneSession` with fresh registration info.
+   */
+  private _recoveryTrace: {
+    unstableAt: number | null;
+    switchRegistrarAt: number | null;
+    registeredAt: number | null;
+    suspectCloseAt: number | null;
+    repairedAt: number | null;
+    path: 'none' | 'quick-reinit' | 'registrar-switch';
+  } = {
+    unstableAt: null,
+    switchRegistrarAt: null,
+    registeredAt: null,
+    suspectCloseAt: null,
+    repairedAt: null,
+    path: 'none',
+  };
 
   constructor(
     private evClient: EvClient,
@@ -359,6 +385,57 @@ class EvIntegratedSoftphone extends RcModule {
   }
 
   /**
+   * Repair a registration a superseded user agent may have wiped.
+   *
+   * A `quick-reinit` recovery re-registers on the same registration info from
+   * the SDK's `_unregistered` handler and never refetches it, so it is the
+   * only path whose fresh binding a late wildcard un-REGISTER from the old
+   * user agent can remove. When that happens the softphone reports
+   * "registered" but the platform can no longer route to it, and the agent
+   * only discovers it when the next offhook fails with an INTERCEPT.
+   *
+   * Rotating the registrar is the proven repair: it tears the suspect session
+   * down and re-registers against fresh registration info, exactly what the
+   * offhook-failure handler already does, so drive it here as soon as the
+   * clean close is seen rather than waiting for the agent to hit the error.
+   *
+   * The clean close and the replacement registration race, and either can
+   * reach the server first, so this is driven from both the suspect close and
+   * `SIP_REGISTERED` and acts only once both facts hold for the cycle.
+   *
+   * Guards:
+   * - only the `quick-reinit` path is vulnerable; a registrar switch already
+   *   refetched its registration info.
+   * - skip while the agent has a live audio leg, so a call in progress is not
+   *   torn down; the failure this prevents only bites the next idle offhook.
+   * - repair at most once per recovery cycle.
+   */
+  private async _maybeRepairSuspectRegistration(): Promise<void> {
+    if (!this.portManager.isServer || !this.isIntegratedSoftphone) {
+      return;
+    }
+    const trace = this._recoveryTrace;
+    const shouldRepair =
+      trace.path === 'quick-reinit' &&
+      trace.registeredAt !== null &&
+      trace.suspectCloseAt !== null &&
+      trace.repairedAt === null &&
+      !this.evPresence.isOffhook;
+    if (!shouldRepair) {
+      return;
+    }
+    this._recoveryTrace.repairedAt = Date.now();
+    this.logger.info('suspect registration~~ rotating registrar');
+    try {
+      await this.evClient.switchSoftphoneRegistrar(
+        this.evPresence.isManualOffhook,
+      );
+    } catch (error) {
+      this.logger.error('suspect registration repair failed', error);
+    }
+  }
+
+  /**
    * Rebuild the SIP session at the agent's request.
    *
    * `autoStartOH` is always set so the audio leg comes back with the session
@@ -410,6 +487,17 @@ class EvIntegratedSoftphone extends RcModule {
     this.logger.info('_bindingIntegratedSoftphone~~');
     this.evSubscription.subscribe(EvCallbackTypes.SIP_REGISTERED, () => {
       this.logger.info('SIP_REGISTERED~~');
+      const { unstableAt, switchRegistrarAt } = this._recoveryTrace;
+      if (unstableAt !== null) {
+        this._recoveryTrace.path =
+          switchRegistrarAt !== null && switchRegistrarAt >= unstableAt
+            ? 'registrar-switch'
+            : 'quick-reinit';
+      }
+      this._recoveryTrace.registeredAt = Date.now();
+      // A suspect close can arrive just before this registration completes, so
+      // re-check the repair condition now that the path is classified.
+      void this._maybeRepairSuspectRegistration();
       this._sipConnected = true;
       this._isCloseWhenCallConnected = false;
       this.setSipRegisterSuccess(true);
@@ -443,12 +531,21 @@ class EvIntegratedSoftphone extends RcModule {
     );
     this.evSubscription.subscribe(EvCallbackTypes.SIP_UNSTABLE_CONNECTION, () => {
       this.logger.info('SIP_UNSTABLE_CONNECTION~~');
+      this._recoveryTrace = {
+        unstableAt: Date.now(),
+        switchRegistrarAt: null,
+        registeredAt: null,
+        suspectCloseAt: null,
+        repairedAt: null,
+        path: 'none',
+      };
       this.setSipUnstableConnection(true);
     });
     this.evSubscription.subscribe(
       EvCallbackTypes.SIP_SWITCH_REGISTRAR,
       async (data?: EvSipSwitchRegistrarData) => {
         this.logger.info('SIP_SWITCH_REGISTRAR~~', data);
+        this._recoveryTrace.switchRegistrarAt = Date.now();
         // 'RESET' means the SDK is rebuilding the session, 'UPDATE' means it
         // declined to and only refreshed its flags, which leaves the agent
         // stuck until they ask for a retry.
@@ -489,6 +586,18 @@ class EvIntegratedSoftphone extends RcModule {
       async (data?: EvSipDialDestChangedData) => {
         this.logger.info('SIP_DIAL_DEST_CHANGED~~', data);
         await this._recoverOffhookOnReconnect(data);
+      },
+    );
+    this.evSubscription.subscribe(
+      EvCallbackTypes.SIP_SUSPECT_REGISTRATION,
+      async (data?: EvSipSuspectRegistrationData) => {
+        this.logger.info('SIP_SUSPECT_REGISTRATION~~', data);
+        if (this._recoveryTrace.unstableAt === null) {
+          // No recovery is in flight, so this is an ordinary teardown.
+          return;
+        }
+        this._recoveryTrace.suspectCloseAt = Date.now();
+        await this._maybeRepairSuspectRegistration();
       },
     );
     this.evSubscription.subscribe(

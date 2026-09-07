@@ -91,4 +91,8 @@ export const EvCallbackTypes = {
   SIP_UNMUTE: 'sipUnmuteResponse',
   SIP_UNREGISTERED: 'sipUnregisteredNotification',
   SIP_UNSTABLE_CONNECTION: 'sipUnstableConnectionNotification',
+  // Synthetic, fired by EvClient rather than the SDK: a superseded SIP.js
+  // user agent's WebSocket closed cleanly, which can mean its queued wildcard
+  // un-REGISTER reached the server and wiped the live registration.
+  SIP_SUSPECT_REGISTRATION: 'sipSuspectRegistrationNotification',
 } as const;

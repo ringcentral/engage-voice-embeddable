@@ -555,6 +555,7 @@ class EvTransferCall extends RcModule {
     });
     this.evSubscription
       .subscribe(EvCallbackTypes.DIRECT_AGENT_TRANSFER, (data) => {
+        console.log('DIRECT_AGENT_TRANSFER', data);
         this._handleDirectAgentTransferResponse(data);
       })
       // The call ending is not the agent leaving a consult leg: there is

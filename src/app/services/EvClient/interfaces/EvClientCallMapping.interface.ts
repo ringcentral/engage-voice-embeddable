@@ -32,6 +32,19 @@ export type EvSipSwitchRegistrarData = {
 };
 
 /**
+ * A superseded SIP.js user agent's WebSocket closed. `code` 1000 means the
+ * close handshake completed, so anything the SDK had queued on that socket,
+ * including a wildcard un-REGISTER, was delivered after the replacement
+ * registration and may have wiped it.
+ */
+export type EvSipSuspectRegistrationData = {
+  closedUaId: string | null;
+  latestUaId: string | null;
+  code: number;
+  reason: string;
+};
+
+/**
  * Fired once the softphone has re-registered, carrying the offhook flags the
  * SDK was holding when the registration dropped.
  */
@@ -134,6 +147,7 @@ export interface EvClientCallMapping {
   sipUnmuteResponse: any;
   sipUnregisteredNotification: any;
   sipUnstableConnectionNotification: any;
+  sipSuspectRegistrationNotification: EvSipSuspectRegistrationData;
 }
 
 export type EvClientCallBackValueType = keyof EvClientCallMapping;
