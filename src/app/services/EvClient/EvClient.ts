@@ -126,6 +126,13 @@ class EvClient extends RcModule {
 
   private _callbacks: Record<string, Function> = {};
 
+  /**
+   * `sipjsId` of the SIP.js user agent created by the most recent `sipInit`.
+   * A clean WebSocket close from any other (superseded) user agent is the
+   * signal that its queued teardown reached the server late.
+   */
+  private _latestSipUaId: string | null = null;
+
   @state
   appStatus: string = evStatus.START;
 
@@ -429,6 +436,101 @@ class EvClient extends RcModule {
       ...options,
     });
     window.AgentSDK.shared.HttpService.setApiBase(options.authHost);
+    this._watchSoftphoneTransports();
+  }
+
+  private get _softphoneService(): any {
+    return this._sdk?._SoftphoneService ?? null;
+  }
+
+  /**
+   * Watch each SIP.js user agent the softphone builds, so a superseded one
+   * that later wipes the live registration can be caught (see
+   * {@link EvClient._onSoftphoneSocketClose}).
+   *
+   * The SDK creates a new user agent inside `SoftphoneService.sipInit` and
+   * exposes no event for it, so `sipInit` is wrapped to re-run the watcher on
+   * each rebuild. The internal reconnect paths all reach the new agent through
+   * this same `sipInit`, so wrapping it alone is enough.
+   */
+  private _watchSoftphoneTransports(): void {
+    const service = this._softphoneService;
+    if (!service || service.__evWatched) {
+      return;
+    }
+    service.__evWatched = true;
+    const originalSipInit = service.sipInit;
+    if (typeof originalSipInit === 'function') {
+      service.sipInit = (...args: any[]) => {
+        const result = originalSipInit.apply(service, args);
+        this._watchSipTransport();
+        return result;
+      };
+    }
+    this._watchSipTransport();
+  }
+
+  /**
+   * Record the current SIP.js user agent as the live one and watch its socket
+   * for a clean close.
+   */
+  private _watchSipTransport(): void {
+    const ua = this._softphoneService?.getSoftphoneSettings?.()?.webRtc?.ua;
+    const transport = ua?.transport;
+    if (!transport || typeof transport.on !== 'function' || transport.__evWatched) {
+      return;
+    }
+    transport.__evWatched = true;
+    const uaId: string | null = ua.configuration?.sipjsId ?? null;
+    // This is the user agent the app now considers live; any other one whose
+    // socket later closes is a superseded UA.
+    this._latestSipUaId = uaId;
+    transport.on('connected', () => {
+      // SIP.js swallows its own `disconnected` event for a close it requested
+      // (which is exactly the wildcard un-REGISTER teardown we care about), so
+      // listen on the raw socket instead.
+      const ws = transport.ws;
+      if (ws && typeof ws.addEventListener === 'function' && !ws.__evWatched) {
+        ws.__evWatched = true;
+        ws.addEventListener('close', (event: CloseEvent) => {
+          this._onSoftphoneSocketClose(uaId, event.code, event.reason);
+        });
+      }
+    });
+  }
+
+  /**
+   * Flag a superseded user agent that closed its socket cleanly.
+   *
+   * A `code` of 1000 means the WebSocket close handshake completed, so the
+   * frames the SDK queued on that socket before abandoning it, which for a
+   * `sipTerminate` include a wildcard un-REGISTER, were delivered. When that
+   * lands after the replacement UA has re-registered it removes the fresh
+   * binding, leaving a UA that reports "registered" while the platform can no
+   * longer route to it. A `code` of 1006 means the socket died before the
+   * queue drained, so no un-REGISTER arrived and the registration is intact.
+   *
+   * Only a UA other than the current one matters: a close from the live UA is
+   * an ordinary teardown, and a deliberate registrar switch tears the old UA
+   * down before building the new one, so its close is never from a superseded
+   * UA. The suspicion is handed to EvIntegratedSoftphone, which owns softphone
+   * recovery, through the subscription bridge.
+   */
+  private _onSoftphoneSocketClose(
+    closedUaId: string | null,
+    code: number,
+    reason: string,
+  ): void {
+    if (code !== 1000 || !closedUaId || closedUaId === this._latestSipUaId) {
+      return;
+    }
+    const listener = this._callbacks[EvCallbackTypes.SIP_SUSPECT_REGISTRATION];
+    listener?.({
+      closedUaId,
+      latestUaId: this._latestSipUaId,
+      code,
+      reason,
+    });
   }
 
   on(eventType: string, callback: (...args: any[]) => void) {
