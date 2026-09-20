@@ -26,6 +26,7 @@ import { EvAgentSession } from '../EvAgentSession';
 import { EvIntegratedSoftphone } from '../EvIntegratedSoftphone';
 import { EvSubscription } from '../EvSubscription';
 import { EvWorkingState } from '../EvWorkingState';
+import { hasRemainingLiveCall } from '../../utils/hasRemainingLiveCall';
 import { parseNumber } from '../../../lib/parseNumber';
 import { checkCountryCode } from '../../../lib/checkCountryCode';
 import { track } from '../Analytics/track';
@@ -307,8 +308,21 @@ class EvCall extends RcModule {
         this.checkQueueId();
       },
     );
-    // Subscribe to call ended events
-    this.evSubscription.subscribe(EvCallbackTypes.END_CALL, () => {
+    // Subscribe to call ended events. Idle is only restored when this
+    // notification ends the last live session -- a queued call can already
+    // be in `callIds`, or can land there before this handler runs.
+    this.evSubscription.subscribe(EvCallbackTypes.END_CALL, (data) => {
+      if (
+        hasRemainingLiveCall({
+          endedCall: {
+            uii: data?.uii ?? '',
+            sessionId: data?.sessionId ?? '',
+          },
+          callIds: this.evPresence.callIds,
+        })
+      ) {
+        return;
+      }
       this.setDialoutStatus(dialoutStatuses.idle);
     });
     // Subscribe to TCPA safe lead state
