@@ -53,6 +53,8 @@ import { SideWidget } from '../../services/SideWidget';
 import { dialoutStatuses } from '../../../enums';
 import { formatPhoneNumber } from '../../../lib/FormatPhoneNumber/formatPhoneNumber';
 import { getCallAni, getCallDnis } from '../../../lib/getEvCallNumbers';
+import { isOnLiveCallPage } from '../../utils/isOnLiveCallPage';
+import { resolveLiveActivityCallId } from '../../utils/resolveLiveActivityCallId';
 import type { EvCallData } from '../../services/EvCallDataSource/EvCallDataSource.interface';
 import type { EvCallDispositionData } from '../../services/EvCallDisposition/EvCallDisposition.interface';
 
@@ -541,6 +543,12 @@ class ActiveCallView extends RcViewModule {
   async goBack() {
     this.evCall.setDialoutStatus(dialoutStatuses.idle);
     this._setViewCallId('');
+    const liveCallId: string = this.liveActivityCallId;
+    if (liveCallId) {
+      this.router.replace('/agent/dialer');
+      this.reset();
+      return;
+    }
     this.router.goBack();
     this.reset();
   }
@@ -551,15 +559,29 @@ class ActiveCallView extends RcViewModule {
   }
 
   goToActiveCall = () => {
-    if (this.callId) {
-      this.router.push(`/activityCallLog/${this.callId}`);
+    const liveCallId: string = this.liveActivityCallId;
+    if (!liveCallId) {
+      return;
     }
+    if (this.evCall.activityCallId !== liveCallId) {
+      void this.setCallId(liveCallId);
+    }
+    this.router.push(`/activityCallLog/${liveCallId}`);
   };
 
+  @computed((that: ActiveCallView) => [
+    that.evCall.activityCallId,
+    that.evCallMonitor.callIds,
+  ])
+  get liveActivityCallId(): string {
+    return resolveLiveActivityCallId({
+      activityCallId: this.evCall.activityCallId,
+      callIds: this.evCallMonitor.callIds,
+    });
+  }
+
   get isOnActiveCallPage(): boolean {
-    const path = this.router.currentPath;
-    if (!path) return false;
-    return path.startsWith('/activityCallLog/') || path.startsWith('/history/');
+    return isOnLiveCallPage(this.router.currentPath, this.liveActivityCallId);
   }
 
   /**
@@ -728,16 +750,19 @@ class ActiveCallView extends RcViewModule {
     const { t } = useLocale(i18n);
     const { hasActiveCall, isOnCallPage, contactName, phoneNumber } =
       useConnector(() => {
-        const call = this.evCall.currentCall;
-        const hasCall = !!call && !call.endedCall;
-        const isInbound = call?.callType === 'INBOUND';
+        const liveCallId: string = this.liveActivityCallId;
+        const call = liveCallId
+          ? this.evPresence.callsMapping[liveCallId]
+          : null;
+        const hasCall: boolean = !!call && !call.endedCall;
+        const isInbound: boolean = call?.callType === 'INBOUND';
         const name = this.getContactName(call);
         const phone = call
           ? (isInbound ? getCallAni(call) : getCallDnis(call))
           : '';
         return {
           hasActiveCall: hasCall,
-          isOnCallPage: this.isOnActiveCallPage,
+          isOnCallPage: isOnLiveCallPage(this.router.currentPath, liveCallId),
           contactName: name,
           phoneNumber: formatPhoneNumber({ phoneNumber: phone }),
         };

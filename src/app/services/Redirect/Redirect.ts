@@ -25,6 +25,7 @@ import { Adapter } from '../Adapter';
 import { EvWorkingState } from '../EvWorkingState';
 import type { DispositionStepOptions } from '../../utils/shouldShowDispositionSubmitStep';
 import { shouldShowDispositionSubmitStep } from '../../utils/shouldShowDispositionSubmitStep';
+import { shouldReplaceActivityCallRoute } from '../../utils/shouldReplaceActivityCallRoute';
 
 /**
  * Redirect service - Handles router redirections based on login status
@@ -271,6 +272,10 @@ class Redirect extends RcModule {
   gotoActivityCallPage(id: string): void {
     const path = `/activityCallLog/${id}`;
     if (this._router.currentPath === path) {
+      return;
+    }
+    if (shouldReplaceActivityCallRoute(this._router.currentPath)) {
+      this._router.replace(path);
       return;
     }
     this._router.push(path);

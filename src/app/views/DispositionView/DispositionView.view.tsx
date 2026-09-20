@@ -52,6 +52,7 @@ import { DispositionForm } from '../../components/DispositionForm';
 import { SideWidgetToggleButton } from '../../components/SideWidgetToggleButton';
 import { getCallInfos } from '../../utils/getCallInfos';
 import { hasNewCallTakenOver } from '../../utils/hasNewCallTakenOver';
+import { resolveLiveActivityCallId } from '../../utils/resolveLiveActivityCallId';
 import { shouldShowCallLogSummary } from '../../utils/shouldShowCallLogSummary';
 import { shouldShowDispositionSubmitStep } from '../../utils/shouldShowDispositionSubmitStep';
 import type {
@@ -511,15 +512,47 @@ class DispositionView extends RcViewModule {
       return;
     }
     const isEnded = this.callStatus === 'callEnd' || !this.hasCurrentCall;
-    if (isEnded) {
-      this.evCall.setDialoutStatus(dialoutStatuses.idle);
-      this._setViewCallId('');
-      this.router.replace(this.dialerPath);
-      this._reset();
-      this.evCall.setActivityCallId('');
-    } else {
+    if (!isEnded) {
       this.router.goBack();
       this._reset();
+      return;
+    }
+    this.leaveEndedDisposition();
+  }
+
+  /**
+   * Leave a finished disposition without dropping a live call that answered
+   * while this page was still on the stack.
+   */
+  private leaveEndedDisposition(): void {
+    const submittedCallId: string = this.callId;
+    const takenOver: boolean = hasNewCallTakenOver({
+      submittedCallId,
+      activityCallId: this.evCall.activityCallId,
+      callIds: this.evCallMonitor.callIds,
+    });
+    this._setViewCallId('');
+    this.router.replace(this.dialerPath);
+    this._reset();
+    if (takenOver) {
+      this.restoreTakenOverCall(submittedCallId);
+      return;
+    }
+    this.evCall.setDialoutStatus(dialoutStatuses.idle);
+    this.evCall.setActivityCallId('');
+  }
+
+  /**
+   * Point the banner at the call that replaced the one just dispositioned.
+   */
+  private restoreTakenOverCall(submittedCallId: string): void {
+    const liveCallId: string = resolveLiveActivityCallId({
+      activityCallId: this.evCall.activityCallId,
+      callIds: this.evCallMonitor.callIds,
+      excludeCallId: submittedCallId,
+    });
+    if (liveCallId && liveCallId !== this.evCall.activityCallId) {
+      this.evCall.setActivityCallId(liveCallId);
     }
   }
 
