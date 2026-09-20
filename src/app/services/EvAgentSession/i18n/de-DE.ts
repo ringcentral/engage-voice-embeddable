@@ -6,7 +6,7 @@ export default {
   [loginTypes.external]: 'Externes Telefon verwenden',
   [loginTypes.integrated]: 'Integriertes Softphone',
   [dropDownOptions.None]: 'Keine',
-  [messageTypes.NOT_INBOUND_QUEUE_SELECTED]: 'Bitte wählen Sie mindestens eine Eingangswarteschlange aus.',
+  [messageTypes.NOT_INBOUND_QUEUE_SELECTED]: 'Bitte wählen Sie mindestens eine Eingangswarteschlange oder eine Wählgruppe aus.',
   [messageTypes.EMPTY_PHONE_NUMBER]: 'Telefonnummer ist erforderlich.',
   [messageTypes.INVALID_PHONE_NUMBER]: 'Ungültige Telefonnummer.',
   [messageTypes.AGENT_CONFIG_ERROR]: 'Agent-Konfiguration fehlgeschlagen.',

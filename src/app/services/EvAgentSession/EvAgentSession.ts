@@ -44,6 +44,7 @@ import type {
 import i18n, { t } from './i18n';
 import { track } from '../Analytics/track';
 import { trackEvents } from '../../../lib/trackEvents';
+import { hasInboundQueueOrOutdialGroup } from '../../utils/hasInboundQueueOrOutdialGroup';
 
 const WAIT_EV_SERVER_ROLLBACK_DELAY = 2000;
 
@@ -380,10 +381,7 @@ class EvAgentSession extends RcModule {
   }
 
   get notInboundQueueSelected(): boolean {
-    return (
-      !this.evAuth.agentPermissions?.allowInbound ||
-      (this.formGroup.selectedInboundQueueIds || []).length === 0
-    );
+    return !hasInboundQueueOrOutdialGroup(this.formGroup);
   }
 
   @action
@@ -696,12 +694,12 @@ class EvAgentSession extends RcModule {
 
   private _checkFieldsResult(formGroup: FormGroup): EvConfigureAgentOptions {
     const { selectedInboundQueueIds = [], selectedSkillProfileId } = formGroup;
-    if (this.notInboundQueueSelected) {
+    if (!hasInboundQueueOrOutdialGroup(formGroup)) {
       this.toast.danger({
         message: t(messageTypes.NOT_INBOUND_QUEUE_SELECTED),
         ttl: 0,
       });
-      throw new Error(`'queueIds' is an empty array.`);
+      throw new Error(`'queueIds' and 'dialGroupId' are both empty.`);
     }
     const dialDest = this._getDialDest(formGroup);
     return {

@@ -5,7 +5,7 @@ export default {
   [loginTypes.external]: 'Use external phone',
   [loginTypes.integrated]: 'Integrated softphone',
   [dropDownOptions.None]: 'None',
-  [messageTypes.NOT_INBOUND_QUEUE_SELECTED]: 'Please select at least one inbound queue.',
+  [messageTypes.NOT_INBOUND_QUEUE_SELECTED]: 'Please select at least one inbound queue or a dial group.',
   [messageTypes.EMPTY_PHONE_NUMBER]: 'Phone number is required.',
   [messageTypes.INVALID_PHONE_NUMBER]: 'Invalid phone number.',
   [messageTypes.AGENT_CONFIG_ERROR]: 'Agent configuration failed.',
