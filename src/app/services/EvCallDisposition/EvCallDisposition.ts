@@ -28,6 +28,17 @@ import type {
 } from './EvCallDisposition.interface';
 
 /**
+ * next-core's @action decorator throws in development after 100 calls in 5s.
+ * Streaming summary phases easily exceed that, so they are coalesced here.
+ */
+const SUMMARY_FLUSH_INTERVAL_MS = 100;
+
+interface PendingSummaryPhase {
+  readonly callId: string;
+  readonly phase: EvDispositionSummaryPhaseResponse;
+}
+
+/**
  * EvCallDisposition module - Call disposition management
  * Handles call disposition selection and submission
  */
@@ -35,6 +46,10 @@ import type {
   name: 'EvCallDisposition',
 })
 class EvCallDisposition extends RcModule {
+  private pendingSummaryPhases: PendingSummaryPhase[] = [];
+  private summaryFlushTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastSummaryFlushAt: number = 0;
+
   constructor(
     private evClient: EvClient,
     private evPresence: EvPresence,
@@ -116,43 +131,29 @@ class EvCallDisposition extends RcModule {
     currentSummaryState.isLoading = false;
   }
 
-  @action
-  upsertSummaryPhase(callId: string, phase: EvDispositionSummaryPhaseResponse) {
-    const currentSummaryState = this.callSummaryMapping[callId];
-    const sequence = Number(phase.sequenceNo);
-    if (Number.isNaN(sequence)) {
-      this.logger.warn('Invalid summary sequence number', phase.sequenceNo);
+  /**
+   * Queue a streaming summary phase. Not an @action: each websocket chunk would
+   * otherwise trip next-core's development call-frequency guard.
+   */
+  upsertSummaryPhase(callId: string, phase: EvDispositionSummaryPhaseResponse): void {
+    this.pendingSummaryPhases.push({ callId, phase });
+    if (phase.final) {
+      this.flushPendingSummaryPhases();
       return;
     }
-    if (!currentSummaryState || String(currentSummaryState.segmentId) !== String(phase.segmentId)) {
-      return;
-    }
-    currentSummaryState.orderedPhases[sequence] = phase.summary ?? '';
-    const aggregatedSummary = this.buildSummaryBySequence(currentSummaryState.orderedPhases);
-    currentSummaryState.summary = aggregatedSummary;
-    const isFinal = currentSummaryState.isFinal || phase.final;
-    currentSummaryState.isFinal = isFinal;
-    currentSummaryState.isLoading = !isFinal;
-    if (!currentSummaryState.isEditedAfterFinal) {
-      this.setSummary(callId, aggregatedSummary, false);
-    }
+    this.scheduleSummaryFlush();
   }
 
+  /**
+   * Apply an agent-edited call summary and mark it as edited after the
+   * streamed summary has finished.
+   */
   @action
-  setSummary(callId: string, summary: string, shouldMarkEdited = true) {
-    const currentDisposition = this.callsMapping[callId];
-    const previousSummary = currentDisposition?.summary ?? '';
-    if (!currentDisposition) {
-      this.callsMapping[callId] = {
-        dispositionId: null,
-        notes: '',
-        summary,
-      };
-    } else {
-      currentDisposition.summary = summary;
-    }
+  setSummary(callId: string, summary: string): void {
+    const previousSummary = this.callsMapping[callId]?.summary ?? '';
+    this.writeDispositionSummary(callId, summary);
     const currentSummaryState = this.callSummaryMapping[callId];
-    if (!shouldMarkEdited || !currentSummaryState || !currentSummaryState.isFinal) {
+    if (!currentSummaryState || !currentSummaryState.isFinal) {
       return;
     }
     if (previousSummary === summary) {
@@ -168,6 +169,12 @@ class EvCallDisposition extends RcModule {
   override onInitOnce() {
     // Set default disposition when call is answered
     // This would typically be connected to EvCallMonitor events
+  }
+
+  override async onReset() {
+    this.clearSummaryFlushTimer();
+    this.pendingSummaryPhases = [];
+    this.lastSummaryFlushAt = 0;
   }
 
   private initialize() {
@@ -253,6 +260,91 @@ class EvCallDisposition extends RcModule {
    */
   isDisposed(id: string): boolean {
     return this.dispositionStateMapping[id]?.disposed || false;
+  }
+
+  private scheduleSummaryFlush(): void {
+    if (this.summaryFlushTimer !== null) {
+      return;
+    }
+    const elapsed: number = Date.now() - this.lastSummaryFlushAt;
+    if (this.lastSummaryFlushAt === 0 || elapsed >= SUMMARY_FLUSH_INTERVAL_MS) {
+      this.flushQueuedSummaryPhases();
+      return;
+    }
+    this.summaryFlushTimer = setTimeout(() => {
+      this.summaryFlushTimer = null;
+      this.flushQueuedSummaryPhases();
+    }, SUMMARY_FLUSH_INTERVAL_MS - elapsed);
+  }
+
+  private flushPendingSummaryPhases(): void {
+    this.clearSummaryFlushTimer();
+    this.flushQueuedSummaryPhases();
+  }
+
+  private flushQueuedSummaryPhases(): void {
+    if (this.pendingSummaryPhases.length === 0) {
+      return;
+    }
+    this.applyQueuedSummaryPhases();
+    this.lastSummaryFlushAt = Date.now();
+  }
+
+  private applyQueuedSummaryPhases(): void {
+    if (this.pendingSummaryPhases.length === 0) {
+      return;
+    }
+    const pendingPhases: PendingSummaryPhase[] = this.pendingSummaryPhases.splice(0);
+    this.applySummaryPhases(pendingPhases);
+  }
+
+  private clearSummaryFlushTimer(): void {
+    if (this.summaryFlushTimer === null) {
+      return;
+    }
+    clearTimeout(this.summaryFlushTimer);
+    this.summaryFlushTimer = null;
+  }
+
+  @action
+  private applySummaryPhases(phases: PendingSummaryPhase[]): void {
+    phases.forEach(({ callId, phase }) => {
+      this.applySummaryPhase(callId, phase);
+    });
+  }
+
+  private applySummaryPhase(callId: string, phase: EvDispositionSummaryPhaseResponse): void {
+    const currentSummaryState = this.callSummaryMapping[callId];
+    const sequence = Number(phase.sequenceNo);
+    if (Number.isNaN(sequence)) {
+      this.logger.warn('Invalid summary sequence number', phase.sequenceNo);
+      return;
+    }
+    if (!currentSummaryState || String(currentSummaryState.segmentId) !== String(phase.segmentId)) {
+      return;
+    }
+    currentSummaryState.orderedPhases[sequence] = phase.summary ?? '';
+    const aggregatedSummary = this.buildSummaryBySequence(currentSummaryState.orderedPhases);
+    currentSummaryState.summary = aggregatedSummary;
+    const isFinal = currentSummaryState.isFinal || phase.final;
+    currentSummaryState.isFinal = isFinal;
+    currentSummaryState.isLoading = !isFinal;
+    if (!currentSummaryState.isEditedAfterFinal) {
+      this.writeDispositionSummary(callId, aggregatedSummary);
+    }
+  }
+
+  private writeDispositionSummary(callId: string, summary: string): void {
+    const currentDisposition = this.callsMapping[callId];
+    if (!currentDisposition) {
+      this.callsMapping[callId] = {
+        dispositionId: null,
+        notes: '',
+        summary,
+      };
+      return;
+    }
+    currentDisposition.summary = summary;
   }
 
   private buildSummaryBySequence(orderedPhases: Record<number, string>): string {
