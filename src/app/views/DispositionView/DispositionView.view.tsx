@@ -51,6 +51,7 @@ import { CallInfoHeader } from '../../components/CallInfoHeader';
 import { DispositionForm } from '../../components/DispositionForm';
 import { SideWidgetToggleButton } from '../../components/SideWidgetToggleButton';
 import { getCallInfos } from '../../utils/getCallInfos';
+import { hasNewCallTakenOver } from '../../utils/hasNewCallTakenOver';
 import { shouldShowCallLogSummary } from '../../utils/shouldShowCallLogSummary';
 import { shouldShowDispositionSubmitStep } from '../../utils/shouldShowDispositionSubmitStep';
 import type {
@@ -789,6 +790,19 @@ class DispositionView extends RcViewModule {
       this.toast.success({ message: translate('callDispositionSuccess') });
       await this.evWorkingState.setIsPendingDisposition(false);
       setTimeout(() => {
+        const takenOver = hasNewCallTakenOver({
+          submittedCallId: callId,
+          activityCallId: this.evCall.activityCallId,
+          callIds: this.evCallMonitor.callIds,
+        });
+        if (takenOver) {
+          // Only the form state belongs to the submitted call; the route and
+          // the call pointer now belong to the call that was answered while
+          // this submit was in flight.
+          this._setViewCallId('');
+          this._reset();
+          return;
+        }
         if (shouldGoToDialerAfterSubmit) {
           this.evCall.setDialoutStatus(dialoutStatuses.idle);
           this._setViewCallId('');

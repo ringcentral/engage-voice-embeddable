@@ -32,6 +32,7 @@ import { EvAuth } from '../../services/EvAuth';
 import { EvSettings } from '../../services/EvSettings';
 import { EvClient } from '../../services/EvClient';
 import { EvCallMonitor } from '../../services/EvCallMonitor';
+import { EvActiveCallControl } from '../../services/EvActiveCallControl';
 import { EvWorkingState } from '../../services/EvWorkingState';
 import {
   EvDirectorySearch,
@@ -64,6 +65,7 @@ class DialerView extends RcViewModule {
     private evSettings: EvSettings,
     private evClient: EvClient,
     private evCallMonitor: EvCallMonitor,
+    private evActiveCallControl: EvActiveCallControl,
     private evWorkingState: EvWorkingState,
     private evDirectorySearch: EvDirectorySearch,
     private router: RouterPlugin,
@@ -282,10 +284,22 @@ class DialerView extends RcViewModule {
   }
 
   /**
-   * Cancel the current outbound call
+   * End whatever the "call in progress" state is showing.
+   *
+   * The two states this button covers need different requests. Once the call
+   * has a session the agent is on a live leg, and that only ends by hanging up
+   * the session -- `manualOutdialCancel` withdraws a request the server has
+   * already fulfilled, so it silently does nothing. Before the session exists
+   * there is nothing to hang up and the pending request is all there is to
+   * cancel, so the offhook the dial opened has to be closed here too.
    */
   @delegate('server')
   async hangup(): Promise<void> {
+    const sessionId = this.evCallMonitor.calls[0]?.session?.sessionId;
+    if (sessionId) {
+      await this.evActiveCallControl.hangUp(sessionId);
+      return;
+    }
     await this.evCall.outdialCancel();
     if (!this.evSettings.isManualOffhook) {
       await this.evClient.offhookTerm();
