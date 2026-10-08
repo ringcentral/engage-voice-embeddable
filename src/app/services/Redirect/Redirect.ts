@@ -9,7 +9,7 @@ import {
   PortManager,
 } from '@ringcentral-integration/next-core';
 
-import { EvLoginStatus } from '../../../enums';
+import { dialoutStatuses, EvLoginStatus } from '../../../enums';
 import { EvCallbackTypes } from '../EvClient/enums';
 import { formatEvCallForRing, formatEvCallForConnected } from '../../../lib/formatEvCall';
 import { EvAuth } from '../EvAuth';
@@ -201,6 +201,15 @@ class Redirect extends RcModule {
       );
       if (isDisposed || !showDispositionStep) {
         await this._evWorkingState.setIsPendingDisposition(false);
+        // Nothing is left to work on for this call, so release the pointer the
+        // same way leaving a submitted disposition does. Ended calls stay in
+        // `callsMapping` for the call log, so a stale pointer keeps the side
+        // widgets (e.g. AI Assistant) registered on the dialer, which has no
+        // toggle to put them away. A call answered meanwhile owns the pointer.
+        if (this._evCall.activityCallId === id) {
+          this._evCall.setDialoutStatus(dialoutStatuses.idle);
+          this._evCall.setActivityCallId('');
+        }
         this._router.replace(this._dialerPath);
         this._adapter.onEndCall(formatEvCallForConnected(call));
         return;
