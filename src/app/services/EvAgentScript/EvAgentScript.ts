@@ -45,12 +45,6 @@ import { formatAgentScriptResult } from './formatAgentScriptResult';
 class EvAgentScript extends RcModule {
   private _callScriptResultMapping: EvCallScriptResultMapping = {};
 
-  /**
-   * Calls whose script result was saved by a disposition submitted while the
-   * call was still live. Their script stays on screen until the call ends.
-   */
-  private _savedScriptCallIds = new Set<string>();
-
   constructor(
     private evClient: EvClient,
     private evAuth: EvAuth,
@@ -154,16 +148,8 @@ class EvAgentScript extends RcModule {
       void this.loadScript(callId, call!.scriptId, call!.scriptVersion);
     });
 
-    this.evPresence.onCallEnded((call) => {
-      const callId = this.getCallId(call);
-      if (!callId || !this._savedScriptCallIds.has(callId)) return;
-      this._savedScriptCallIds.delete(callId);
-      this._removeCallScript(callId);
-    });
-
     this.evAuth.beforeAgentLogout(() => {
       this._callScriptResultMapping = {};
-      this._savedScriptCallIds.clear();
       this._clearCallScripts();
     });
 
@@ -298,27 +284,16 @@ class EvAgentScript extends RcModule {
   @delegate('server')
   async saveScriptResult(call: EvBaseCall): Promise<void> {
     const callId = this.getCallId(call);
-    if (!callId) return;
     const scriptResult = this._callScriptResultMapping[callId];
-    if (scriptResult && call.scriptId) {
-      const result = formatAgentScriptResult(scriptResult);
-      await this.evClient.saveScriptResult(call.uii, call.scriptId, result);
-      delete this._callScriptResultMapping[callId];
-    }
-    this._releaseCallScript(callId);
-  }
-
-  /**
-   * Drop a call's script once its result is saved - but a disposition can be
-   * submitted while the call is still live, and the agent is still talking
-   * through the script then, so it stays on screen until the call ends.
-   */
-  private _releaseCallScript(callId: string): void {
-    if (this.evPresence.callIds.includes(callId)) {
-      this._savedScriptCallIds.add(callId);
+    if (!callId) return;
+    if (!scriptResult || !call.scriptId) {
+      this._removeCallScript(callId);
       return;
     }
-    this._savedScriptCallIds.delete(callId);
+
+    const result = formatAgentScriptResult(scriptResult);
+    await this.evClient.saveScriptResult(call.uii, call.scriptId, result);
+    delete this._callScriptResultMapping[callId];
     this._removeCallScript(callId);
   }
 
