@@ -1,12 +1,14 @@
 # RingCX Embeddable 1.0 (BETA)
 
-[![Build Status](https://github.com/ringcentral/engage-voice-embeddable/actions/workflows/ci.yml/badge.svg?branch=next)](https://github.com/ringcentral/engage-voice-embeddable/actions)
+> **Notice:** RingCX Embeddable has been merged into [RingCentral Embeddable 3.1.x](https://embeddable.labs.ringcentral.com/3.1.x/). We recommend using RingCentral Embeddable 3.1.x instead of this project.
 
 > **This is a beta release.** We welcome your feedback and bug reports — please feel free to [open an issue](https://github.com/ringcentral/engage-voice-embeddable/issues).
 
 > **Looking for the 0.x beta version?** Please visit the [legacy branch](https://github.com/ringcentral/engage-voice-embeddable/tree/master) and its [demo](https://ringcentral.github.io/engage-voice-embeddable/).
 
 > **Upgrading from 0.x?** See the [migration guide](docs/migration-from-0.x.md).
+
+[![Build Status](https://github.com/ringcentral/engage-voice-embeddable/actions/workflows/ci.yml/badge.svg?branch=1.x)](https://github.com/ringcentral/engage-voice-embeddable/actions)
 
 ## Introduction
 
