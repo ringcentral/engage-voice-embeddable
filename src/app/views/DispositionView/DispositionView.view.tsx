@@ -50,6 +50,7 @@ import type {
 import { CallInfoHeader } from '../../components/CallInfoHeader';
 import { DispositionForm } from '../../components/DispositionForm';
 import { SideWidgetToggleButton } from '../../components/SideWidgetToggleButton';
+import { formatCallLogTask } from '../../utils/formatCallLogTask';
 import { getCallInfos } from '../../utils/getCallInfos';
 import { hasNewCallTakenOver } from '../../utils/hasNewCallTakenOver';
 import { resolveLiveActivityCallId } from '../../utils/resolveLiveActivityCallId';
@@ -743,7 +744,10 @@ class DispositionView extends RcViewModule {
       await this.thirdParty.logCall({
         call,
         task: {
+          // History rows only carry the disposition label, not its id;
+          // `dispositionId` keeps the label for backward compatibility.
           dispositionId: this.historyDispositionName || null,
+          dispositionName: this.historyDispositionName || null,
           notes: this.historyActivityDraft.agentNotes,
           summary: this.historyActivityDraft.agentSummary,
         },
@@ -763,11 +767,13 @@ class DispositionView extends RcViewModule {
     }
     const call = this.currentCall;
     const disposition = this.evCallDisposition.getDisposition(this.callId);
+    const dispositionId = disposition?.dispositionId;
+    const task = formatCallLogTask(disposition, this.dispositionPickList);
     try {
       if (this.callLogData) {
         await this.thirdParty.logCall({
           call: this.callLogData,
-          task: disposition,
+          task,
           sessionId: this.callId,
         });
       }
@@ -775,18 +781,14 @@ class DispositionView extends RcViewModule {
       this.logger.error('thirdParty logCall error~~', e);
     }
     const dialogId = call?.session.dialogId;
-    const dispositionId = disposition?.dispositionId;
     await this.evCallDisposition.disposeCall(this.callId);
     if (dialogId && this.summary && dispositionId) {
-      const dispositionItem = this.dispositionPickList.find(
-        p => p.dispositionId === dispositionId
-      );
       const authorized = await this.evAuth.refreshEvToken();
       if (authorized) {
         await this.evClient.updateActivityDisposition({
           dialogId,
           params: {
-            dispositionName: dispositionItem?.label || '',
+            dispositionName: task?.dispositionName || '',
             agentSummary: this.summary,
             agentNotes: disposition?.notes || '',
           },

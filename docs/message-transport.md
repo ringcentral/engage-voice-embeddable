@@ -80,6 +80,11 @@ window.addEventListener('message', function(event) {
     if (payload.requestType === 'rc-ev-logCall') {
       // log call here ...
       console.log('Log Call:', payload.data);
+      // payload.data.call: call info
+      // payload.data.task.dispositionId: selected disposition id
+      // payload.data.task.dispositionName: selected disposition name/label
+      // payload.data.task.notes: agent notes
+      // payload.data.task.summary: call summary
       responseMessageToWidget(requestId, 'ok');
     }
   }
