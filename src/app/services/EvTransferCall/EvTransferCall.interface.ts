@@ -1,4 +1,14 @@
-import type { EvTransferType, TransferStatus } from '../../../enums';
+import type {
+  DirectTransferTypes,
+  EvTransferType,
+  TransferStatus,
+} from '../../../enums';
+
+/**
+ * How a transfer is carried out: WARM asks the destination first, COLD hands
+ * the call over, VOICEMAIL sends it to a directory user's voicemail.
+ */
+export type EvTransferMode = Exclude<DirectTransferTypes, 'CANCEL'>;
 
 /**
  * EvTransferCall options for configuration

@@ -9,10 +9,12 @@ import {
   RouterPlugin,
   state,
   useConnector,
+  watch,
   type UIProps,
   type UIFunctions,
 } from '@ringcentral-integration/next-core';
 import { useLocale } from '@ringcentral-integration/micro-core/src/app/hooks';
+import { Toast } from '@ringcentral-integration/micro-core/src/app/services';
 import {
   AppFooterNav,
   AppHeaderNav,
@@ -20,8 +22,11 @@ import {
 import { PageHeader } from '@ringcentral-integration/next-widgets/components';
 
 import type { EvTransferType } from '../../../enums';
-import { transferTypes } from '../../../enums';
-import { EvTransferCall } from '../../services/EvTransferCall';
+import { directTransferTypes, transferTypes } from '../../../enums';
+import {
+  EvTransferCall,
+  type EvTransferMode,
+} from '../../services/EvTransferCall';
 import { EvRequeueCall } from '../../services/EvRequeueCall';
 import { EvCall } from '../../services/EvCall';
 import { EvAuth } from '../../services/EvAuth';
@@ -59,6 +64,7 @@ class TransferView extends RcViewModule {
     private _evAuth: EvAuth,
     private _evDirectorySearch: EvDirectorySearch,
     private _router: RouterPlugin,
+    private _toast: Toast,
     @optional('TransferViewOptions')
     private _options?: TransferViewOptions,
   ) {
@@ -66,6 +72,16 @@ class TransferView extends RcViewModule {
   }
 
   private readonly _searchScope = directorySearchScopes.transferManualEntry;
+
+  override onInitOnce() {
+    // Check voicemail as soon as a directory user becomes the destination,
+    // whether picked from the list or matched by an extension on the keypad
+    watch(
+      this,
+      () => this.voicemailCandidateExtensionId,
+      () => this._checkVoicemail(),
+    );
+  }
 
   @state
   private _manualEntryNumber = '';
@@ -188,6 +204,38 @@ class TransferView extends RcViewModule {
   }
 
   /**
+   * The RC extension id of the directory user a voicemail transfer would go
+   * to, or null. Only a corporate directory user qualifies: other extension
+   * types (call queues, IVR menus, ...) have no personal mailbox, and the other
+   * tabs never resolve to a RingEX extension at all.
+   */
+  get voicemailCandidateExtensionId(): string | null {
+    if (this._evTransferCall.transferType !== transferTypes.manualEntry) {
+      return null;
+    }
+    const record = this.selectedDirectoryRecord ?? this.matchedDirectoryRecord;
+    if (
+      record?.type?.toLowerCase() !== 'user' ||
+      !this.manualEntryDestination?.skipParse
+    ) {
+      return null;
+    }
+    return record.id;
+  }
+
+  /**
+   * A directory user whose extension the server confirmed takes voicemail.
+   * Until the check answers, the user does not count.
+   */
+  get isVoicemailDestination(): boolean {
+    const extensionId = this.voicemailCandidateExtensionId;
+    return (
+      !!extensionId &&
+      this._evTransferCall.voicemailEnabledByExtension[extensionId] === true
+    );
+  }
+
+  /**
    * Who the Transfer button would transfer to, named where the directory knows
    * them. Empty on the other tabs, whose destination is already spelled out in
    * the tab itself, and empty when there is nothing transferable.
@@ -237,6 +285,17 @@ class TransferView extends RcViewModule {
     this._evDirectorySearch.cancel(this._searchScope);
     this._setSelectedDirectoryRecordId(record.id);
     this._evTransferCall.changeTransferType(transferTypes.manualEntry);
+    // Picking the same user again does not change what the watch in
+    // `onInitOnce` sees, so retry a check that failed from here
+    this._checkVoicemail();
+  }
+
+  private _checkVoicemail(): void {
+    const extensionId = this.voicemailCandidateExtensionId;
+    if (!extensionId) return;
+    this._evTransferCall.checkVoicemail(extensionId).catch((error) => {
+      this.logger.warn('checkVoicemail failed', error);
+    });
   }
 
   /**
@@ -282,22 +341,6 @@ class TransferView extends RcViewModule {
 
   get isQueueTransfer(): boolean {
     return this._evTransferCall.transferType === transferTypes.queue;
-  }
-
-  /**
-   * A queue transfer is executed by EvRequeueCall, which keeps its own
-   * `stayOnCall` for the requeue `maintain` flag, so the switch has to read and
-   * write that module instead of EvTransferCall while the queue tab is active.
-   */
-  @computed((that: TransferView) => [
-    that.isQueueTransfer,
-    that._evRequeueCall.stayOnCall,
-    that._evTransferCall.stayOnCall,
-  ])
-  get isStayOnCall(): boolean {
-    return this.isQueueTransfer
-      ? this._evRequeueCall.stayOnCall
-      : this._evTransferCall.stayOnCall;
   }
 
   /** Whether a transfer can be issued right now, regardless of destination */
@@ -393,12 +436,34 @@ class TransferView extends RcViewModule {
     }
   }
 
+  /**
+   * Same gate as Ask first and Transfer (which already waits for a directory
+   * search to settle), plus a directory user as the destination.
+   */
+  @computed((that: TransferView) => [
+    that.isTransferDisabled,
+    that.isVoicemailDestination,
+  ])
+  get isVoicemailDisabled(): boolean {
+    return this.isTransferDisabled || !this.isVoicemailDestination;
+  }
+
+  /**
+   * Carry out the transfer chosen in the footer: Ask first (WARM), Transfer
+   * (COLD) or Voicemail. On the queue tab Ask first and Transfer map to a
+   * requeue that keeps or drops the agent.
+   */
   @delegate('server')
-  async executeTransfer(): Promise<void> {
+  async executeTransfer(mode: EvTransferMode): Promise<void> {
+    const isVoicemail = mode === directTransferTypes.VOICEMAIL;
     try {
       if (this.isQueueTransfer) {
-        await this._evRequeueCall.requeueCall();
+        if (isVoicemail) return;
+        await this._evRequeueCall.requeueCall({
+          maintain: mode === directTransferTypes.WARM,
+        });
       } else {
+        if (isVoicemail && !this.isVoicemailDestination) return;
         if (this._evTransferCall.transferType === transferTypes.manualEntry) {
           const destination = this.manualEntryDestination;
           if (!destination) return;
@@ -409,7 +474,10 @@ class TransferView extends RcViewModule {
           });
           this._evDirectorySearch.cancel(this._searchScope);
         }
-        await this._evTransferCall.transfer();
+        await this._evTransferCall.transfer(mode);
+        if (isVoicemail) {
+          this._toast.success({ message: translate('voicemailTransferSuccess') });
+        }
       }
       // Only on success: a failed transfer keeps the destination so the agent
       // can retry it. Without this the number outlives the call, and the panel
@@ -417,6 +485,9 @@ class TransferView extends RcViewModule {
       this._resetManualEntry();
       this._returnToActiveCall();
     } catch (error) {
+      if (isVoicemail) {
+        this._toast.danger({ message: translate('voicemailTransferFailed') });
+      }
       this.logger.error('Transfer failed:', error);
     }
   }
@@ -430,7 +501,7 @@ class TransferView extends RcViewModule {
   }
 
   /**
-   * A transfer with 'Stay on call' off ends the agent's call, and Redirect
+   * A cold or voicemail transfer ends the agent's call, and Redirect
    * routes to the disposition page from its own `onCallEnded` handler. That can
    * land before the transfer request resolves, so only navigate while the
    * transfer page is still the current route: otherwise this replaces the
@@ -444,16 +515,15 @@ class TransferView extends RcViewModule {
     this._router.replace(`/activityCallLog/${this.callId}`);
   }
 
+  /**
+   * Leaving the page without transferring cancels the transfer: there is no
+   * Cancel button, the header back button is the way out.
+   */
   @delegate('server')
   async cancelTransfer(): Promise<void> {
     this._evTransferCall.resetTransferStatus();
     this._resetManualEntry();
     this._options?.onCancel?.();
-    this._router.replace(`/activityCallLog/${this.callId}`);
-  }
-
-  @delegate('server')
-  async goBack(): Promise<void> {
     this._router.replace(`/activityCallLog/${this.callId}`);
   }
 
@@ -470,17 +540,6 @@ class TransferView extends RcViewModule {
     if (type === transferTypes.internal) {
       await this._evTransferCall.fetchAgentList();
     }
-  }
-
-  @delegate('server')
-  async handleStayOnCallChange(): Promise<void> {
-    if (this.isQueueTransfer) {
-      this._evRequeueCall.setStatus({
-        stayOnCall: !this._evRequeueCall.stayOnCall,
-      });
-      return;
-    }
-    this._evTransferCall.changeStayOnCall(this._evTransferCall.stayOnCall);
   }
 
   @delegate('server')
@@ -516,10 +575,10 @@ class TransferView extends RcViewModule {
   getUIProps(): UIProps<TransferViewUIProps> {
     return {
       transferType: this._evTransferCall.transferType,
-      isStayOnCall: this.isStayOnCall,
       isTransferring:
         this._evTransferCall.transferring || this._evRequeueCall.requeuing,
       isDisabled: this.isTransferDisabled,
+      isVoicemailDisabled: this.isVoicemailDisabled,
       allTabs: this.allTabs,
       defaultTab: this.defaultTab,
       agentList: this._evTransferCall.transferAgentList,
@@ -543,7 +602,6 @@ class TransferView extends RcViewModule {
   getUIFunctions(): UIFunctions<TransferViewUIFunctions> {
     return {
       onTabChange: (type) => this.handleTabChange(type),
-      onStayOnCallChange: () => this.handleStayOnCallChange(),
       onSelectAgent: (agentId) => this.selectAgent(agentId),
       onSelectPhoneBookContact: (index) => this.selectPhoneBookContact(index),
       onManualEntryChange: (value) => this.setManualEntryNumber(value),
@@ -553,9 +611,8 @@ class TransferView extends RcViewModule {
       onSelectDirectoryRecord: (record) => this.selectDirectoryRecord(record),
       onQueueGroupChange: (groupId) => this.handleQueueGroupChange(groupId),
       onGateChange: (gateId) => this.handleGateChange(gateId),
-      onTransfer: () => this.executeTransfer(),
-      onCancel: () => this.cancelTransfer(),
-      onBack: () => this.goBack(),
+      onTransfer: (mode) => this.executeTransfer(mode),
+      onBack: () => this.cancelTransfer(),
       fetchAgentList: () => this.fetchAgentList(),
     };
   }
@@ -575,9 +632,9 @@ class TransferView extends RcViewModule {
         <TransferPanel
           allTabs={uiProps.allTabs}
           defaultTab={uiProps.defaultTab}
-          isStayOnCall={uiProps.isStayOnCall}
           isTransferring={uiProps.isTransferring}
           isDisabled={uiProps.isDisabled}
+          isVoicemailDisabled={uiProps.isVoicemailDisabled}
           agentList={uiProps.agentList}
           phoneBook={uiProps.phoneBook}
           selectedAgentId={uiProps.selectedAgentId}
@@ -593,7 +650,6 @@ class TransferView extends RcViewModule {
           selectedQueueGroupId={uiProps.selectedQueueGroupId}
           selectedGateId={uiProps.selectedGateId}
           onTabChange={uiFunctions.onTabChange}
-          onStayOnCallChange={uiFunctions.onStayOnCallChange}
           onSelectAgent={uiFunctions.onSelectAgent}
           onSelectPhoneBookContact={uiFunctions.onSelectPhoneBookContact}
           onManualEntryChange={uiFunctions.onManualEntryChange}
@@ -604,7 +660,6 @@ class TransferView extends RcViewModule {
           onQueueGroupChange={uiFunctions.onQueueGroupChange}
           onGateChange={uiFunctions.onGateChange}
           onTransfer={uiFunctions.onTransfer}
-          onCancel={uiFunctions.onCancel}
           fetchAgentList={uiFunctions.fetchAgentList}
         />
         <AppFooterNav />
