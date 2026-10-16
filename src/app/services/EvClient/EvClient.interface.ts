@@ -66,3 +66,12 @@ export interface EvClientManualOutdialParams {
   queueId: string;
   countryId: string;
 }
+
+/**
+ * Outcome of `/api/v1/extension-permissions/check-voicemail`. `status` is the
+ * HTTP status, or 0 when the request could not be made.
+ */
+export interface EvCheckVoicemailResult {
+  status: number;
+  voiceMailEnabled: boolean;
+}

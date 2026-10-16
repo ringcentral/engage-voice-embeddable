@@ -1,5 +1,9 @@
 import type { EvTransferType } from '../../../enums';
-import type { EvDirectAgentListItem, EvTransferPhoneBookItem } from '../../services/EvTransferCall/EvTransferCall.interface';
+import type {
+  EvDirectAgentListItem,
+  EvTransferMode,
+  EvTransferPhoneBookItem,
+} from '../../services/EvTransferCall/EvTransferCall.interface';
 import type { EvAvailableRequeueQueue } from '../../services/EvClient';
 import type { DirectoryRecord } from '../../services/EvDirectorySearch';
 
@@ -32,9 +36,9 @@ interface TransferTab {
  */
 interface TransferViewUIProps {
   transferType: EvTransferType;
-  isStayOnCall: boolean;
   isTransferring: boolean;
   isDisabled: boolean;
+  isVoicemailDisabled: boolean;
   allTabs: TransferTab[];
   defaultTab: EvTransferType | null;
   agentList: EvDirectAgentListItem[];
@@ -58,7 +62,6 @@ interface TransferViewUIProps {
  */
 interface TransferViewUIFunctions {
   onTabChange: (type: EvTransferType) => void;
-  onStayOnCallChange: () => void;
   onSelectAgent: (agentId: string) => void;
   onSelectPhoneBookContact: (index: number) => void;
   onManualEntryChange: (value: string) => void;
@@ -68,8 +71,7 @@ interface TransferViewUIFunctions {
   onSelectDirectoryRecord: (record: DirectoryRecord) => void;
   onQueueGroupChange: (groupId: string) => void;
   onGateChange: (gateId: string) => void;
-  onTransfer: () => Promise<void>;
-  onCancel: () => void;
+  onTransfer: (mode: EvTransferMode) => Promise<void>;
   onBack: () => void;
   fetchAgentList: () => void;
 }
