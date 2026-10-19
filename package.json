@@ -126,7 +126,7 @@
     "isomorphic-ws": "^4.0.1",
     "libphonenumber-js": "^1.13.3",
     "mixpanel-browser": "^2.48.1",
-    "moment": "^2.29.4",
+    "moment": "^2.31.0",
     "moment-timezone": "^0.5.35",
     "normalize-css": "^2.3.1",
     "prop-types": "^15.7.2",
