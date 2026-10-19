@@ -53,10 +53,6 @@ class EvRequeueCall extends RcModule {
 
   @storage
   @state
-  stayOnCall = false;
-
-  @storage
-  @state
   requeuing = false;
 
   /**
@@ -89,7 +85,6 @@ class EvRequeueCall extends RcModule {
   setStatus({
     selectedQueueGroupId,
     selectedGateId,
-    stayOnCall,
     requeuing,
   }: EvRequeueCallStatus) {
     if (selectedQueueGroupId !== undefined) {
@@ -98,18 +93,18 @@ class EvRequeueCall extends RcModule {
     if (selectedGateId !== undefined) {
       this.selectedGateId = selectedGateId;
     }
-    if (stayOnCall !== undefined) {
-      this.stayOnCall = stayOnCall;
-    }
     if (requeuing !== undefined) {
       this.requeuing = requeuing;
     }
   }
 
   /**
-   * Requeue the current call to a different queue
+   * Requeue the current call to a different queue.
+   *
+   * @param maintain keep the agent on the call (Ask first), holding the
+   * customer while the queue finds an agent
    */
-  async requeueCall(): Promise<void> {
+  async requeueCall({ maintain = false }: { maintain?: boolean } = {}): Promise<void> {
     try {
       this.setStatus({ requeuing: true });
       this.toast.info({
@@ -117,7 +112,7 @@ class EvRequeueCall extends RcModule {
       });
 
       const result = await this.evClient.requeueCall({
-        maintain: this.stayOnCall,
+        maintain,
         queueId: this.selectedGateId,
       });
 
@@ -125,7 +120,7 @@ class EvRequeueCall extends RcModule {
         throw new Error('Requeue failed');
       }
 
-      if (this.stayOnCall) {
+      if (maintain) {
         await this.activeCallControl.hold();
       }
 

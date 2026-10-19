@@ -9,6 +9,5 @@ export interface EvRequeueCallOptions {
 export interface EvRequeueCallStatus {
   selectedQueueGroupId?: string;
   selectedGateId?: string;
-  stayOnCall?: boolean;
   requeuing?: boolean;
 }
