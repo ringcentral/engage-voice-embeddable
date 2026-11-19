@@ -1,12 +1,14 @@
-# RingCX Embeddable 1.0 (BETA)
+# RingCX Embeddable 1.0 (DEPRECATED)
 
-> **Notice:** RingCX Embeddable has been merged into [RingCentral Embeddable 3.1.x](https://embeddable.labs.ringcentral.com/3.1.x/). We recommend using RingCentral Embeddable 3.1.x instead of this project.
+> [!WARNING]
+> **RingCX Embeddable is deprecated.** It is now part of [RingCentral Embeddable 3.1.x](https://embeddable.labs.ringcentral.com/3.1.x/). Please migrate to RingCentral Embeddable 3.1.x.
+>
+> * **Until May 31, 2027:** no new features. We still fix bugs.
+> * **After May 31, 2027:** no more bug fixes or updates. The widget stays online at its current URL, but it may stop working because we no longer maintain it.
+>
+> See the [deprecation notice and migration guide](docs/deprecation.md).
 
-> **This is a beta release.** We welcome your feedback and bug reports — please feel free to [open an issue](https://github.com/ringcentral/engage-voice-embeddable/issues).
-
-> **Looking for the 0.x beta version?** Please visit the [legacy branch](https://github.com/ringcentral/engage-voice-embeddable/tree/master) and its [demo](https://ringcentral.github.io/engage-voice-embeddable/).
-
-> **Upgrading from 0.x?** See the [migration guide](docs/migration-from-0.x.md).
+> **Looking for the 0.x legacy version?** Please visit the [legacy branch](https://github.com/ringcentral/engage-voice-embeddable/tree/master) and its [demo](https://ringcentral.github.io/engage-voice-embeddable/). Don't upgrade 0.x to 1.0. Migrate directly to [RingCentral Embeddable 3.1.x](https://embeddable.labs.ringcentral.com/3.1.x/).
 
 [![Build Status](https://github.com/ringcentral/engage-voice-embeddable/actions/workflows/ci.yml/badge.svg?branch=1.x)](https://github.com/ringcentral/engage-voice-embeddable/actions)
 
@@ -35,6 +37,8 @@ Visit [website](https://cdn.labs.ringcentral.com/ringcx-embeddable/1.0.0/index.h
 
 ## Documents
 
+* [Deprecation notice and migration to RingCentral Embeddable 3.1.x](docs/deprecation.md)
+* [Differences between RingCentral Embeddable and RingCX Embeddable](docs/differences-with-rc-embeddable.md)
 * [Migrating from 0.x (Legacy) to 1.0 (Beta)](docs/migration-from-0.x.md)
 * [Get Started](docs/get-started.md)
 * [Customize Client ID and environment](docs/customize-client-id.md)

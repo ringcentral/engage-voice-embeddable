@@ -2,7 +2,7 @@
 
 [RingCentral Embeddable 3.1](https://embeddable.labs.ringcentral.com/3.1.x/) supports both [RingEX](https://www.ringcentral.com/ringex.html) (calls, messages and meetings) and [RingCX](https://www.ringcentral.com/ringcx.html) (contact center). Standalone RingCX Embeddable focuses on RingCX.
 
-**Developers using standalone RingCX Embeddable are recommended to migrate to RingCentral Embeddable 3.1.** The 3.1 build is released as a beta and adds RingCX support alongside RingEX, including progressive dial mode. Review the [RingCX integration and migration guide](https://embeddable.labs.ringcentral.com/integration/ringcx/#migrating-from-the-standalone-ringcx-embeddable) when migrating an existing integration.
+**Standalone RingCX Embeddable is deprecated. Developers should migrate to RingCentral Embeddable 3.1.** Standalone RingCX Embeddable gets no new features and receives bug fixes only until May 31, 2027 (see the [deprecation notice](deprecation.md)). The 3.1 build adds RingCX support alongside RingEX, including progressive dial mode. Review the [RingCX integration and migration guide](https://embeddable.labs.ringcentral.com/integration/ringcx/#migrating-from-the-standalone-ringcx-embeddable) when migrating an existing integration.
 
 ## Features in standalone RingCX Embeddable
 

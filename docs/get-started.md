@@ -1,5 +1,8 @@
 # Get Started
 
+> [!WARNING]
+> **RingCX Embeddable is deprecated.** For new integrations, use [RingCentral Embeddable 3.1.x](https://embeddable.labs.ringcentral.com/3.1.x/) instead. RingCX Embeddable gets bug fixes only until May 31, 2027. See the [deprecation notice](deprecation.md).
+
 there are two ways to integrate this widget to a web application:
 
 ## Adapter JS way
