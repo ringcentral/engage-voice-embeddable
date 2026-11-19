@@ -1,5 +1,8 @@
 # Migrating from 0.x (Legacy) to 1.0 (Beta)
 
+> [!WARNING]
+> **RingCX Embeddable 1.0 is deprecated** and gets bug fixes only until May 31, 2027. If you are still on 0.x, don't upgrade to 1.0. Migrate directly to [RingCentral Embeddable 3.1.x](https://embeddable.labs.ringcentral.com/3.1.x/). See the [deprecation notice](deprecation.md).
+
 RingCX Embeddable `1.0` is a full rewrite of the `0.x` beta. The widget has been
 rebuilt on RingCentral's next-generation [Spring UI](https://www.npmjs.com/package/@ringcentral/spring-ui)
 design system and a new module architecture. For most integrations the migration
